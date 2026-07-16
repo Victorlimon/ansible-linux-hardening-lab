@@ -1,0 +1,83 @@
+---
+# =============================================================================
+# CIS 1.5 | Process Hardening
+# Idempotente, con backup y validación, compatible con check_mode
+# =============================================================================
+
+# 1.5.1 - Disable core dumps
+- name: "CIS 1.5.1 | Remediation | Disable core dumps via limits.conf"
+  ansible.builtin.lineinfile:
+    path: /etc/security/limits.conf
+    regexp: '^\*\s+hard\s+core'
+    line: '* hard core 0'
+    create: yes
+    backup: yes
+  when:
+    - cis_section1_5_process_hardening | default(true)
+    - cis_1_5_1_disable_core_dumps | default(true)
+  tags: ['cis_sec1', 'cis_1.5.1', 'process', 'core_dumps']
+
+- name: "CIS 1.5.1 | Remediation | Disable core dumps via sysctl"
+  ansible.builtin.lineinfile:
+    path: /etc/sysctl.conf
+    regexp: '^kernel.core_pattern'
+    line: 'kernel.core_pattern=|/bin/false'
+    backup: yes
+  notify: reload_sysctl
+  when:
+    - cis_section1_5_process_hardening | default(true)
+    - cis_1_5_1_disable_core_dumps | default(true)
+  tags: ['cis_sec1', 'cis_1.5.1', 'process', 'core_dumps']
+
+# 1.5.2 - Restrict core dumps to privileged users only
+- name: "CIS 1.5.2 | Remediation | Ensure core dumps are restricted"
+  ansible.builtin.lineinfile:
+    path: /etc/security/limits.conf
+    regexp: '^\*\s+hard\s+core'
+    line: '* hard core 0'
+    backup: yes
+  when:
+    - cis_section1_5_process_hardening | default(true)
+    - cis_1_5_2_restrict_core_dumps | default(true)
+  tags: ['cis_sec1', 'cis_1.5.2', 'process', 'core_dumps']
+
+# 1.5.3 - Enable Address Space Layout Randomization (ASLR)
+- name: "CIS 1.5.3 | Remediation | Ensure address space layout randomization (ASLR) is enabled"
+  ansible.builtin.lineinfile:
+    path: /etc/sysctl.conf
+    regexp: '^kernel\.randomize_va_space'
+    line: 'kernel.randomize_va_space=2'
+    backup: yes
+  notify: reload_sysctl
+  when:
+    - cis_section1_5_process_hardening | default(true)
+    - cis_1_5_3_enable_aslr | default(true)
+  tags: ['cis_sec1', 'cis_1.5.3', 'process', 'aslr', 'NIST800-53R5_CM-6']
+
+# 1.5.4 - Restrict ptrace scope
+- name: "CIS 1.5.4 | Remediation | Ensure ptrace_scope is restricted"
+  ansible.builtin.lineinfile:
+    path: /etc/sysctl.conf
+    regexp: '^kernel\.yama\.ptrace_scope'
+    line: 'kernel.yama.ptrace_scope=1'
+    backup: yes
+  notify: reload_sysctl
+  when:
+    - cis_section1_5_process_hardening | default(true)
+    - cis_1_5_4_restrict_ptrace | default(true)
+  tags: ['cis_sec1', 'cis_1.5.4', 'process', 'ptrace']
+
+# 1.5.5 - Disable apport
+- name: "CIS 1.5.5 | Remediation | Disable apport in /etc/default/apport"
+  ansible.builtin.lineinfile:
+    path: /etc/default/apport
+    regexp: '^enabled='
+    line: 'enabled=0'
+    create: yes
+    backup: yes
+    validate: 'bash -n %s'
+  when:
+    - cis_section1_5_process_hardening | default(true)
+    - cis_1_5_5_disable_apport | default(true)
+    - ansible_facts.packages['apport'] is defined
+  tags: ['cis_sec1', 'cis_1.5.5', 'process', 'apport']

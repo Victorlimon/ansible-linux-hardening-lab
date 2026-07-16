@@ -1,0 +1,55 @@
+---
+# =================================================================
+# CIS 1.1.2.4 | Configure /var Partition
+# =================================================================
+
+- name: "CIS 1.1.2.4.1 | AUDIT | Check if /var is a separate partition"
+  ansible.builtin.shell: findmnt -kn /var
+  changed_when: false
+  failed_when: false
+  register: _cis_var_mount
+  tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var']
+
+- name: "CIS 1.1.2.4.2 | Remediation | Ensure nodev option set on /var"
+  when:
+    - _cis_var_mount.rc == 0
+    - _cis_var_mount.stdout_lines | length > 0
+    - cis_1_1_2_var_nodev | default(true)
+  block:
+    - name: "CIS 1.1.2.4.2 | AUDIT | Re-read /var mount options"
+      ansible.builtin.shell: findmnt -kn /var -o OPTIONS
+      changed_when: false
+      register: _cis_var_opts
+      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var']
+
+    - name: "CIS 1.1.2.4.2 | Remediation | Apply nodev to /var"
+      when: "'nodev' not in _cis_var_opts.stdout"
+      ansible.posix.mount:
+        path: /var
+        src: "{{ _cis_var_mount.stdout.split()[1] }}"
+        fstype: "{{ _cis_var_mount.stdout.split()[2] }}"
+        opts: "{{ (_cis_var_opts.stdout | trim).split(',') | union(['nodev']) | join(',') }}"
+        state: mounted
+      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var']
+
+- name: "CIS 1.1.2.4.3 | Remediation | Ensure nosuid option set on /var"
+  when:
+    - _cis_var_mount.rc == 0
+    - _cis_var_mount.stdout_lines | length > 0
+    - cis_1_1_2_var_nosuid | default(true)
+  block:
+    - name: "CIS 1.1.2.4.3 | AUDIT | Re-read /var mount options"
+      ansible.builtin.shell: findmnt -kn /var -o OPTIONS
+      changed_when: false
+      register: _cis_var_opts
+      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var']
+
+    - name: "CIS 1.1.2.4.3 | Remediation | Apply nosuid to /var"
+      when: "'nosuid' not in _cis_var_opts.stdout"
+      ansible.posix.mount:
+        path: /var
+        src: "{{ _cis_var_mount.stdout.split()[1] }}"
+        fstype: "{{ _cis_var_mount.stdout.split()[2] }}"
+        opts: "{{ (_cis_var_opts.stdout | trim).split(',') | union(['nosuid']) | join(',') }}"
+        state: mounted
+      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var']

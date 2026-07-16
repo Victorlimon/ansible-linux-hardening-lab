@@ -1,0 +1,40 @@
+---
+# =============================================================================
+# CIS 1.1.2 | Configure Partitions - Entry Point
+# Importa todas las sub-secciones de particiones con tags y condicionales
+# =============================================================================
+
+- name: Include /tmp partition config
+  when: cis_1_1_2_tmp_partition | default(true)
+  ansible.builtin.import_tasks: 1.1.2.1-configure_tmp.yml
+  tags: ['cis_sec1', 'cis_1.1.2', 'cis_1.1.2.1', 'partitions', 'tmp']
+
+- name: Include /dev/shm partition config
+  when: cis_1_1_2_dev_shm_partition | default(true)
+  ansible.builtin.import_tasks: 1.1.2.2-configure_dev_shm.yml
+  tags: ['cis_sec1', 'cis_1.1.2', 'cis_1.1.2.2', 'partitions', 'dev_shm']
+
+- name: Include /home partition config
+  when: cis_1_1_2_home_partition | default(true)
+  ansible.builtin.import_tasks: 1.1.2.3-configure_home.yml
+  tags: ['cis_sec1', 'cis_1.1.2', 'cis_1.1.2.3', 'partitions', 'home']
+
+- name: Include /var partition config
+  when: cis_1_1_2_var_partition | default(true)
+  ansible.builtin.import_tasks: 1.1.2.4-configure_var.yml
+  tags: ['cis_sec1', 'cis_1.1.2', 'cis_1.1.2.4', 'partitions', 'var']
+
+- name: Include /var/tmp partition config
+  when: cis_1_1_2_var_tmp_partition | default(true)
+  ansible.builtin.import_tasks: 1.1.2.5-configure_var_tmp.yml
+  tags: ['cis_sec1', 'cis_1.1.2', 'cis_1.1.2.5', 'partitions', 'var_tmp']
+
+- name: Include /var/log partition config
+  when: cis_1_1_2_var_log_partition | default(true)
+  ansible.builtin.import_tasks: 1.1.2.6-configure_var_log.yml
+  tags: ['cis_sec1', 'cis_1.1.2', 'cis_1.1.2.6', 'partitions', 'var_log']
+
+- name: Include /var/log/audit partition config
+  when: cis_1_1_2_var_log_audit_partition | default(true)
+  ansible.builtin.import_tasks: 1.1.2.7-configure_var_log_audit.yml
+  tags: ['cis_sec1', 'cis_1.1.2', 'cis_1.1.2.7', 'partitions', 'var_log_audit']

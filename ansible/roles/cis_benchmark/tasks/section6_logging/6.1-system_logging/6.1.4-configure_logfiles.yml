@@ -1,0 +1,221 @@
+---
+# =================================================================
+# CIS Benchmark Section 6.1.4: Configure Logfiles
+# Ubuntu 24.04 LTS - Ansible Tasks
+# Basado en CIS Benchmark v1.0.0
+# CRITICAL: Ensure IDEMPOTENCY - exclude dynamic journal files
+# =================================================================
+
+# =================================================================
+# 6.1.4.1 | Ensure access to all logfiles has been configured (Automated)
+# =================================================================
+
+# -----------------------------------------------------------------
+# AUDIT: Check current logfile permissions and ownership
+# -----------------------------------------------------------------
+- name: "6.1.4.1 | AUDIT | Scan /var/log for files with incorrect permissions"
+  ansible.builtin.find:
+    paths: /var/log
+    file_type: file
+    recurse: true
+    patterns: "*"
+    excludes:
+      - "*.gz"
+      - "*.1"
+      - "*.2"
+      - "*.3"
+      - "*.4"
+      - "*.5"
+      - "*.6"
+      - "*.7"
+      - "*.journal"      # ← EXCLUDE: Dynamic journal files managed by systemd
+      - "*.journal~"     # ← EXCLUDE: Journal backups
+      - "system@*.journal"
+      - "user-*.journal"
+      - "*.journal~"
+  register: log_files_scan
+  changed_when: false
+  failed_when: false
+
+- name: "6.1.4.1 | AUDIT | Check permissions on standard log files"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /var/log/syslog
+    - /var/log/auth.log
+    - /var/log/kern.log
+    - /var/log/messages
+    - /var/log/secure
+    - /var/log/wtmp
+    - /var/log/btmp
+    - /var/log/lastlog
+  register: standard_log_files
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+
+# -----------------------------------------------------------------
+# REMEDIATE: Apply correct permissions to log files (IDEMPOTENT)
+# -----------------------------------------------------------------
+- name: "6.1.4.1 | REMEDIATE | Set default permissions on log files in /var/log"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "{{ section6_logging['6_1_4_1_logfile_permissions'].default_mode }}"
+    owner: "{{ section6_logging['6_1_4_1_logfile_permissions'].default_owner }}"
+    group: "{{ section6_logging['6_1_4_1_logfile_permissions'].default_group }}"
+    state: touch
+    modification_time: preserve
+    access_time: preserve
+  loop: "{{ log_files_scan.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when:
+    - section6_logging['6_1_4_1_logfile_permissions'].enabled | default(true)
+    - item.path is defined
+    - item.path != '/var/log'
+    # ← CRITICAL: Exclude dynamic journal files that systemd manages
+    - item.path is not match(".*\\.journal$")
+    - item.path is not match(".*\\.journal~$")
+    - item.path is not match(".*/system@.*\\.journal$")
+    - item.path is not match(".*/user-.*\\.journal$")
+    # ← Only apply if permissions actually differ (idempotency check)
+    - item.mode is defined
+    - item.mode != (section6_logging['6_1_4_1_logfile_permissions'].default_mode | regex_replace('^0?', ''))
+    - not (systemd_unresponsive | default(false))
+  ignore_errors: true
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_4
+    - cis_6_1_4_1
+    - logging
+    - permissions
+    - remediate
+
+- name: "6.1.4.1 | REMEDIATE | Apply specific overrides for sensitive log files"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "{{ item.mode }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    state: touch
+    modification_time: preserve
+    access_time: preserve
+  loop: "{{ section6_logging['6_1_4_1_logfile_permissions'].file_overrides | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - section6_logging['6_1_4_1_logfile_permissions'].enabled | default(true)
+    - item.path is defined
+    - not (systemd_unresponsive | default(false))
+  ignore_errors: true
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_4
+    - cis_6_1_4_1
+    - logging
+    - permissions
+    - sensitive
+
+- name: "6.1.4.1 | REMEDIATE | Set secure permissions on authentication logs"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: '0600'
+    owner: root
+    group: root
+    state: touch
+    modification_time: preserve
+    access_time: preserve
+  loop:
+    - /var/log/secure
+    - /var/log/auth.log
+  when:
+    - section6_logging['6_1_4_1_logfile_permissions'].enabled | default(true)
+    - not (systemd_unresponsive | default(false))
+  ignore_errors: true
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_4
+    - cis_6_1_4_1
+    - logging
+    - permissions
+    - auth
+
+- name: "6.1.4.1 | REMEDIATE | Set permissions on session tracking files"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "{{ item.mode }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    state: touch
+    modification_time: preserve
+    access_time: preserve
+  loop:
+    - { path: '/var/log/wtmp', mode: '0660', owner: 'root', group: 'utmp' }
+    - { path: '/var/log/btmp', mode: '0660', owner: 'root', group: 'utmp' }
+    - { path: '/var/log/lastlog', mode: '0660', owner: 'root', group: 'utmp' }
+  when:
+    - section6_logging['6_1_4_1_logfile_permissions'].enabled | default(true)
+    - not (systemd_unresponsive | default(false))
+  ignore_errors: true
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_4
+    - cis_6_1_4_1
+    - logging
+    - permissions
+    - session
+
+# -----------------------------------------------------------------
+# REPORT: Summary of logfile permissions configuration
+# -----------------------------------------------------------------
+- name: "6.1.4.1 | REPORT | Logfile permissions summary"
+  ansible.builtin.debug:
+    msg: |
+      6.1.4.1 | Logfile Permissions Configuration:
+        - Default mode: {{ section6_logging['6_1_4_1_logfile_permissions'].default_mode }}
+        - Default owner: {{ section6_logging['6_1_4_1_logfile_permissions'].default_owner }}
+        - Default group: {{ section6_logging['6_1_4_1_logfile_permissions'].default_group }}
+        - Files scanned: {{ log_files_scan.files | length | default(0) }}
+        - Overrides applied: {{ section6_logging['6_1_4_1_logfile_permissions'].file_overrides | default([]) | length }}
+  when: not ansible_check_mode
+
+# -----------------------------------------------------------------
+# POST-REMEDIATION: Verify permissions were applied correctly
+# -----------------------------------------------------------------
+- name: "6.1.4.1 | VERIFY | Re-check permissions on standard log files"
+  ansible.builtin.stat:
+    path: "{{ item.item }}"
+  loop: "{{ standard_log_files.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  register: log_files_verified
+  changed_when: false
+  failed_when: false
+  when: section6_logging['6_1_4_1_logfile_permissions'].enabled | default(true)
+
+- name: "6.1.4.1 | ALERT | Report any remaining permission issues"
+  ansible.builtin.debug:
+    msg: |
+      6.1.4.1 | WARNING: The following files may still have incorrect permissions:
+      {% for item in log_files_verified.results %}
+      {% if item.stat is defined and item.stat.exists %}
+      {% if item.stat.mode != '0640' and item.stat.mode != '0600' and item.stat.mode != '0660' %}
+        - {{ item.item }}: mode={{ item.stat.mode }}, owner={{ item.stat.pw_name }}, group={{ item.stat.gr_name }}
+      {% endif %}
+      {% endif %}
+      {% endfor %}
+  when:
+    - not ansible_check_mode
+    - log_files_verified.results | length > 0
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_4
+    - cis_6_1_4_1
+    - logging
+    - permissions
+    - warning

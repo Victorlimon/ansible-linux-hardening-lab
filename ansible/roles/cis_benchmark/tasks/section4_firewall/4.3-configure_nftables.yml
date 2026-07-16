@@ -1,0 +1,195 @@
+---
+# =============================================================================
+# CIS Ubuntu 24.04 LTS / Debian 12 Benchmark v1.0.0 - Section 4.3: Configure nftables
+# Nota: Este archivo se ejecuta solo si cis_firewall_engine == 'nftables'
+#       (auto-seleccionado para Debian 12)
+# =============================================================================
+
+- name: "CIS 4.3.1 | Remediation | Ensure nftables is installed"
+  when:
+    - cis_4_3_1_nftables_install | default(true)
+    - "'nftables' not in ansible_facts.packages"
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+    update_cache: yes
+  tags: ['cis_sec4', 'cis_4.3.1', 'nftables', 'level1', 'NIST800-53R5_CA-9']
+
+- name: "CIS 4.3.2 | Remediation | Ensure ufw is uninstalled or disabled with nftables"
+  when:
+    - cis_4_3_2_nftables_disable_ufw | default(true)
+    - "'ufw' in ansible_facts.packages"
+  block:
+    - name: "CIS 4.3.2 | Remediation | Remove ufw package"
+      ansible.builtin.apt:
+        name: ufw
+        state: absent
+        purge: yes
+      when: cis_nftables_remove_ufw | default(true)
+
+    - name: "CIS 4.3.2 | Remediation | Disable and mask ufw service"
+      ansible.builtin.systemd:
+        name: ufw
+        state: stopped
+        enabled: false
+        masked: true
+      when: not cis_nftables_remove_ufw | default(true)
+  tags: ['cis_sec4', 'cis_4.3.2', 'nftables', 'level1', 'NIST800-53R5_SC-7']
+
+- name: "CIS 4.3.3 | Remediation | Ensure iptables are flushed with nftables"
+  when: cis_4_3_3_nftables_flush_iptables | default(true)
+  block:
+    - name: "CIS 4.3.3 | Remediation | Flush iptables rules"
+      ansible.builtin.iptables:
+        chain: "{{ item }}"
+        flush: yes
+      loop: ['INPUT', 'FORWARD', 'OUTPUT', 'PREROUTING', 'POSTROUTING']
+      ignore_errors: true
+
+    - name: "CIS 4.3.3 | Remediation | Flush ip6tables rules"
+      ansible.builtin.iptables:
+        chain: "{{ item }}"
+        flush: yes
+        ip_version: ipv6
+      loop: ['INPUT', 'FORWARD', 'OUTPUT', 'PREROUTING', 'POSTROUTING']
+      ignore_errors: true
+  tags: ['cis_sec4', 'cis_4.3.3', 'nftables', 'level1', 'NIST800-53R5_CA-9']
+
+- name: "CIS 4.3.4 | Remediation | Ensure a nftables table exists"
+  when: cis_4_3_4_nftables_table_exists | default(true)
+  block:
+    - name: "CIS 4.3.4 | AUDIT | Check if nftables table exists"
+      ansible.builtin.shell: nft list tables | grep -q "{{ cis_nftables_table_name }}"
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      register: _cis_nft_table_exists
+
+    - name: "CIS 4.3.4 | Remediation | Create nftables table if not exists"
+      when: _cis_nft_table_exists.rc != 0
+      ansible.builtin.command: "nft create table {{ cis_nftables_family }} {{ cis_nftables_table_name }}"
+      changed_when: true
+  tags: ['cis_sec4', 'cis_4.3.4', 'nftables', 'level1', 'NIST800-53R5_CA-9']
+
+- name: "CIS 4.3.5 | Remediation | Ensure nftables base chains exist"
+  when: cis_4_3_5_nftables_base_chains | default(true)
+  block:
+    - name: "CIS 4.3.5 | Remediation | Create input base chain"
+      ansible.builtin.command: >
+        nft create chain {{ cis_nftables_family }} {{ cis_nftables_table_name }} input
+        { type filter hook input priority 0\; }
+      changed_when: true
+      failed_when: false
+
+    - name: "CIS 4.3.5 | Remediation | Create forward base chain"
+      ansible.builtin.command: >
+        nft create chain {{ cis_nftables_family }} {{ cis_nftables_table_name }} forward
+        { type filter hook forward priority 0\; }
+      changed_when: true
+      failed_when: false
+
+    - name: "CIS 4.3.5 | Remediation | Create output base chain"
+      ansible.builtin.command: >
+        nft create chain {{ cis_nftables_family }} {{ cis_nftables_table_name }} output
+        { type filter hook output priority 0\; }
+      changed_when: true
+      failed_when: false
+  tags: ['cis_sec4', 'cis_4.3.5', 'nftables', 'level1', 'NIST800-53R5_CA-9']
+
+- name: "CIS 4.3.6 | Remediation | Ensure nftables loopback traffic is configured"
+  when: cis_4_3_6_nftables_loopback | default(true)
+  block:
+    - name: "CIS 4.3.6 | Remediation | Accept loopback interface traffic"
+      ansible.builtin.command: >
+        nft add rule {{ cis_nftables_family }} {{ cis_nftables_table_name }} input
+        iif "lo" accept
+      changed_when: true
+
+    - name: "CIS 4.3.6 | Remediation | Drop spoofed IPv4 loopback traffic"
+      ansible.builtin.command: >
+        nft add rule {{ cis_nftables_family }} {{ cis_nftables_table_name }} input
+        ip saddr 127.0.0.0/8 counter drop
+      changed_when: true
+
+    - name: "CIS 4.3.6 | Remediation | Drop spoofed IPv6 loopback traffic"
+      when: ansible_facts.default_ipv6.address is defined
+      ansible.builtin.command: >
+        nft add rule {{ cis_nftables_family }} {{ cis_nftables_table_name }} input
+        ip6 saddr ::1 counter drop
+      changed_when: true
+  tags: ['cis_sec4', 'cis_4.3.6', 'nftables', 'level1', 'NIST800-53R5_SC-7']
+
+- name: "CIS 4.3.7 | Remediation | Ensure nftables outbound and established connections are configured"
+  when: cis_4_3_7_nftables_outbound | default(true)
+  block:
+    - name: "CIS 4.3.7 | Remediation | Accept established TCP connections (input)"
+      ansible.builtin.command: >
+        nft add rule {{ cis_nftables_family }} {{ cis_nftables_table_name }} input
+        ip protocol tcp ct state established accept
+      changed_when: true
+
+    - name: "CIS 4.3.7 | Remediation | Accept established UDP connections (input)"
+      ansible.builtin.command: >
+        nft add rule {{ cis_nftables_family }} {{ cis_nftables_table_name }} input
+        ip protocol udp ct state established accept
+      changed_when: true
+
+    - name: "CIS 4.3.7 | Remediation | Accept new/established TCP connections (output)"
+      ansible.builtin.command: >
+        nft add rule {{ cis_nftables_family }} {{ cis_nftables_table_name }} output
+        ip protocol tcp ct state established,related,new accept
+      changed_when: true
+
+    - name: "CIS 4.3.7 | Remediation | Accept new/established UDP connections (output)"
+      ansible.builtin.command: >
+        nft add rule {{ cis_nftables_family }} {{ cis_nftables_table_name }} output
+        ip protocol udp ct state established,related,new accept
+      changed_when: true
+  tags: ['cis_sec4', 'cis_4.3.7', 'nftables', 'level1', 'NIST800-53R5_SC-7']
+
+- name: "CIS 4.3.8 | Remediation | Ensure nftables default deny firewall policy"
+  when: cis_4_3_8_nftables_default_deny | default(true)
+  block:
+    - name: "CIS 4.3.8 | Remediation | Set input chain policy to drop"
+      ansible.builtin.command: >
+        nft chain {{ cis_nftables_family }} {{ cis_nftables_table_name }} input
+        { policy drop\; }
+      changed_when: true
+
+    - name: "CIS 4.3.8 | Remediation | Set forward chain policy to drop"
+      ansible.builtin.command: >
+        nft chain {{ cis_nftables_family }} {{ cis_nftables_table_name }} forward
+        { policy drop\; }
+      changed_when: true
+
+    - name: "CIS 4.3.8 | Remediation | Set output chain policy to drop"
+      ansible.builtin.command: >
+        nft chain {{ cis_nftables_family }} {{ cis_nftables_table_name }} output
+        { policy drop\; }
+      changed_when: true
+  tags: ['cis_sec4', 'cis_4.3.8', 'nftables', 'level1', 'NIST800-53R5_SC-7']
+
+- name: "CIS 4.3.9 | Remediation | Ensure nftables service is enabled"
+  when: cis_4_3_9_nftables_service_enabled | default(true)
+  ansible.builtin.systemd:
+    name: nftables
+    state: started
+    enabled: true
+  tags: ['cis_sec4', 'cis_4.3.9', 'nftables', 'level1', 'NIST800-53R5_CA-9']
+
+- name: "CIS 4.3.10 | Remediation | Ensure nftables rules are permanent"
+  when: cis_4_3_10_nftables_rules_permanent | default(true)
+  block:
+    - name: "CIS 4.3.10 | Remediation | Save current nftables ruleset"
+      ansible.builtin.command: nft list ruleset > /etc/nftables.rules
+      changed_when: true
+
+    - name: "CIS 4.3.10 | Remediation | Ensure /etc/nftables.conf includes rules file"
+      ansible.builtin.lineinfile:
+        path: /etc/nftables.conf
+        regexp: '^include "/etc/nftables.rules"'
+        line: 'include "/etc/nftables.rules"'
+        create: yes
+        mode: '0644'
+      notify: reload_nftables
+  tags: ['cis_sec4', 'cis_4.3.10', 'nftables', 'level1', 'NIST800-53R5_CA-9']

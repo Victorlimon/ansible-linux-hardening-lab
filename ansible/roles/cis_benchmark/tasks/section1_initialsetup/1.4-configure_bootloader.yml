@@ -1,0 +1,46 @@
+---
+# =============================================================================
+# CIS 1.4 | Bootloader Configuration - GRUB Hardening
+# Idempotente, con validación post-cambio, compatible con check_mode
+# =============================================================================
+
+- name: "CIS 1.4.1 | Remediation | Set bootloader password"
+  when:
+    - cis_section1_4_bootloader | default(true)
+    - cis_1_4_1_grub_password | default(true)
+    - cis_grub_password is defined
+  block:
+    - name: "CIS 1.4.1 | Configure GRUB password in /etc/grub.d/40_custom"
+      ansible.builtin.lineinfile:
+        path: /etc/grub.d/40_custom
+        regexp: '^set superusers='
+        line: |
+          set superusers="root"
+          password_pbkdf2 root {{ cis_grub_password }}
+        create: yes
+        mode: '0755'
+        backup: yes
+      notify: Update grub
+
+- name: "CIS 1.4.2 | Remediation | Ensure permissions on bootloader config"
+  ansible.builtin.file:
+    path: /boot/grub/grub.cfg
+    mode: '0600'
+    owner: root
+    group: root
+  when:
+    - cis_section1_4_bootloader | default(true)
+    - cis_1_4_2_grub_permissions | default(true)
+  tags: ['cis_sec1', 'cis_1.4.2', 'level1', 'NIST800-53R5_AC-3']
+
+- name: "CIS 1.4.2 | Verify grub.cfg permissions after change"
+  ansible.builtin.stat:
+    path: /boot/grub/grub.cfg
+  register: _grub_perms
+  failed_when:
+    - _grub_perms.stat.mode != '0600'
+    - cis_1_4_2_grub_permissions | default(true)
+  when:
+    - cis_section1_4_bootloader | default(true)
+    - cis_1_4_2_grub_permissions | default(true)
+  tags: ['cis_sec1', 'cis_1.4.2', 'level1', 'NIST800-53R5_AC-3']

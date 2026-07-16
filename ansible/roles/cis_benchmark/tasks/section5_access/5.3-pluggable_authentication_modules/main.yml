@@ -1,0 +1,20 @@
+---
+# =============================================================================
+# CIS Ubuntu 24.04 LTS / Debian 12 Benchmark v1.0.0 - Section 5.3: PAM
+# Entry point - importa todos los sub-módulos con tags y condicionales
+# =============================================================================
+
+- name: Include 5.3.1 configure PAM software packages
+  when: cis_5_3_1_pam_software | default(true)
+  ansible.builtin.import_tasks: 5.3.1-configure_pam_software_packages.yml
+  tags: ['cis_sec5', 'cis_5.3.1', 'pam', 'packages']
+
+- name: Include 5.3.2 configure PAM auth-update profiles
+  when: cis_5_3_2_pam_auth_update | default(true)
+  ansible.builtin.import_tasks: 5.3.2-configure_pam_auth_update_profiles.yml
+  tags: ['cis_sec5', 'cis_5.3.2', 'pam', 'auth_update']
+
+- name: Include 5.3.3 configure PAM arguments
+  when: cis_5_3_3_pam_arguments | default(true)
+  ansible.builtin.import_tasks: 5.3.3-configure_pam_arguments.yml
+  tags: ['cis_sec5', 'cis_5.3.3', 'pam', 'arguments']

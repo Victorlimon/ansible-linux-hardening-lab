@@ -1,0 +1,749 @@
+---
+# =================================================================
+# CIS Benchmark 6.2.3: Configure auditd Rules
+# Ubuntu 24.04 LTS - Idempotent Implementation
+# NOTE: For 64-bit systems, rules must be defined for both b32 and b64 arch
+# =================================================================
+
+# Helper: Get UID_MIN for non-privileged user filtering
+- name: "6.2.3 | HELPER | Get UID_MIN from login.defs"
+  ansible.builtin.command: awk '/^\s*UID_MIN/{print $2}' /etc/login.defs
+  register: uid_min_value
+  changed_when: false
+  failed_when: false
+  when: not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - auditd
+    - rules
+    - helper
+
+# -----------------------------------------------------------------
+# 6.2.3.1 | Ensure changes to system administration scope (sudoers) is collected
+# -----------------------------------------------------------------
+- name: "6.2.3.1 | Ensure changes to system administration scope (sudoers) is collected"
+  block:
+    - name: "AUDIT | Check if sudoers rules exist"
+      ansible.builtin.command: grep -E '^-w\s+/etc/sudoers.*-k\s+scope' /etc/audit/rules.d/*.rules
+      register: sudoers_rules_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add audit rules for /etc/sudoers and /etc/sudoers.d"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-scope.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # NOTE: validate removed - grep with spaces in pattern causes parsing issues in VMs
+        # lineinfile with regexp is already idempotent for this use case
+      loop:
+        - "-w /etc/sudoers -p wa -k scope"
+        - "-w /etc/sudoers.d -p wa -k scope"
+      when: 
+        - item not in sudoers_rules_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_1_sudoers_scope'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_1
+    - auditd
+    - rules
+    - sudoers
+    - scope
+
+# -----------------------------------------------------------------
+# 6.2.3.2 | Ensure actions as another user are always logged
+# -----------------------------------------------------------------
+- name: "6.2.3.2 | Ensure actions as another user are always logged"
+  block:
+    - name: "AUDIT | Check user_emulation rules"
+      ansible.builtin.command: grep -E '^-a.*execve.*-k\s+user_emulation' /etc/audit/rules.d/*.rules
+      register: user_emul_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add user emulation audit rules (b64 and b32)"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-user_emulation.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # NOTE: validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-a always,exit -F arch=b64 -C euid!=uid -F auid!=unset -S execve -k user_emulation"
+        - "-a always,exit -F arch=b32 -C euid!=uid -F auid!=unset -S execve -k user_emulation"
+      when: 
+        - item not in user_emul_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_2_user_emulation'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_2
+    - auditd
+    - rules
+    - user_emulation
+
+# -----------------------------------------------------------------
+# 6.2.3.3 | Ensure events that modify the sudo log file are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.3 | Ensure events that modify the sudo log file are collected"
+  block:
+    - name: "AUDIT | Get sudo log file path from sudoers"
+      ansible.builtin.shell: grep -r logfile /etc/sudoers* 2>/dev/null | sed -e 's/.*logfile=//;s/,.*//' -e 's/"//g' | head -1
+      register: sudo_log_path
+      changed_when: false
+      failed_when: false
+
+    - name: "AUDIT | Check if sudo_log rule exists"
+      ansible.builtin.command: "grep -E '^-w\\s+{{ sudo_log_path.stdout | regex_replace('/', '\\\\/') }}.*-k\\s+sudo_log_file' /etc/audit/rules.d/*.rules"
+      register: sudo_log_check
+      changed_when: false
+      failed_when: false
+      when: sudo_log_path.stdout | length > 0
+
+    - name: "REMEDIATE | Add audit rule for sudo log file"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-sudo.rules
+        line: "-w {{ sudo_log_path.stdout }} -p wa -k sudo_log_file"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      when: 
+        - sudo_log_path.stdout | length > 0
+        - sudo_log_check is skipped or "-w {{ sudo_log_path.stdout }} -p wa -k sudo_log_file" not in sudo_log_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_3_sudo_log'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_3
+    - auditd
+    - rules
+    - sudo_log
+
+# -----------------------------------------------------------------
+# 6.2.3.4 | Ensure events that modify date and time information are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.4 | Ensure events that modify date and time information are collected"
+  block:
+    - name: "AUDIT | Check time-change rules"
+      ansible.builtin.command: grep -E '^-a.*(adjtimex|settimeofday|clock_settime).*-k\s+time-change' /etc/audit/rules.d/*.rules
+      register: time_change_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add time change audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-time-change.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+        # lineinfile with regexp is already idempotent for this use case
+      loop:
+        - "-a always,exit -F arch=b64 -S adjtimex,settimeofday -k time-change"
+        - "-a always,exit -F arch=b32 -S adjtimex,settimeofday -k time-change"
+        - "-a always,exit -F arch=b64 -S clock_settime -F a0=0x0 -k time-change"
+        - "-a always,exit -F arch=b32 -S clock_settime -F a0=0x0 -k time-change"
+        - "-w /etc/localtime -p wa -k time-change"
+      when: 
+        - item not in time_change_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_4_time_change'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_4
+    - auditd
+    - rules
+    - time_change
+
+# -----------------------------------------------------------------
+# 6.2.3.5 | Ensure events that modify the system's network environment are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.5 | Ensure events that modify the system's network environment are collected"
+  block:
+    - name: "AUDIT | Check system-locale rules"
+      ansible.builtin.command: grep -E '^-a.*(sethostname|setdomainname).*-k\s+system-locale' /etc/audit/rules.d/*.rules
+      register: sys_locale_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add network environment audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-system_locale.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-a always,exit -F arch=b64 -S sethostname,setdomainname -k system-locale"
+        - "-a always,exit -F arch=b32 -S sethostname,setdomainname -k system-locale"
+        - "-w /etc/issue -p wa -k system-locale"
+        - "-w /etc/issue.net -p wa -k system-locale"
+        - "-w /etc/hosts -p wa -k system-locale"
+        - "-w /etc/networks -p wa -k system-locale"
+        - "-w /etc/network -p wa -k system-locale"
+        - "-w /etc/netplan -p wa -k system-locale"
+      when: 
+        - item not in sys_locale_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_5_system_locale'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_5
+    - auditd
+    - rules
+    - network
+    - locale
+
+# -----------------------------------------------------------------
+# 6.2.3.6 | Ensure use of privileged commands are collected
+# NOTE: This is resource-intensive; exclude large/noexec partitions
+# -----------------------------------------------------------------
+- name: "6.2.3.6 | Ensure use of privileged commands are collected"
+  block:
+    - name: "AUDIT | Find privileged commands (setuid/setgid)"
+      ansible.builtin.shell: |
+        findmnt -n -l -k -it $(awk '/nodev/ { print $2 }' /proc/filesystems | paste -sd,) | grep -Pv "noexec|nosuid" | awk '{print $1}' | while read PART; do
+          find "$PART" -xdev -perm /6000 -type f 2>/dev/null
+        done | head -100
+      register: privileged_cmds
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add audit rules for privileged commands"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-privileged.rules
+        line: "-a always,exit -F path={{ item }} -F perm=x -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k privileged"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+      loop: "{{ privileged_cmds.stdout_lines | default([]) }}"
+      when: 
+        - item not in existing_priv_rules.stdout | default('')
+      notify: Load audit rules
+      ignore_errors: true  # May have many files; continue on error
+
+    - name: "AUDIT | Check existing privileged rules"
+      ansible.builtin.command: grep -E '^-a.*perm=x.*-k\s+privileged' /etc/audit/rules.d/50-privileged.rules
+      register: existing_priv_rules
+      changed_when: false
+      failed_when: false
+  when: 
+    - section6_logging['6_2_3_6_privileged_cmds'].enabled | default(false)  # Disabled by default due to performance
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_6
+    - auditd
+    - rules
+    - privileged
+    - performance_warning
+
+# -----------------------------------------------------------------
+# 6.2.3.7 | Ensure unsuccessful file access attempts are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.7 | Ensure unsuccessful file access attempts are collected"
+  block:
+    - name: "AUDIT | Check access failure rules"
+      ansible.builtin.command: grep -E '^-a.*(creat|open|openat|truncate|ftruncate).*exit=-E(Access|Perm).*-k\s+access' /etc/audit/rules.d/*.rules
+      register: access_fail_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add unsuccessful file access audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-access.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-a always,exit -F arch=b64 -S creat,open,openat,truncate,ftruncate -F exit=-EACCES -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k access"
+        - "-a always,exit -F arch=b64 -S creat,open,openat,truncate,ftruncate -F exit=-EPERM -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k access"
+        - "-a always,exit -F arch=b32 -S creat,open,openat,truncate,ftruncate -F exit=-EACCES -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k access"
+        - "-a always,exit -F arch=b32 -S creat,open,openat,truncate,ftruncate -F exit=-EPERM -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k access"
+      when: 
+        - item not in access_fail_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_7_access_failures'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_7
+    - auditd
+    - rules
+    - access
+    - failures
+
+# -----------------------------------------------------------------
+# 6.2.3.8 | Ensure events that modify user/group information are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.8 | Ensure events that modify user/group information are collected"
+  block:
+    - name: "AUDIT | Check identity rules"
+      ansible.builtin.command: grep -E '^-w\s+/(etc/group|etc/passwd|etc/gshadow|etc/shadow).*-k\s+identity' /etc/audit/rules.d/*.rules
+      register: identity_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add user/group info audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-identity.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-w /etc/group -p wa -k identity"
+        - "-w /etc/passwd -p wa -k identity"
+        - "-w /etc/gshadow -p wa -k identity"
+        - "-w /etc/shadow -p wa -k identity"
+        - "-w /etc/security/opasswd -p wa -k identity"
+        - "-w /etc/nsswitch.conf -p wa -k identity"
+        - "-w /etc/pam.conf -p wa -k identity"
+        - "-w /etc/pam.d -p wa -k identity"
+      when: 
+        - item not in identity_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_8_identity'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_8
+    - auditd
+    - rules
+    - identity
+    - users
+
+# -----------------------------------------------------------------
+# 6.2.3.9 | Ensure discretionary access control permission modification events are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.9 | Ensure discretionary access control permission modification events are collected"
+  block:
+    - name: "AUDIT | Check perm_mod rules"
+      ansible.builtin.command: grep -E '^-a.*(chmod|chown|setxattr).*-k\s+perm_mod' /etc/audit/rules.d/*.rules
+      register: perm_mod_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add permission modification audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-perm_mod.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-a always,exit -F arch=b64 -S chmod,fchmod,fchmodat -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -F key=perm_mod"
+        - "-a always,exit -F arch=b64 -S chown,fchown,lchown,fchownat -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -F key=perm_mod"
+        - "-a always,exit -F arch=b32 -S chmod,fchmod,fchmodat -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -F key=perm_mod"
+        - "-a always,exit -F arch=b32 -S lchown,fchown,chown,fchownat -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -F key=perm_mod"
+        - "-a always,exit -F arch=b64 -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -F key=perm_mod"
+        - "-a always,exit -F arch=b32 -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -F key=perm_mod"
+      when: 
+        - item not in perm_mod_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_9_perm_mod'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_9
+    - auditd
+    - rules
+    - permissions
+    - dac
+
+# -----------------------------------------------------------------
+# 6.2.3.10 | Ensure successful file system mounts are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.10 | Ensure successful file system mounts are collected"
+  block:
+    - name: "AUDIT | Check mounts rules"
+      ansible.builtin.command: grep -E '^-a.*-S\s+mount.*-k\s+mounts' /etc/audit/rules.d/*.rules
+      register: mounts_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add mount audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-mounts.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-a always,exit -F arch=b64 -S mount -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k mounts"
+        - "-a always,exit -F arch=b32 -S mount -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k mounts"
+      when: 
+        - item not in mounts_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_10_mounts'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_10
+    - auditd
+    - rules
+    - mounts
+    - filesystem
+
+# -----------------------------------------------------------------
+# 6.2.3.11 | Ensure session initiation information is collected
+# -----------------------------------------------------------------
+- name: "6.2.3.11 | Ensure session initiation information is collected"
+  block:
+    - name: "AUDIT | Check session rules"
+      ansible.builtin.command: grep -E '^-w\s+/(var/run/utmp|var/log/wtmp|var/log/btmp).*-k\s+session' /etc/audit/rules.d/*.rules
+      register: session_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add session audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-session.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-w /var/run/utmp -p wa -k session"
+        - "-w /var/log/wtmp -p wa -k session"
+        - "-w /var/log/btmp -p wa -k session"
+      when: 
+        - item not in session_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_11_session'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_11
+    - auditd
+    - rules
+    - session
+    - logins
+
+# -----------------------------------------------------------------
+# 6.2.3.12 | Ensure login and logout events are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.12 | Ensure login and logout events are collected"
+  block:
+    - name: "AUDIT | Check logins rules"
+      ansible.builtin.command: grep -E '^-w\s+/(var/log/lastlog|var/run/faillock).*-k\s+logins' /etc/audit/rules.d/*.rules
+      register: logins_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add login/logout audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-login.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-w /var/log/lastlog -p wa -k logins"
+        - "-w /var/run/faillock -p wa -k logins"
+      when: 
+        - item not in logins_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_12_logins'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_12
+    - auditd
+    - rules
+    - logins
+    - authentication
+
+# -----------------------------------------------------------------
+# 6.2.3.13 | Ensure file deletion events by users are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.13 | Ensure file deletion events by users are collected"
+  block:
+    - name: "AUDIT | Check delete rules"
+      ansible.builtin.command: grep -E '^-a.*(unlink|rename).*-k\s+delete' /etc/audit/rules.d/*.rules
+      register: delete_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add file deletion audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-delete.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-a always,exit -F arch=b64 -S rename,unlink,unlinkat,renameat -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -F key=delete"
+        - "-a always,exit -F arch=b32 -S rename,unlink,unlinkat,renameat -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -F key=delete"
+      when: 
+        - item not in delete_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_13_delete'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_13
+    - auditd
+    - rules
+    - delete
+    - files
+
+# -----------------------------------------------------------------
+# 6.2.3.14 | Ensure events that modify the system's Mandatory Access Controls are collected
+# -----------------------------------------------------------------
+- name: "6.2.3.14 | Ensure events that modify the system's Mandatory Access Controls are collected"
+  block:
+    - name: "AUDIT | Check MAC-policy rules"
+      ansible.builtin.command: grep -E '^-w\s+/etc/apparmor.*-k\s+MAC-policy' /etc/audit/rules.d/*.rules
+      register: mac_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add MAC policy audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-MAC-policy.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-w /etc/apparmor/ -p wa -k MAC-policy"
+        - "-w /etc/apparmor.d/ -p wa -k MAC-policy"
+      when: 
+        - item not in mac_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_14_mac_policy'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_14
+    - auditd
+    - rules
+    - mac
+    - apparmor
+
+# -----------------------------------------------------------------
+# 6.2.3.15-6.2.3.18 | Ensure successful/unsuccessful attempts to use privileged commands are collected
+# Grouped for efficiency: chcon, setfacl, chacl, usermod
+# -----------------------------------------------------------------
+- name: "6.2.3.15-18 | Ensure privileged command usage is collected (chcon, setfacl, chacl, usermod)"
+  block:
+    - name: "REMEDIATE | Add audit rules for privileged commands"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-perm_chng.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        # 6.2.3.15 - chcon
+        - "-a always,exit -F path=/usr/bin/chcon -F perm=x -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k perm_chng"
+        # 6.2.3.16 - setfacl
+        - "-a always,exit -F path=/usr/bin/setfacl -F perm=x -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k perm_chng"
+        # 6.2.3.17 - chacl
+        - "-a always,exit -F path=/usr/bin/chacl -F perm=x -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k perm_chng"
+        # 6.2.3.18 - usermod
+        - "-a always,exit -F path=/usr/sbin/usermod -F perm=x -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k usermod"
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_15_18_priv_commands'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_15
+    - cis_6_2_3_16
+    - cis_6_2_3_17
+    - cis_6_2_3_18
+    - auditd
+    - rules
+    - privileged_commands
+
+# -----------------------------------------------------------------
+# 6.2.3.19 | Ensure kernel module loading unloading and modification is collected
+# -----------------------------------------------------------------
+- name: "6.2.3.19 | Ensure kernel module loading unloading and modification is collected"
+  block:
+    - name: "AUDIT | Check kernel_modules rules"
+      ansible.builtin.command: grep -E '^-a.*(init_module|finit_module|delete_module).*-k\s+kernel_modules' /etc/audit/rules.d/*.rules
+      register: kernel_mod_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add kernel module audit rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/50-kernel_modules.rules
+        line: "{{ item }}"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      loop:
+        - "-a always,exit -F arch=b64 -S init_module,finit_module,delete_module,create_module,query_module -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k kernel_modules"
+        - "-a always,exit -F path=/usr/bin/kmod -F perm=x -F auid>={{ uid_min_value.stdout | default(1000) }} -F auid!=unset -k kernel_modules"
+      when: 
+        - item not in kernel_mod_check.stdout
+      notify: Load audit rules
+  when: 
+    - section6_logging['6_2_3_19_kernel_modules'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_19
+    - auditd
+    - rules
+    - kernel
+    - modules
+
+# -----------------------------------------------------------------
+# 6.2.3.20 | Ensure the audit configuration is immutable (Automated)
+# WARNING: Requires reboot to take effect; placed last in rules file
+# -----------------------------------------------------------------
+- name: "6.2.3.20 | Ensure the audit configuration is immutable"
+  block:
+    - name: "AUDIT | Check if immutable flag is set"
+      ansible.builtin.command: grep -E '^-e\s+2\s*$' /etc/audit/rules.d/99-finalize.rules
+      register: immutable_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Add immutable flag to finalize rules"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/rules.d/99-finalize.rules
+        line: "-e 2"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        insertafter: EOF
+        # validate removed - grep with spaces in pattern causes parsing issues in VMs
+      when: immutable_check.rc != 0
+      notify: "Load audit rules and warn reboot"  # Fixed: Handler name must match exactly (case-sensitive)
+  when: 
+    - section6_logging['6_2_3_20_immutable'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_20
+    - auditd
+    - rules
+    - immutable
+    - reboot_required
+
+# -----------------------------------------------------------------
+# 6.2.3.21 | Ensure the running and on disk configuration is the same (Manual)
+# This is a manual check; we provide automation to sync if needed
+# -----------------------------------------------------------------
+- name: "6.2.3.21 | Ensure the running and on disk configuration is the same"
+  block:
+    - name: "AUDIT | Check if rules need to be loaded"
+      ansible.builtin.command: augenrules --check
+      register: augenrules_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
+
+    - name: "REMEDIATE | Load audit rules if out of sync"
+      ansible.builtin.command: augenrules --load
+      when: 
+        - augenrules_check.rc != 0 or 'No change' not in augenrules_check.stdout
+      changed_when: true
+      notify: "Restart auditd"  # Fixed: Handler name must match exactly; 'Restart auditd if needed' does not exist
+  when: 
+    - section6_logging['6_2_3_21_sync_rules'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_3
+    - cis_6_2_3_21
+    - auditd
+    - rules
+    - sync
+    - manual_check

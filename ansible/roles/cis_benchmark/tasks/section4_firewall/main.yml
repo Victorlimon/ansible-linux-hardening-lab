@@ -1,0 +1,49 @@
+---
+# =============================================================================
+# CIS Ubuntu 24.04 LTS / Debian 12 Benchmark v1.0.0 - Section 4: Firewall
+# Entry point - Auto-selecciona motor por distribución:
+#   Ubuntu 24.04 → ufw
+#   Debian 12    → nftables
+# Override manual: definir cis_firewall_engine en group_vars/
+# =============================================================================
+
+- name: Gather package facts for Section 4
+  ansible.builtin.package_facts:
+    manager: auto
+  tags: always
+
+- name: Gather service facts for Section 4
+  ansible.builtin.service_facts:
+  tags: always
+
+- name: "CIS 4 | REPORT | Display selected firewall engine"
+  ansible.builtin.debug:
+    msg: "Firewall engine selected: {{ cis_firewall_engine }} (detected distro: {{ ansible_facts.distribution }})"
+  tags: ['cis_sec4', 'report']
+
+# --- 4.1 Single Firewall Utility ---
+- name: Include 4.1 configure single firewall utility
+  when: cis_4_1_single_utility | default(true)
+  ansible.builtin.import_tasks: 4.1-configure_single_firewall_utility.yml
+  tags: ['cis_sec4', 'cis_4.1', 'firewall']
+
+# --- 4.2 UFW (Ubuntu 24.04 default) ---
+# Se ejecuta solo si: cis_firewall_engine == 'ufw' (auto o manual)
+- name: Include 4.2 configure uncomplicated firewall
+  when: cis_firewall_engine == 'ufw'
+  ansible.builtin.import_tasks: 4.2-configure_uncomplicated_firewall.yml
+  tags: ['cis_sec4', 'cis_4.2', 'ufw', 'ubuntu']
+
+# --- 4.3 nftables (Debian 12 default) ---
+# Se ejecuta solo si: cis_firewall_engine == 'nftables' (auto o manual)
+- name: Include 4.3 configure nftables
+  when: cis_firewall_engine == 'nftables'
+  ansible.builtin.import_tasks: 4.3-configure_nftables.yml
+  tags: ['cis_sec4', 'cis_4.3', 'nftables', 'debian']
+
+# --- 4.4 iptables (Legacy/Manual override only) ---
+# Se ejecuta solo si: cis_firewall_engine == 'iptables' (override manual)
+- name: Include 4.4 configure iptables
+  when: cis_firewall_engine == 'iptables'
+  ansible.builtin.import_tasks: 4.4-configure_iptables/main.yml
+  tags: ['cis_sec4', 'cis_4.4', 'iptables', 'legacy']

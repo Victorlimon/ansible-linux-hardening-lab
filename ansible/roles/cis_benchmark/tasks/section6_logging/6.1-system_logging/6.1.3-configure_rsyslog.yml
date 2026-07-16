@@ -1,0 +1,323 @@
+---
+# =================================================================
+# CIS Benchmark Section 6.1.3: Configure rsyslog
+# Ubuntu 24.04 LTS - Ansible Tasks
+# Basado en CIS Benchmark v1.0.0
+# NOTE: All systemd-dependent tasks check systemd_unresponsive fact first
+# =================================================================
+
+# =================================================================
+# 6.1.3.1 | Ensure rsyslog is installed (Automated)
+# =================================================================
+- name: "6.1.3.1 | AUDIT | Check if rsyslog is installed"
+  ansible.builtin.command: dpkg-query -s rsyslog
+  register: rsyslog_check
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+
+- name: "6.1.3.1 | REMEDIATE | Install rsyslog package"
+  ansible.builtin.apt:
+    name: rsyslog
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - section6_logging['6_1_3_1_rsyslog_installed'].enabled | default(true)
+    - rsyslog_check is defined
+    - (rsyslog_check.rc | default(1)) != 0
+    - not (systemd_unresponsive | default(false))
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_3
+    - cis_6_1_3_1
+    - rsyslog
+    - install
+  ignore_errors: true
+
+- name: "6.1.3.1 | REPORT | rsyslog installation status"
+  ansible.builtin.debug:
+    msg: "6.1.3.1 | rsyslog: {{ 'installed' if (rsyslog_check is defined and (rsyslog_check.rc | default(1)) == 0) else 'not installed' }}"
+  when: not ansible_check_mode
+
+
+# =================================================================
+# 6.1.3.2 | Ensure rsyslog service is enabled and active (Automated)
+# =================================================================
+- name: "6.1.3.2 | AUDIT | Check rsyslog service status via command"
+  ansible.builtin.command: systemctl is-active rsyslog.service
+  register: rsyslog_audit
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+  timeout: 3
+  when: 
+    - section6_logging['6_1_3_2_rsyslog_enabled'].enabled | default(true)
+    - not (systemd_unresponsive | default(false))
+
+- name: "6.1.3.2 | REMEDIATE | Ensure rsyslog service is enabled and active"
+  block:
+    - name: "6.1.3.2 | Enable and start via systemd module"
+      ansible.builtin.systemd:
+        name: rsyslog.service
+        state: started
+        enabled: true
+        unmasked: true
+      register: rsyslog_result
+      ignore_errors: true
+      failed_when: false
+      timeout: 10
+
+    - name: "6.1.3.2 | FALLBACK | Start via command if module failed"
+      ansible.builtin.command: systemctl start rsyslog.service
+      when:
+        - rsyslog_result is defined
+        - rsyslog_result.failed | default(true)
+        - rsyslog_result.msg is defined
+        - "'timed out' in rsyslog_result.msg or 'D-Bus' in rsyslog_result.msg"
+      changed_when: true
+      ignore_errors: true
+      failed_when: false
+      timeout: 10
+  when:
+    - section6_logging['6_1_3_2_rsyslog_enabled'].enabled | default(true)
+    - not (systemd_unresponsive | default(false))
+    - rsyslog_audit is defined
+    - ((rsyslog_audit.rc | default(1)) != 0) or ((rsyslog_audit.stdout | default('')) != "active")
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_3
+    - cis_6_1_3_2
+    - rsyslog
+    - service
+    - enable
+
+- name: "6.1.3.2 | REPORT | rsyslog service status"
+  ansible.builtin.debug:
+    msg: "6.1.3.2 | rsyslog: Active={{ rsyslog_audit.stdout | default('unknown') }}, Enabled={{ 'yes' if (rsyslog_audit.rc | default(1)) == 0 else 'no' }}"
+  when: not ansible_check_mode
+
+
+# =================================================================
+# 6.1.3.3 | Ensure journald is configured to send logs to rsyslog (Automated)
+# =================================================================
+- name: "6.1.3.3 | AUDIT | Check journald ForwardToSyslog for rsyslog integration"
+  ansible.builtin.command: grep -E "^ForwardToSyslog" /etc/systemd/journald.conf /etc/systemd/journald.conf.d/*.conf 2>/dev/null || true
+  register: journald_rsyslog_check
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+  when: section6_logging['6_1_3_3_journald_to_rsyslog'].enabled | default(true)
+
+- name: "6.1.3.3 | REMEDIATE | Configure journald to forward logs to rsyslog (idempotent)"
+  block:
+    - name: "6.1.3.3 | Create journald.conf.d directory"
+      ansible.builtin.file:
+        path: /etc/systemd/journald.conf.d
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      ignore_errors: true
+
+    - name: "6.1.3.3 | Set ForwardToSyslog=yes for rsyslog integration"
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/journald.conf.d/60-journald.conf
+        line: "ForwardToSyslog={{ section6_logging['6_1_3_3_journald_to_rsyslog'].ForwardToSyslog | default('yes') }}"
+        regexp: "^ForwardToSyslog="
+        create: true
+        mode: '0644'
+        owner: root
+        group: root
+        backup: true
+      notify: Restart journald
+      ignore_errors: true
+  when:
+    - section6_logging['6_1_3_3_journald_to_rsyslog'].enabled | default(true)
+    - (section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog')) == 'rsyslog'
+    - not (systemd_unresponsive | default(false))
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_3
+    - cis_6_1_3_3
+    - journald
+    - rsyslog
+    - forward
+
+
+# =================================================================
+# 6.1.3.4 | Ensure rsyslog log file creation mode is configured (Automated)
+# =================================================================
+- name: "6.1.3.4 | AUDIT | Check rsyslog file creation mode"
+  ansible.builtin.command: grep -E "^\$FileCreateMode" /etc/rsyslog.conf /etc/rsyslog.d/*.conf 2>/dev/null || true
+  register: rsyslog_filemode_check
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+
+- name: "6.1.3.4 | REMEDIATE | Configure rsyslog file creation mode (idempotent)"
+  ansible.builtin.lineinfile:
+    path: /etc/rsyslog.conf
+    line: "$FileCreateMode {{ section6_logging['6_1_3_4_rsyslog_filemode'].value | default('0640') }}"
+    regexp: '^\\$FileCreateMode'
+    backup: true
+  when:
+    - section6_logging['6_1_3_4_rsyslog_filemode'] is defined
+    - section6_logging['6_1_3_4_rsyslog_filemode'].enabled | default(true)
+    - not (systemd_unresponsive | default(false))
+  notify: Restart rsyslog
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_3
+    - cis_6_1_3_4
+    - rsyslog
+    - permissions
+  ignore_errors: true
+
+
+# =================================================================
+# 6.1.3.5 | Ensure rsyslog is configured to send logs to a remote host (Manual)
+# =================================================================
+- name: "6.1.3.5 | AUDIT | Check rsyslog remote logging configuration"
+  ansible.builtin.command: grep -E "^\*\.\\* @|^\*\.\\* @@|^\*\.\\* \*\:\*\:" /etc/rsyslog.conf /etc/rsyslog.d/*.conf 2>/dev/null || true
+  register: rsyslog_remote_check
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+
+- name: "6.1.3.5 | REMEDIATE | Configure rsyslog remote logging"
+  ansible.builtin.lineinfile:
+    path: "{{ section6_logging['6_1_3_5_rsyslog_remote'].config_file | default('/etc/rsyslog.d/60-remote.conf') }}"
+    line: "*.* {{ section6_logging['6_1_3_5_rsyslog_remote'].protocol | default('@@') }}{{ section6_logging['6_1_3_5_rsyslog_remote'].remote_host }}:{{ section6_logging['6_1_3_5_rsyslog_remote'].port | default(514) }}"
+    create: true
+    mode: '0644'
+    owner: root
+    group: root
+    backup: true
+  when:
+    - section6_logging['6_1_3_5_rsyslog_remote'].enabled | default(false)
+    - section6_logging['6_1_3_5_rsyslog_remote'].remote_host is defined
+    - not (systemd_unresponsive | default(false))
+  notify: Restart rsyslog
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_3
+    - cis_6_1_3_5
+    - rsyslog
+    - remote
+    - logging
+  ignore_errors: true
+
+
+# =================================================================
+# 6.1.3.6 | Ensure rsyslog is not configured to receive logs from remote clients (Automated)
+# =================================================================
+- name: "6.1.3.6 | AUDIT | Check if rsyslog is configured as a server"
+  ansible.builtin.command: grep -E "^\$ModLoad imtcp|^\$InputTCPServerRun|^\$ModLoad imudp|^\$UDPServerRun" /etc/rsyslog.conf /etc/rsyslog.d/*.conf 2>/dev/null || true
+  register: rsyslog_server_check
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+
+- name: "6.1.3.6 | REMEDIATE | Disable rsyslog server modules in main config (idempotent)"
+  ansible.builtin.replace:
+    path: /etc/rsyslog.conf
+    regexp: '^(\$ModLoad imtcp|\$InputTCPServerRun|\$ModLoad imudp|\$UDPServerRun)'
+    replace: '#\1'
+  when:
+    - section6_logging['6_1_3_6_rsyslog_no_server'].enabled | default(true)
+    - not (systemd_unresponsive | default(false))
+  notify: Restart rsyslog
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_3
+    - cis_6_1_3_6
+    - rsyslog
+    - security
+    - server
+  ignore_errors: true
+
+- name: "6.1.3.6 | REMEDIATE | Disable rsyslog server modules in conf.d (if directory exists)"
+  ansible.builtin.replace:
+    path: "{{ item }}"
+    regexp: '^(\$ModLoad imtcp|\$InputTCPServerRun|\$ModLoad imudp|\$UDPServerRun)'
+    replace: '#\1'
+  with_fileglob:
+    - /etc/rsyslog.d/*.conf
+  when:
+    - section6_logging['6_1_3_6_rsyslog_no_server'].enabled | default(true)
+    - not (systemd_unresponsive | default(false))
+  notify: Restart rsyslog
+  tags: [cis_6_1_3_6, rsyslog, security, server]
+  ignore_errors: true
+
+
+# =================================================================
+# 6.1.3.7 | Ensure rsyslog default file permissions are configured (Automated)
+# =================================================================
+- name: "6.1.3.7 | AUDIT | Check rsyslog default file permissions"
+  ansible.builtin.stat:
+    path: /var/log/syslog
+  register: syslog_stat
+  failed_when: false
+
+- name: "6.1.3.7 | REMEDIATE | Set secure permissions on rsyslog log files (idempotent)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: "{{ section6_logging['6_1_3_7_rsyslog_log_perms'].mode | default('0640') }}"
+    owner: "{{ section6_logging['6_1_3_7_rsyslog_log_perms'].owner | default('syslog') }}"
+    group: "{{ section6_logging['6_1_3_7_rsyslog_log_perms'].group | default('adm') }}"
+  loop:
+    - /var/log/syslog
+    - /var/log/auth.log
+    - /var/log/kern.log
+  when:
+    - section6_logging['6_1_3_7_rsyslog_log_perms'] is defined
+    - section6_logging['6_1_3_7_rsyslog_log_perms'].enabled | default(true)
+    - not (systemd_unresponsive | default(false))
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_3
+    - cis_6_1_3_7
+    - rsyslog
+    - permissions
+  ignore_errors: true
+
+
+# =================================================================
+# 6.1.3.8 | Ensure rsyslog log rotation is configured (Automated)
+# =================================================================
+- name: "6.1.3.8 | AUDIT | Check rsyslog logrotate configuration"
+  ansible.builtin.stat:
+    path: /etc/logrotate.d/rsyslog
+  register: rsyslog_logrotate_stat
+  failed_when: false
+
+- name: "6.1.3.8 | REMEDIATE | Ensure rsyslog logrotate config exists"
+  ansible.builtin.template:
+    src: logrotate-rsyslog.j2
+    dest: /etc/logrotate.d/rsyslog
+    mode: '0644'
+    owner: root
+    group: root
+    backup: true
+  when:
+    - section6_logging['6_1_3_8_rsyslog_logrotate'] is defined
+    - section6_logging['6_1_3_8_rsyslog_logrotate'].enabled | default(true)
+    - not rsyslog_logrotate_stat.stat.exists
+    - not (systemd_unresponsive | default(false))
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_3
+    - cis_6_1_3_8
+    - rsyslog
+    - logrotate
+  ignore_errors: true

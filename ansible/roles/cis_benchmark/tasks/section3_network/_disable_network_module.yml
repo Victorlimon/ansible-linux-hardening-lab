@@ -1,0 +1,43 @@
+---
+# =================================================================
+# Internal: Disable a single network kernel module
+# Expects variable: _module (module name)
+# =================================================================
+
+- name: "CIS 3.2 | AUDIT | Check if {{ _module }} module exists on the system"
+  ansible.builtin.shell: |
+    module_name="{{ _module }}"
+    module_name_slash="${module_name//-//}"
+    found=0
+    for base_path in {{ _cis_network_module_paths.stdout_lines | to_json }}; do
+      base_path=$(echo "$base_path" | tr -d '"')
+      if [ -d "$base_path/$module_name_slash" ] && [ -n "$(ls -A "$base_path/$module_name_slash" 2>/dev/null)" ]; then
+        found=1
+        break
+      fi
+    done
+    echo "$found"
+  changed_when: false
+  failed_when: false
+  register: _module_exists
+  tags: ['section3', 'network', 'cis_3.2', 'kernel_modules']
+
+- name: "CIS 3.2 | Remediation | Configure modprobe.d to disable {{ _module }}"
+  when: _module_exists.stdout | trim == '1'
+  ansible.builtin.copy:
+    dest: "/etc/modprobe.d/cis_{{ _module }}.conf"
+    content: |
+      install {{ _module }} /bin/true
+      blacklist {{ _module }}
+    owner: root
+    group: root
+    mode: '0644'
+  tags: ['section3', 'network', 'cis_3.2', 'kernel_modules']
+
+- name: "CIS 3.2 | Remediation | Unload {{ _module }} module from running kernel"
+  when: _module_exists.stdout | trim == '1'
+  community.general.modprobe:
+    name: "{{ _module }}"
+    state: absent
+  ignore_errors: true
+  tags: ['section3', 'network', 'cis_3.2', 'kernel_modules']

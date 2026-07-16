@@ -1,0 +1,54 @@
+---
+# =============================================================================
+# CIS Ubuntu 24.04 LTS Benchmark v1.0.0 - Section 1.1.1: Configure Filesystem Kernel Modules
+# Strategy:
+#   1. AUDIT: Gather module paths once
+#   2. For each module in cis_1_1_1_disable_filesystem_modules:
+#      a. Check if it exists on the system (shell + changed_when: false)
+#      b. If it exists, write /etc/modprobe.d/cis_<module>.conf
+#         with 'install <module> /bin/true' + 'blacklist <module>'
+#      c. Unload with community.general.modprobe (state: absent)
+#   3. Optional 1.1.1.10 manual review report
+# =============================================================================
+
+- name: "CIS 1.1.1 | AUDIT | Gather filesystem module paths"
+  ansible.builtin.shell: |
+    for mod_path in /lib/modules/*/kernel/fs /lib/modules/*/kernel/drivers; do
+      [ -d "$mod_path" ] && readlink -f "$mod_path" 2>/dev/null
+    done | sort -u
+  changed_when: false
+  failed_when: false
+  register: _cis_module_paths
+  tags: ['cis_sec1', 'cis_1.1.1', 'kernel_modules']
+
+- name: "CIS 1.1.1 | Remediation | Disable unused filesystem kernel modules"
+  ansible.builtin.include_tasks: _disable_module.yml
+  loop: "{{ cis_1_1_1_disable_filesystem_modules }}"
+  loop_control:
+    loop_var: _module
+    label: "{{ _module }}"
+  when: cis_1_1_1_kernel_modules | default(true)
+  tags: ['cis_sec1', 'cis_1.1.1', 'kernel_modules']
+
+- name: "CIS 1.1.1.10 | AUDIT | Find unused filesystem modules (Manual Review)"
+  when:
+    - cis_1_1_1_kernel_modules | default(true)
+    - cis_1_1_1_10_unused_modules_manual | default(false)
+  block:
+    - name: "CIS 1.1.1.10 | AUDIT | List all available filesystem modules"
+      ansible.builtin.shell: |
+        echo "=== Filesystem kernel modules available ==="
+        find "$(readlink -f /lib/modules/$(uname -r)/kernel/fs)" -mindepth 1 -maxdepth 1 -type d ! -empty 2>/dev/null | xargs -n1 basename
+      changed_when: false
+      failed_when: false
+      register: _cis_all_fs_modules
+      tags: ['cis_sec1', 'cis_1.1.1', 'kernel_modules']
+
+    - name: "CIS 1.1.1.10 | REPORT | Display modules for manual review"
+      ansible.builtin.debug:
+        msg:
+          - "=== CIS 1.1.1.10 — Manual Review Required ==="
+          - "Review these modules and disable any not required:"
+          - "{{ _cis_all_fs_modules.stdout_lines }}"
+          - "Add to cis_1_1_1_disable_filesystem_modules in defaults/main.yml"
+      tags: ['cis_sec1', 'cis_1.1.1', 'kernel_modules']

@@ -1,0 +1,80 @@
+---
+# =================================================================
+# CIS Benchmark Section 6: Logging & Auditing
+# Ubuntu 24.04 LTS - Ansible Role Tasks Entry Point
+# =================================================================
+
+- name: "SECTION 6 | Logging and Auditing - Entry Point"
+  debug:
+    msg: "Executing CIS Section 6: Logging and Auditing hardening tasks"
+  when: section6_logging.enabled | default(true)
+
+# =================================================================
+# 6.1 SYSTEM LOGGING (rsyslog/journald)
+# =================================================================
+
+- name: "6.1 | Include System Logging tasks"
+  ansible.builtin.import_tasks: "6.1-system_logging/main.yml"
+  when: 
+    - section6_logging.enabled | default(true)
+    - section6_logging['6_1_1_journald_service'].enabled | default(true) or
+      section6_logging['6_1_3_1_rsyslog_installed'].enabled | default(true)
+  tags:
+    - cis_6
+    - cis_6_1
+    - cis_6_1_1
+    - cis_6_1_2
+    - cis_6_1_3
+    - cis_6_1_4
+    - system_logging
+    - logging
+    - journald
+    - rsyslog
+    - permissions
+
+# =================================================================
+# 6.2 SYSTEM AUDITING (auditd)
+# =================================================================
+
+- name: "6.2 | Include System Auditing tasks"
+  ansible.builtin.import_tasks: "6.2-system_auditing/main.yml"
+  when: 
+    - section6_logging.enabled | default(true)
+    - section6_logging['6_2_1_1_auditd_packages'].enabled | default(true)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_1
+    - cis_6_2_2
+    - cis_6_2_3
+    - cis_6_2_4
+    - auditd
+    - system_auditing
+    - auditing
+    - service
+    - retention
+    - rules
+    - permissions
+
+# =================================================================
+# 6.3 CONFIGURE INTEGRITY CHECKING (AIDE)
+# =================================================================
+
+- name: "6.3 | Include Integrity Checking tasks"
+  ansible.builtin.import_tasks: "6.3-configure_integrity_checking.yml"
+  when: 
+    - section6_logging.enabled | default(true)
+    - section6_logging['6_3_1_aide_installed'].enabled | default(true)
+  tags:
+    - cis_6
+    - cis_6_3
+    - cis_6_3_1
+    - cis_6_3_2
+    - cis_6_3_3
+    - aide
+    - integrity
+    - install
+    - timer
+    - config
+    - level_1
+    - level_2

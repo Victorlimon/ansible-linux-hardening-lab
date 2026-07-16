@@ -1,0 +1,20 @@
+---
+# =============================================================================
+# CIS Ubuntu 24.04 LTS / Debian 12 Benchmark v1.0.0 - Section 5.4: User Accounts
+# Entry point - importa todos los sub-módulos con tags y condicionales
+# =============================================================================
+
+- name: Include 5.4.1 configure shadow password suite parameters
+  when: cis_5_4_1_shadow_password | default(true)
+  ansible.builtin.import_tasks: 5.4.1-configure_shadow_password_suite_parameters.yml
+  tags: ['cis_sec5', 'cis_5.4.1', 'shadow', 'password', 'users']
+
+- name: Include 5.4.2 configure root and system accounts
+  when: cis_5_4_2_root_system_accounts | default(true)
+  ansible.builtin.import_tasks: 5.4.2-configure_root_and_system_accounts_and_environment.yml
+  tags: ['cis_sec5', 'cis_5.4.2', 'root', 'system_accounts', 'users']
+
+- name: Include 5.4.3 configure user default environment
+  when: cis_5_4_3_user_default_environment | default(true)
+  ansible.builtin.import_tasks: 5.4.3-configure_user_default_environment.yml
+  tags: ['cis_sec5', 'cis_5.4.3', 'users', 'environment', 'defaults']

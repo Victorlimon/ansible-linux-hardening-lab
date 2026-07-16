@@ -1,0 +1,195 @@
+---
+# =================================================================
+# CIS Benchmark 6.3: Configure Integrity Checking (AIDE)
+# Ubuntu 24.04 LTS - Tasks (3 Flat Controls)
+# Profile: Level 1 - Server/Workstation (6.3.1, 6.3.2)
+#          Level 2 - Server/Workstation (6.3.3)
+# =================================================================
+
+# -----------------------------------------------------------------
+# 6.3.1 | Ensure AIDE is installed (Automated) - Level 1
+# Tags: cis_6, cis_6_3, cis_6_3_1, aide, install, level_1
+# -----------------------------------------------------------------
+
+- name: "6.3.1 | Ensure AIDE is installed and database initialized"
+  block:
+    - name: "AUDIT | Check if AIDE packages are installed"
+      ansible.builtin.command: dpkg-query -s aide
+      register: aide_package_check
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Install AIDE packages if not present"
+      ansible.builtin.apt:
+        name: "{{ section6_logging['6_3_1_aide_installed'].packages }}"
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+      when: aide_package_check.rc != 0
+      register: aide_install
+
+    - name: "Check if AIDE database exists"
+      ansible.builtin.stat:
+        path: "/var/lib/aide/aide.db"
+      register: aide_db_stat
+
+    - name: "Initialize AIDE database (first run only)"
+      ansible.builtin.command: aideinit -y
+      args:
+        creates: "/var/lib/aide/aide.db.new"
+      register: aide_init_result
+      changed_when: "'Database initialized' in aide_init_result.stdout"
+      when: 
+        - not aide_db_stat.stat.exists
+        - aide_install is defined and (aide_install.changed or not aide_package_check.rc == 0)
+
+    - name: "Move new AIDE database to production location"
+      ansible.builtin.command: >
+        mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+      args:
+        creates: "/var/lib/aide/aide.db"
+      when: 
+        - not aide_db_stat.stat.exists
+        - aide_init_result is defined and aide_init_result.changed
+      notify: Update AIDE database
+  when: section6_logging['6_3_1_aide_installed'].enabled | default(true) | bool
+  tags:
+    - cis_6
+    - cis_6_3
+    - cis_6_3_1
+    - aide
+    - install
+    - level_1
+
+# -----------------------------------------------------------------
+# 6.3.2 | Ensure filesystem integrity is regularly checked (Automated) - Level 1
+# Tags: cis_6, cis_6_3, cis_6_3_2, aide, timer, level_1
+# -----------------------------------------------------------------
+
+- name: "6.3.2 | Ensure filesystem integrity is regularly checked via AIDE timer"
+  block:
+    - name: "Ensure daily AIDE check timer is unmasked"
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        masked: false
+        daemon_reload: true
+      loop:
+        - "dailyaidecheck.timer"
+        - "dailyaidecheck.service"
+
+    - name: "Ensure daily AIDE check timer is enabled and active"
+      ansible.builtin.systemd:
+        name: "dailyaidecheck.timer"
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: "Verify AIDE timer is active"
+      ansible.builtin.command: systemctl is-active dailyaidecheck.timer
+      register: aide_timer_active
+      changed_when: false
+      failed_when: false
+
+    - name: "Configure AIDE wrapper script usage (Ubuntu recommendation)"
+      ansible.builtin.lineinfile:
+        path: /etc/default/aide
+        regexp: '^#?AIDE_WRAPPER='
+        line: 'AIDE_WRAPPER=/usr/bin/aide.wrapper'
+        create: true
+        mode: '0644'
+        owner: root
+        group: root
+      when: section6_logging['6_3_2_aide_wrapper'].enabled | default(true)
+  when: section6_logging['6_3_2_aide_timer'].enabled | default(true) | bool
+  tags:
+    - cis_6
+    - cis_6_3
+    - cis_6_3_2
+    - aide
+    - timer
+    - level_1
+
+# -----------------------------------------------------------------
+# 6.3.3 | Ensure cryptographic mechanisms protect audit tools (Automated) - Level 2
+# Tags: cis_6, cis_6_3, cis_6_3_3, aide, config, level_2
+# -----------------------------------------------------------------
+
+- name: "6.3.3 | Ensure cryptographic mechanisms protect AIDE configuration and audit tools"
+  block:
+    - name: "Ensure /etc/aide directory has correct permissions"
+      ansible.builtin.file:
+        path: /etc/aide
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: "Ensure aide.conf has correct permissions"
+      ansible.builtin.file:
+        path: /etc/aide/aide.conf
+        state: file
+        mode: '0640'
+        owner: root
+        group: root
+
+    - name: "Add audit tools integrity rules to aide.conf"
+      ansible.builtin.lineinfile:
+        path: /etc/aide/aide.conf
+        line: "{{ item }} p+i+n+u+g+s+b+acl+xattrs+sha512"
+        regexp: "^{{ item }}\\s+"
+        create: true
+        mode: '0640'
+        owner: root
+        group: root
+        insertafter: "^# Audit Tools$"
+      loop:
+        - /usr/sbin/auditctl
+        - /usr/sbin/auditd
+        - /usr/sbin/ausearch
+        - /usr/sbin/aureport
+        - /usr/sbin/autrace
+        - /usr/sbin/augenrules
+      loop_control:
+        label: "{{ item | basename }}"
+      notify: Update AIDE database
+
+    - name: "Validate AIDE configuration syntax"
+      ansible.builtin.command: aide --config-check
+      register: aide_config_check
+      changed_when: false
+      failed_when: false
+
+    - name: "Report AIDE configuration validation result"
+      ansible.builtin.debug:
+        msg: "AIDE config validation: {{ 'PASSED' if aide_config_check.rc == 0 else 'FAILED - Review /etc/aide/aide.conf' }}"
+        verbosity: 1
+      when: aide_config_check is defined
+  when: section6_logging['6_3_3_aide_audit_tools_integrity'].enabled | default(true) | bool
+  tags:
+    - cis_6
+    - cis_6_3
+    - cis_6_3_3
+    - aide
+    - config
+    - level_2
+
+# -----------------------------------------------------------------
+# POST-CONFIGURATION: Compliance Reporting
+# -----------------------------------------------------------------
+
+- name: "6.3 | REPORT | Generate AIDE compliance summary"
+  ansible.builtin.debug:
+    msg: |
+      === CIS 6.3 AIDE Compliance Summary ===
+      Host: {{ inventory_hostname }}
+      AIDE Installed: {{ aide_package_check.rc == 0 if aide_package_check is defined else 'N/A' }}
+      Database Exists: {{ aide_db_stat.stat.exists | default('N/A') }}
+      Timer Active: {{ aide_timer_active.stdout | default('N/A') }}
+      Config Valid: {{ aide_config_check.rc == 0 if aide_config_check is defined else 'N/A' }}
+      Level: {% if section6_logging['6_3_3_aide_audit_tools_integrity'].enabled | default(false) %}Level 2{% else %}Level 1{% endif %}
+  tags:
+    - cis_6
+    - cis_6_3
+    - aide
+    - report
+    - always

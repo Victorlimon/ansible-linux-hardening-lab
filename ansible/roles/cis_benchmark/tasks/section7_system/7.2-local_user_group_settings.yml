@@ -1,0 +1,289 @@
+---
+
+- name: "CIS 7.2.1 | Remediation | Ensure accounts in /etc/passwd use shadowed passwords"
+  when: section7_system_7_2_local_user_group_settings_7_2_1_shadow_passwords | default(false)
+  block:
+    - name: "CIS 7.2.1 | Audit | Ensure accounts in /etc/passwd use shadowed passwords | Check if any accounts have passwords in /etc/passwd"
+      ansible.builtin.command: "awk -F: '($2 != \"x\" && $2 != \"*\") {print $1}' /etc/passwd"
+      register: passwd_accounts_with_passwords
+      changed_when: false
+      failed_when: false
+    
+    - name: "CIS 7.2.1 | Remediation | Apply shadow password conversion"
+      ansible.builtin.command: pwconv
+      when: passwd_accounts_with_passwords.stdout_lines | length > 0
+      register: pwconv_result
+      changed_when: pwconv_result.rc == 0
+
+- name: "CIS 7.2.2 | Remediation | Ensure no legacy \"+\" entries exist in /etc/passwd"
+  when: section7_system_7_2_local_user_group_settings_7_2_2_remove_legacy_plus_entries | default(false)
+  block:
+    - name: "CIS 7.2.2 | Audit | Ensure no legacy '+' entries exist in /etc/passwd | Check for legacy '+' entries"
+      ansible.builtin.command: "awk -F: '($2 == \"\" ) { print $1 }' /etc/shadow"
+      register: passwd_plus_entries
+      changed_when: false
+      failed_when: false
+    
+    - name: "CIS 7.2.2 | Remediation | Remove legacy '+' entries from /etc/passwd"
+      ansible.builtin.user:
+        name: "{{ item }}"
+        password_lock: true
+      loop: "{{ passwd_plus_entries.stdout_lines }}"
+      when: passwd_plus_entries.stdout_lines | length > 0
+      
+
+- name: "CIS 7.2.3 | Ensure all groups in /etc/passwd exist in /etc/group"
+  vars:
+    cis_rule_7_2_3: true
+    cis_fix_missing_groups: false
+  block:
+  - name: "7.2.3 | AUDIT | Read passwd file"
+    ansible.builtin.command: "awk -F: '{print $4}' /etc/passwd"
+    register: passwd_gid_raw
+    changed_when: false
+    when: cis_rule_7_2_3
+
+  - name: "7.2.3 | AUDIT | Normalize passwd GIDs"
+    ansible.builtin.set_fact:
+      passwd_gids: "{{ passwd_gid_raw.stdout_lines | unique }}"
+    when: cis_rule_7_2_3
+  - name: "7.2.3 | AUDIT | Read group file"
+    ansible.builtin.command: "awk -F: '{print $3}' /etc/group"
+    register: group_gid_raw
+    changed_when: false
+    when: cis_rule_7_2_3
+
+  - name: "7.2.3 | AUDIT | Normalize group GIDs"
+    ansible.builtin.set_fact:
+      group_gids: "{{ group_gid_raw.stdout_lines | unique }}"
+    when: cis_rule_7_2_3
+
+  - name: "7.2.3 | AUDIT | Find missing GIDs"
+    ansible.builtin.set_fact:
+      missing_gids: "{{ passwd_gids | difference(group_gids) }}"
+    when: cis_rule_7_2_3
+
+  - name: "7.2.3 | AUDIT | Report affected users"
+    ansible.builtin.shell: "awk -F: '($4 == {{ item }}) {print $1 \" -> missing GID {{ item }}\"}' /etc/passwd"
+    loop: "{{ missing_gids }}"
+    register: affected_users
+    changed_when: false
+    when:
+      - cis_rule_7_2_3
+      - missing_gids | length > 0
+
+  - name: "7.2.3 | AUDIT | Print report"
+    ansible.builtin.debug:
+      msg: "{{ affected_users.results | map(attribute='stdout_lines') | flatten }}"
+    when:
+      - cis_rule_7_2_3
+      - missing_gids | length > 0
+
+  - name: "7.2.3 | PATCH | Create missing groups"
+    ansible.builtin.group:
+      name: "gid_{{ item }}"
+      gid: "{{ item }}"
+      state: present
+    loop: "{{ missing_gids }}"
+    when:
+      - cis_rule_7_2_3
+      - cis_fix_missing_groups
+      - missing_gids | length > 0
+
+  - name: "7.2.3 | RESULT"
+    ansible.builtin.debug:
+      msg: "Missing GIDs detected: {{ missing_gids | default([]) }}"
+
+
+- name: "CIS 7.2.4 | Ensure shadow group is empty"
+  when: section7_system_7_2_local_user_group_settings_7_2_4_empty_shadow_group | default(false)
+  block:
+    - name: "AUDIT | Get shadow group info"
+      ansible.builtin.getent:
+        database: group
+        split: ':'
+        key: shadow
+      register: shadow_group_info
+
+    - name: "PROCESS | Extract shadow info"
+      ansible.builtin.set_fact:
+        shadow_gid: "{{ shadow_group_info.ansible_facts.getent_group.shadow[1] }}"
+        shadow_members: "{{ shadow_group_info.ansible_facts.getent_group.shadow[2] | default('') }}"
+
+    - name: "AUDIT | Find users with primary shadow group"
+      ansible.builtin.shell: "awk -F: '($4 == {{ shadow_gid }}) {print $1}' /etc/passwd"
+      register: shadow_primary_users
+      changed_when: false
+      failed_when: false
+
+    - name: "REMEDIATE | Remove secondary shadow members"
+      ansible.builtin.command: "gpasswd -d {{ item }} shadow"
+      loop: "{{ shadow_members.split(',') }}"
+      when: shadow_members | length > 0
+      changed_when: true
+
+    - name: "REMEDIATE | Change primary group from shadow"
+      ansible.builtin.user:
+        name: "{{ item }}"
+        group: users
+      loop: "{{ shadow_primary_users.stdout_lines }}"
+      when: shadow_primary_users.stdout_lines | length > 0
+
+- name: "CIS 7.2.5 | Ensure no duplicate UIDs exist"
+  block:
+    - name: "AUDIT | Find duplicate UIDs"
+      ansible.builtin.shell: "cut -f3 -d\":\" /etc/passwd | sort -n | uniq -c | awk '$1 > 1 {print $2}'"
+      register: duplicate_uids
+      changed_when: false
+      failed_when: false
+
+    - name: debug | Show duplicate UIDs
+      ansible.builtin.debug:
+        msg: "Duplicate UIDs found: {{ duplicate_uids.stdout_lines }}"
+      when: duplicate_uids.stdout_lines | length > 0
+
+    - name: "PROCESS | Get users with duplicate UIDs"
+      ansible.builtin.shell: "awk -F: '($3 == {{ item }}) {print $1}' /etc/passwd"
+      loop: "{{ duplicate_uids.stdout_lines }}"
+      register: duplicate_uid_users
+      when: duplicate_uids.stdout_lines | length > 0
+      changed_when: false
+      failed_when: false
+
+    - name: "REPORT | Show duplicate UID findings"
+      ansible.builtin.debug:
+        msg: "Duplicate UID detected: {{ item.item }} Users: {{ item.stdout_lines | join(', ') }}"
+      loop: "{{ duplicate_uid_users.results }}"
+      when: duplicate_uids.stdout_lines | length > 0
+
+
+- name: "CIS 7.2.6 | Ensure no duplicate GIDs exist"
+  block:
+    - name: "AUDIT | Find duplicate GIDs"
+      ansible.builtin.shell: "cut -f3 -d\":\" /etc/group | sort -n | uniq -c | awk '$1 > 1 {print $2}'"
+      register: duplicate_gids
+      changed_when: false
+      failed_when: false
+
+    - name: debug | Show duplicate GIDs
+      ansible.builtin.debug:
+        msg: "Duplicate GIDs found: {{ duplicate_gids.stdout_lines }}"
+      when: duplicate_gids.stdout_lines | length > 0
+
+    - name: "PROCESS | Get groups with duplicate GIDs"
+      ansible.builtin.shell: "awk -F: '($3 == {{ item }}) {print $1}' /etc/group"
+      loop: "{{ duplicate_gids.stdout_lines }}"
+      register: duplicate_gid_groups
+      when: duplicate_gids.stdout_lines | length > 0
+      changed_when: false
+      failed_when: false
+
+    - name: "REPORT | Show duplicate GID findings"
+      ansible.builtin.debug:
+        msg: "Duplicate GID detected: {{ item.item }} Groups: {{ item.stdout_lines | join(', ') }}"
+      loop: "{{ duplicate_gid_groups.results }}"
+      when: duplicate_gids.stdout_lines | length > 0
+
+
+- name: "CIS 7.2.7 | Ensure no duplicate user names exist"
+  block:
+    - name: "7.2.7 | Audit duplicate usernames"
+      ansible.builtin.shell: "awk -F: '{print $1}' /etc/passwd | sort | uniq -d"
+      register: duplicate_usernames
+      changed_when: false
+      failed_when: false
+
+    - name: "7.2.7 | Report duplicate usernames"
+      ansible.builtin.debug:
+        msg: "Duplicate usernames found: {{ duplicate_usernames.stdout_lines }}"
+      when: duplicate_usernames.stdout_lines | length > 0
+
+
+- name: "CIS 7.2.8 | AUDIT | Ensure no duplicate group names exist"
+  block:
+    - name: "7.2.8 | Read /etc/group"
+      ansible.builtin.shell: 'getent group | cut -d: -f1 | sort -n | uniq -d'
+      register: duplicate_group_names
+      changed_when: false
+
+    - name: "7.2.8 | Report duplicate group names"
+      ansible.builtin.debug:
+        msg: "Duplicate group names: {{ duplicate_group_names.stdout_lines }}"
+      #when: duplicate_group_names.stdout != ""
+
+  tags:
+    - level1-server
+    - level1-workstation
+    - rule_7.2.8
+    - audit
+
+
+- name: "CIS 7.2.9 | Ensure local interactive user home directories are configured"
+  block:
+    - name: "AUDIT | Obtener información de usuarios"
+      ansible.builtin.getent:
+        database: passwd
+
+    - name: "PROCESS | Filtrar usuarios interactivos"
+      ansible.builtin.set_fact:
+        # Filtramos por UID >= 1000 Y que el shell sea interactivo
+        interactive_users: >-
+          {{
+            ansible_facts.getent_passwd
+            | dict2items
+            | selectattr('value.2', '>=', '1000')
+            | selectattr('value.5', 'match', '^(?!.*nologin|.*false|.*sync).*$')
+            | list
+          }}
+
+    - name: "REMEDIATE | Asegurar permisos y propiedad en home directories"
+      ansible.builtin.file:
+        path: "{{ item.value[4] }}"
+        state: directory
+        owner: "{{ item.key }}"
+        group: "{{ item.key }}"
+        mode: "0750"
+      loop: "{{ interactive_users }}"
+      # Solo procesamos si el directorio está definido y existe
+      when: 
+        - item.value[4] != ''
+        - item.value[4] is exists
+      loop_control:
+        label: "{{ item.key }} - {{ item.value[4] }}"
+
+- name: "CIS 7.2.10 | Ensure local interactive user dot files access is configured"
+  block:
+    - name: "AUDIT | Obtener lista de usuarios interactivos"
+      ansible.builtin.getent:
+        database: passwd
+
+    - name: "PROCESS | Definir usuarios y sus homes"
+      ansible.builtin.set_fact:
+        interactive_users: >-
+          {{
+            ansible_facts.getent_passwd
+            | dict2items
+            | selectattr('value.2', '>=', '1000')
+            | selectattr('value.5', 'match', '^(?!.*nologin|.*false|.*sync).*$')
+            | map(attribute='value')
+            | map(attribute='4') 
+            | list
+          }}
+
+    - name: "REMEDIATE | Limpiar permisos de archivos dot"
+      ansible.builtin.shell: |
+        find {{ item }} -maxdepth 1 -name ".*" -type f ! -name ".forward" ! -name ".rhost" | while read -r dotfile; do
+            # Definir modo según archivo
+            if [[ "$dotfile" =~ \.bash_history$ ]] || [[ "$dotfile" =~ \.netrc$ ]]; then
+                chmod 600 "$dotfile"
+            else
+                chmod 644 "$dotfile"
+            fi
+            # Corregir propiedad (usuario actual y su grupo)
+            chown $(stat -c '%U' "$item"):"$(id -gn $(stat -c '%U' "$item"))" "$dotfile"
+        done
+      loop: "{{ interactive_users }}"
+      when: item != '' and (item is exists)
+      loop_control:
+        label: "Procesando home: {{ item }}"
+      changed_when: false # Cambiar a true si deseas reportar cambios

@@ -1,0 +1,83 @@
+---
+# =============================================================================
+# CIS 1.6 | Configure Login Banners
+# Idempotente, con backup, compatible con check_mode
+# =============================================================================
+
+# 1.6.1 - /etc/motd
+- name: "CIS 1.6.1 | Remediation | Ensure /etc/motd is configured"
+  ansible.builtin.copy:
+    content: "{{ cis_banner_text | trim }}\n"
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  when:
+    - cis_section1_6_banners | default(true)
+    - cis_1_6_1_login_banner_text | default(true)
+  tags: ['cis_sec1', 'cis_1.6.1', 'banners', 'motd']
+
+# 1.6.2 - /etc/issue
+- name: "CIS 1.6.2 | Remediation | Ensure /etc/issue is configured"
+  ansible.builtin.copy:
+    content: "{{ cis_issue_text | trim }}\n"
+    dest: /etc/issue
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  when:
+    - cis_section1_6_banners | default(true)
+    - cis_1_6_2_issue_banner_text | default(true)
+  tags: ['cis_sec1', 'cis_1.6.2', 'banners', 'issue']
+
+# 1.6.3 - /etc/issue.net
+- name: "CIS 1.6.3 | Remediation | Ensure /etc/issue.net is configured"
+  ansible.builtin.copy:
+    content: "{{ cis_issue_net_text | trim }}\n"
+    dest: /etc/issue.net
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  when:
+    - cis_section1_6_banners | default(true)
+    - cis_1_6_3_remote_login_banner | default(true)
+  tags: ['cis_sec1', 'cis_1.6.3', 'banners', 'issue_net']
+
+# 1.6.4 - Permissions on /etc/motd
+- name: "CIS 1.6.4 | Remediation | Ensure permissions on /etc/motd"
+  ansible.builtin.file:
+    path: /etc/motd
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - cis_section1_6_banners | default(true)
+    - cis_1_6_4_motd_permissions | default(true)
+  tags: ['cis_sec1', 'cis_1.6.4', 'banners', 'permissions']
+
+# 1.6.5 - Permissions on /etc/issue
+- name: "CIS 1.6.5 | Remediation | Ensure permissions on /etc/issue"
+  ansible.builtin.file:
+    path: /etc/issue
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - cis_section1_6_banners | default(true)
+    - cis_1_6_5_issue_permissions | default(true)
+  tags: ['cis_sec1', 'cis_1.6.5', 'banners', 'permissions']
+
+# 1.6.6 - Permissions on /etc/issue.net
+- name: "CIS 1.6.6 | Remediation | Ensure permissions on /etc/issue.net"
+  ansible.builtin.file:
+    path: /etc/issue.net
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - cis_section1_6_banners | default(true)
+    - cis_1_6_6_issue_net_permissions | default(true)
+  tags: ['cis_sec1', 'cis_1.6.6', 'banners', 'permissions']

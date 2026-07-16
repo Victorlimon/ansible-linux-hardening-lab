@@ -1,0 +1,7 @@
+cis_section4_firewall: true
+cis_firewall_utility: auto   # o forzar ufw, nftables, iptables
+cis_firewall_allow_ports:
+  - 22/tcp
+  - 80/tcp
+  - 443/tcp
+cis_firewall_allow_outbound: true

@@ -1,0 +1,489 @@
+---
+
+- name: "CIS 5.1.1 | Remediation | Ensure permissions on /etc/ssh/sshd_config are configured"
+  when: cis_ssh_config.config_files | default(true)
+  block:
+    - name: "CIS 5.1.1 | Remediation | Set permissions on /etc/ssh/sshd_config"
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config
+        owner: root
+        group: root
+        mode: 'u-x,og-rwx'
+        state: file
+    - name: "CIS 5.1.1 | Remediation | Set permissions on additional SSH config files in sshd_config.d"
+      ansible.builtin.find:
+        paths: /etc/ssh/sshd_config.d
+        file_type: file
+      register: sshd_config_files
+      ignore_errors: yes   
+    - name: "CIS 5.1.1 | Remediation | Apply strict permissions to each SSH config file"
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        recurse: false
+        owner: root
+        group: root
+        mode: 'u-x,go-rwx'
+        state: file
+      loop: "{{ sshd_config_files.files | default([]) }}"
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.1
+    - cis
+    - NIST800-53R5_AC-3
+    - NIST800-53R5_MP-2
+    - sshd
+
+- name: "CIS 5.1.2 | Remediation | Ensure permissions on SSH private host key files are configured"
+  when: cis_ssh_config.host_keys | default(true)
+  block:
+    - name: "CIS 5.1.2 | Audit | Set permissions on SSH private host keys"
+      ansible.builtin.find:
+        paths: /etc/ssh
+        patterns: 'ssh_host_*_key'
+        file_type: file
+      register: ssh_private_keys
+    - name: "CIS 5.1.2 | Remediation | Apply strict permissions to SSH private host keys"
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        owner: root
+        group: root
+        mode: 'u-x,go-rwx'
+        state: file
+      loop: "{{ ssh_private_keys.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path }}"
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.2
+    - NIST800-53R5_AC-3
+    - NIST800-53R5_MP-2
+    - sshd
+
+- name: "CIS 5.1.3 | Remediation | Ensure permissions on SSH public host key files are configured"
+  when: cis_ssh_config.host_keys | default(true)
+  block:
+    - name: "CIS 5.1.3 | Audit | Set permissions on SSH public host keys"
+      ansible.builtin.find:
+        paths: /etc/ssh
+        patterns: 'ssh_host_*_key.pub'
+        file_type: file
+      register: ssh_public_keys
+    - name: "CIS 5.1.3 | Remediation | Apply strict permissions to SSH public host keys"
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        owner: root
+        group: root
+        mode: 'u-x,go-rwx'
+        state: file
+      loop: "{{ ssh_public_keys.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path }}"
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - rule_5.1.3
+    - NIST800-53R5_AC-3
+    - NIST800-53R5_MP-2
+    - sshd
+
+- name: "CIS 5.1.4 | Remediation | Ensure sshd access is configured"
+  when: cis_ssh_config.access_control | default(true)
+  block:
+    - name: "CIS 5.1.4 | Remediation | Configure AllowUsers or AllowGroups"
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^(AllowUsers|AllowGroups)'
+        line: "{{ cis_ssh_config.access_control_type | default('AllowGroups') }} {{ cis_ssh_config.allowed_users_groups | default('sshusers') }}"
+        insertafter: '^# Authentication'
+        validate: 'sshd -t -f %s'
+        state: present
+      notify: restart sshd
+      when: cis_ssh_config.use_allow_list | default(true)
+
+    - name: "CIS 5.1.4 | Remediation | Configure DenyUsers or DenyGroups (alternative)"
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^(DenyUsers|DenyGroups)'
+        line: "{{ cis_ssh_config.access_control_type | default('DenyUsers') }} {{ cis_ssh_config.denied_users_groups | default('') }}"
+        insertafter: '^# Authentication'
+        validate: 'sshd -t -f %s'
+        state: present
+      notify: restart sshd
+      when: not (cis_ssh_config.use_allow_list | default(true))
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.4
+    - NIST800-53R5_AC-3
+    - sshd
+
+- name: "CIS 5.1.5 - Configure SSH banner"
+  when: cis_ssh_config.banner | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^Banner'
+    line: "Banner /etc/issue.net"
+    state: present
+    insertafter: '^# no default banner path'
+    validate: 'sshd -t -f %s'
+  notify: restart sshd
+  tags: 
+    - level1-server
+    - level1-workstation
+    - patch
+    - rule_5.1.5
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+
+- name: "CIS 5.1.6 | Remediation | Ensure sshd Ciphers are configured"
+  when: cis_ssh_config.ciphers | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^Ciphers'
+    line: "Ciphers {{ cis_ssh_config.Ciphers }}"
+    insertafter: '^# Ciphers and keying'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - rule_5.1.6
+    - NIST800-53R5_SC-8
+    - sshd
+
+- name: "CIS 5.1.7 | Remediation | Ensure sshd ClientAlive settings are configured"
+  when: cis_ssh_config.client_alive | default(true)
+  block:
+    - name: "CIS 5.1.7 | Remediation | Configure SSH ClientAliveInterval"
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^ClientAliveInterval'
+        line: "ClientAliveInterval {{ cis_ssh_config.ClientAliveInterval }}"
+        state: present
+    - name: "CIS 5.1.7 | Remediation | Configure SSH ClientAliveCountMax"
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^ClientAliveCountMax'
+        line: "ClientAliveCountMax {{ cis_ssh_config.ClientAliveCountMax }}"
+        state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - rule_5.1.7
+    - NIST800-53R5_SC-8
+    - sshd
+
+- name: "CIS 5.1.8 | Remediation | Ensure sshd DisableForwarding is enabled"
+  when: cis_ssh_config.disable_forwarding | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*DisableForwarding
+    line: 'DisableForwarding yes'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - rule_5.1.8
+    - NIST800-53R5_CM-7
+    - sshd
+
+- name: "CIS 5.1.9 | Remediation | Ensure sshd GSSAPIAuthentication is disabled"
+  when: cis_ssh_config.gssapi_auth | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*GSSAPIAuthentication
+    line: 'GSSAPIAuthentication no'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level2-server
+    - level1-workstation
+    - patch
+    - rule_5.1.9
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+
+- name: "CIS 5.1.10 | Remediation | Ensure sshd HostbasedAuthentication is disabled"
+  when: cis_ssh_config.hostbased_auth | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*HostbasedAuthentication
+    line: 'HostbasedAuthentication no'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - rule_5.1.10
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+
+- name: "CIS 5.1.11 | Remediation | Ensure sshd IgnoreRhosts is enabled"
+  when: cis_ssh_config.ignore_rhosts | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*IgnoreRhosts
+    line: 'IgnoreRhosts yes'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - rule_5.1.11
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+
+- name: "CIS 5.1.12 | Remediation | Ensure sshd KexAlgorithms is configured "
+  when: cis_ssh_config.kex_algorithms | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*KexAlgorithms
+    line: "KexAlgorithms {{ cis_ssh_config.KexAlgorithms }}"
+    insertafter: '^# Ciphers and keying'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - patch
+    - cis_5.1.12
+    - NIST800-53R5_SC-8
+    - sshd
+
+- name: "CIS 5.1.13 | Remediation | Ensure sshd LoginGraceTime is configured"
+  when: cis_ssh_config.login_grace_time | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*LoginGraceTime
+    line: "LoginGraceTime {{ cis_ssh_config.LoginGraceTime }}"
+    insertafter: '^# Authentication'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.13
+    - NIST800-53R5_CM-6
+    - sshd
+
+- name: "CIS 5.1.14 | Remediation | Ensure sshd LogLevel is configured"
+  when: cis_ssh_config.log_level | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*LogLevel
+    line: "LogLevel {{ cis_ssh_config.LogLevel }}"
+    insertafter: '^# Logging'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.14
+    - NIST800-53R5_AU-2
+    - NIST800-53R5_AU-12
+    - NIST800-53R5_SI-5
+    - sshd
+
+- name: "CIS 5.1.15 | Remediation | Ensure sshd MACs are configured"
+  when: cis_ssh_config.macs | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*MACs
+    line: "MACs {{ cis_ssh_config.MACs }}"
+    insertafter: '^# Ciphers and keying'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.15
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+
+- name: "CIS 5.1.16 | Remediation | Ensure sshd MaxAuthTries is configured"
+  when: cis_ssh_config.max_auth_tries | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*MaxAuthTries
+    line: "MaxAuthTries {{ cis_ssh_config.MaxAuthTries }}"
+    insertafter: '^# Authentication'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.16
+    - NIST800-53R5_AU-3
+    - sshd
+
+- name: "CIS 5.1.17 | Remediation | Ensure sshd MaxSessions is configured"
+  when: cis_ssh_config.max_sessions | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*MaxSessions
+    line: "MaxSessions {{ cis_ssh_config.MaxSessions }}"
+    insertafter: '^# Authentication'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.17
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+
+- name: "CIS 5.1.18 | Remediation | Ensure sshd MaxStartups is configured"
+  when: cis_ssh_config.max_startups | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*MaxStartups
+    line: "MaxStartups {{ cis_ssh_config.MaxStartups }}"
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.18
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+
+- name: "CIS 5.1.19 | Remediation | Ensure sshd PermitEmptyPasswords is disabled"
+  when: cis_ssh_config.permit_empty_passwords | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*PermitEmptyPasswords
+    line: 'PermitEmptyPasswords {{ cis_ssh_config.PermitEmptyPasswords }}'
+    insertafter: '# To disable tunneled clear text passwords, change to no here!'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.19
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+
+- name : "CIS 5.1.20 | Remediation | Ensure sshd PermitRootLogin is disabled"
+  when: cis_ssh_config.permit_root_login | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*PermitRootLogin
+    line: 'PermitRootLogin {{ cis_ssh_config.PermitRootLogin }}'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.20
+    - NIST800-53R5_AC-6
+    - sshd
+
+- name: "CIS 5.1.21 | Remediation | Ensure sshd PermitUserEnvironment is disabled"
+  when: cis_ssh_config.permit_user_environment | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*PermitUserEnvironment
+    line: 'PermitUserEnvironment {{ cis_ssh_config.PermitUserEnvironment }}'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.21
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+
+- name: "CIS 5.1.22 | Remediation | Ensure sshd UsePAM is enabled"
+  when: cis_ssh_config.use_pam | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: (?i)^(#?)\s*UsePAM
+    line: 'UsePAM {{ cis_ssh_config.UsePAM }}'
+    validate: 'sshd -t -f %s'
+    state: present
+  notify: restart sshd
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.1.22
+    - NIST800-53R5_CM-1
+    - NIST800-53R5_CM-2
+    - NIST800-53R5_CM-6
+    - NIST800-53R5_CM-7
+    - NIST800-53R5_IA-5
+    - sshd
+    - pam

@@ -1,0 +1,177 @@
+---
+
+- name: "CIS 7.1.1 | Remediation | Ensure permissions on /etc/passwd are configured"
+  ansible.builtin.file:
+    path: /etc/passwd
+    owner: root
+    group: root
+    mode: 'u-x,go-wx'
+
+- name: "CIS 7.1.2 | Remediation | Ensure permissions on /etc/passwd- are configured"
+  ansible.builtin.file:
+    path: /etc/passwd-
+    owner: root
+    group: root
+    mode: 'u-x,go-wx'
+
+- name: "CIS 7.1.3 | Remediation | Ensure permissions on /etc/group are configured"
+  ansible.builtin.file:
+    path: /etc/group
+    owner: root
+    group: root
+    mode: 'u-x,go-wx'
+
+- name: "CIS 7.1.4 | Remediation | Ensure permissions on /etc/group- are configured"
+  ansible.builtin.file:
+    path: /etc/group-
+    owner: root
+    group: root
+    mode: 'u-x,go-wx'
+
+- name: "CIS 7.1.5 | Remediation | Ensure permissions on /etc/shadow are configured"
+  ansible.builtin.file:
+    path: /etc/shadow
+    owner: root
+    group: root
+    mode: 'u-x,g-wx,o-rwx'
+
+- name: "CIS 7.1.6 | Remediation | Ensure permissions on /etc/shadow- are configured"
+  ansible.builtin.file:
+    path: /etc/shadow-
+    owner: root
+    group: root
+    mode: 'u-x,g-wx,o-rwx'
+
+- name: "CIS 7.1.7 | Remediation | Ensure permissions on /etc/gshadow are configured"
+  ansible.builtin.file:
+    path: /etc/gshadow
+    owner: root
+    group: root
+    mode: 'u-x,g-wx,o-rwx'
+
+- name: "CIS 7.1.8 | Remediation | Ensure permissions on /etc/gshadow- are configured"
+  ansible.builtin.file:
+    path: /etc/gshadow-
+    owner: root
+    group: root
+    mode: 'u-x,g-wx,o-rwx'
+
+- name: "CIS 7.1.9 | Remediation | Ensure permissions on /etc/shells are configured"
+  ansible.builtin.file:
+    path: /etc/shells
+    owner: root
+    group: root
+    mode: 'u-x,go-wx'
+
+- name: "CIS 7.1.10 | Remediation | Ensure permissions on /etc/security/opasswd are configured"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: root
+    group: root
+    mode: 'u-x,go-rwx'
+  loop:
+    - /etc/security/opasswd
+    - /etc/security/opasswd.old
+
+
+- name: "7.1.11 | Remediation | Ensure world writable files and directories are secured"
+  block:
+    - name: "7.1.11 | AUDIT | Ensure world writable files and directories are secured | Get list of world-writable files"
+      ansible.builtin.shell: >
+        df --local -P |
+        awk 'NR!=1 {print $6}' |
+        xargs -I '{}' find '{}'
+        -xdev
+        ! -path "/run/user/*"
+        ! -path "/proc/*"
+        ! -path "*/containerd/*"
+        ! -path "*/kubelet/pods/*"
+        ! -path "*/kubelet/plugins/*"
+        ! -path "/sys/*"
+        ! -path "/snap/*"
+        -type f
+        -perm -0002
+        ! -perm -1000
+      failed_when: false
+      changed_when: false
+      register: discovered_worldwriteable_files
+    - name: "7.1.11 | Remediation | Remove world-write permission from files"
+      ansible.builtin.file:
+        path: '{{ item }}'
+        mode: o-w
+      loop: '{{ discovered_worldwriteable_files.stdout_lines }}'
+      when: discovered_worldwriteable_files.stdout_lines | length > 0
+    - name: "7.1.11 | AUDIT | Get list of world-writable directories"
+      ansible.builtin.shell: >
+        df --local -P |
+        awk 'NR!=1 {print $6}' |
+        xargs -I '{}' find '{}'
+        -xdev
+        ! -path "/run/user/*"
+        ! -path "/proc/*"
+        ! -path "*/containerd/*"
+        ! -path "*/kubelet/pods/*"
+        ! -path "*/kubelet/plugins/*"
+        ! -path "/sys/*"
+        ! -path "/snap/*"
+        -type d
+        -perm -0002
+        ! -perm -1000
+      register: discovered_worldwriteable_dirs
+      changed_when: false
+      failed_when: false
+    - name: "7.1.11 | Remediation | Remove world-write permission and set sticky bit on directories"
+      ansible.builtin.file:
+        path: '{{ item }}'
+        mode: a+t
+      loop: '{{ discovered_worldwriteable_dirs.stdout_lines }}'
+      when: discovered_worldwriteable_dirs.stdout_lines | length > 0
+
+
+- name: "7.1.12 | Ensure no files or directories without owner/group exist"
+  block:
+  - name: "7.1.12 | AUDIT | Find files without owner"
+    ansible.builtin.shell: >
+      df --local -P |
+      awk 'NR!=1 {print $6}' |
+      xargs -I '{}' find '{}'
+      -xdev
+      ! -path "/run/user/*"
+      ! -path "/proc/*"
+      ! -path "*/containerd/*"
+      ! -path "*/kubelet/pods/*"
+      ! -path "*/kubelet/plugins/*"
+      ! -path "/sys/*"
+      ! -path "/snap/*"
+      \( -nouser -o -nogroup \)
+    register: discovered_nouser_files
+    changed_when: false
+    failed_when: false
+  - name: "7.1.12 | Remediation | Fix ownership"
+    when:
+      - fix_orphan_files | default(false)
+    ansible.builtin.file:
+      path: "{{ item }}"
+      owner: root
+      group: root
+    loop: "{{ discovered_nouser_files.stdout_lines }}"
+    when: discovered_nouser_files.stdout_lines | length > 0
+
+  - name: "7.1.13 | Ensure SUID and SGID files are reviewed (Manual)"
+    block:
+    - name: "7.1.13 | AUDIT | Find SUID and SGID files"
+      ansible.builtin.shell: >
+        df --local -P |
+        awk 'NR!=1 {print $6}' |
+        xargs -I '{}' find '{}'
+        -xdev
+        -type f
+        \( -perm -2000 -o -perm -4000 \)
+      register: suid_sgid_files
+      changed_when: false
+      failed_when: false
+  - name: "7.1.13 | REPORT | Show SUID/SGID files"
+    debug:
+      msg:
+        - "SUID/SGID Files Detected:"
+        - "{{ suid_sgid_files.stdout_lines | default([]) }}"

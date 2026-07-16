@@ -1,0 +1,15 @@
+---
+- name: Gather package facts
+  package_facts:
+    manager: auto
+
+- name: Gather service facts
+  service_facts:
+
+- name: Include 7.1 system file permissions
+  when: section7_system_7_1_system_file_permissions | default(true)
+  ansible.builtin.include_tasks: 7.1-system_file_permissions.yml
+
+- name: Include 7.2 local user and group settings
+  when: section7_system_7_2_local_user_group_settings | default(true)
+  ansible.builtin.include_tasks: 7.2-local_user_group_settings.yml

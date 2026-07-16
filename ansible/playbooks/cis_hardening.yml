@@ -1,0 +1,8 @@
+---
+- name: Aplicar hardening CIS
+  hosts: all
+  become: yes
+  vars_files:
+    - ../group_vars/{{ env | default('local') }}.yml
+  roles:
+    - cis_benchmark

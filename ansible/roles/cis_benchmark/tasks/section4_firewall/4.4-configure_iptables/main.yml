@@ -1,0 +1,20 @@
+---
+# =============================================================================
+# CIS Ubuntu 24.04 LTS Benchmark v1.0.0 - Section 4.4: Configure iptables
+# Entry point - imports IPv4 and IPv6 configuration
+# =============================================================================
+
+- name: Include 4.4.1 configure iptables software
+  when: cis_4_4_1_1_iptables_install | default(true)
+  ansible.builtin.import_tasks: 4.4.1-configure_software.yml
+  tags: ['cis_sec4', 'cis_4.4.1', 'iptables']
+
+- name: Include 4.4.2 configure IPv4 iptables rules
+  when: cis_4_4_2_1_iptables_default_deny | default(true)
+  ansible.builtin.import_tasks: 4.4.2-configure_ipv4.yml
+  tags: ['cis_sec4', 'cis_4.4.2', 'iptables', 'ipv4']
+
+- name: Include 4.4.3 configure IPv6 ip6tables rules
+  when: cis_4_4_3_1_ip6tables_default_deny | default(true)
+  ansible.builtin.import_tasks: 4.4.3-configure_ipv6.yml
+  tags: ['cis_sec4', 'cis_4.4.3', 'iptables', 'ipv6']

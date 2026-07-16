@@ -1,0 +1,286 @@
+---
+# =============================================================================
+# CIS Ubuntu 24.04 LTS / Debian 12 Benchmark v1.0.0 - Section 5.3.3: PAM Arguments
+# =============================================================================
+
+# ------------------------------------------------------------------------------
+# 5.3.3.1 - pam_faillock arguments
+# ------------------------------------------------------------------------------
+- name: "CIS 5.3.3.1.1 | Remediation | Ensure pam_faillock deny is configured"
+  when: cis_5_3_3_1_1_faillock_deny | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-auth
+    regexp: '^\s*auth\s+.*\bpam_faillock\.so.*\bdeny='
+    line: 'auth\trequired\tpam_faillock.so preauth silent audit deny={{ cis_pam_faillock_deny | default(5) }} unlock_time={{ cis_pam_faillock_unlock_time | default(900) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.1.1
+    - NIST800-53R5_AC-7
+    - pam
+
+- name: "CIS 5.3.3.1.2 | Remediation | Ensure pam_faillock unlock_time is configured"
+  when: cis_5_3_3_1_2_faillock_unlock_time | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-auth
+    regexp: '^\s*auth\s+.*\bpam_faillock\.so.*\bunlock_time='
+    line: 'auth\trequired\tpam_faillock.so preauth silent audit deny={{ cis_pam_faillock_deny | default(5) }} unlock_time={{ cis_pam_faillock_unlock_time | default(900) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.1.2
+    - NIST800-53R5_AC-7
+    - pam
+
+- name: "CIS 5.3.3.1.3 | Remediation | Ensure pam_faillock audit is configured"
+  when: cis_5_3_3_1_3_faillock_audit | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-auth
+    regexp: '^\s*auth\s+.*\bpam_faillock\.so.*\baudit\b'
+    line: 'auth\trequired\tpam_faillock.so preauth silent audit deny={{ cis_pam_faillock_deny | default(5) }} unlock_time={{ cis_pam_faillock_unlock_time | default(900) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.1.3
+    - NIST800-53R5_AC-7
+    - pam
+
+# ------------------------------------------------------------------------------
+# 5.3.3.2 - pam_pwquality arguments
+# ------------------------------------------------------------------------------
+- name: "CIS 5.3.3.2.1 | Remediation | Ensure pam_pwquality retry is configured"
+  when: cis_5_3_3_2_1_pwquality_retry | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwquality\.so.*\bretry='
+    line: 'password\trequisite\tpam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }} minlen={{ cis_pam_pwquality_minlen | default(14) }} dcredit={{ cis_pam_pwquality_dcredit | default(-1) }} ucredit={{ cis_pam_pwquality_ucredit | default(-1) }} ocredit={{ cis_pam_pwquality_ocredit | default(-1) }} lcredit={{ cis_pam_pwquality_lcredit | default(-1) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.2.1
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.2.2 | Remediation | Ensure pam_pwquality minlen is configured"
+  when: cis_5_3_3_2_2_pwquality_minlen | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwquality\.so.*\bminlen='
+    line: 'password\trequisite\tpam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }} minlen={{ cis_pam_pwquality_minlen | default(14) }} dcredit={{ cis_pam_pwquality_dcredit | default(-1) }} ucredit={{ cis_pam_pwquality_ucredit | default(-1) }} ocredit={{ cis_pam_pwquality_ocredit | default(-1) }} lcredit={{ cis_pam_pwquality_lcredit | default(-1) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.2.2
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.2.3 | Remediation | Ensure pam_pwquality dcredit is configured"
+  when: cis_5_3_3_2_3_pwquality_dcredit | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwquality\.so.*\bdcredit='
+    line: 'password\trequisite\tpam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }} minlen={{ cis_pam_pwquality_minlen | default(14) }} dcredit={{ cis_pam_pwquality_dcredit | default(-1) }} ucredit={{ cis_pam_pwquality_ucredit | default(-1) }} ocredit={{ cis_pam_pwquality_ocredit | default(-1) }} lcredit={{ cis_pam_pwquality_lcredit | default(-1) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.2.3
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.2.4 | Remediation | Ensure pam_pwquality ucredit is configured"
+  when: cis_5_3_3_2_4_pwquality_ucredit | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwquality\.so.*\bucredit='
+    line: 'password\trequisite\tpam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }} minlen={{ cis_pam_pwquality_minlen | default(14) }} dcredit={{ cis_pam_pwquality_dcredit | default(-1) }} ucredit={{ cis_pam_pwquality_ucredit | default(-1) }} ocredit={{ cis_pam_pwquality_ocredit | default(-1) }} lcredit={{ cis_pam_pwquality_lcredit | default(-1) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.2.4
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.2.5 | Remediation | Ensure pam_pwquality ocredit is configured"
+  when: cis_5_3_3_2_5_pwquality_ocredit | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwquality\.so.*\bocredit='
+    line: 'password\trequisite\tpam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }} minlen={{ cis_pam_pwquality_minlen | default(14) }} dcredit={{ cis_pam_pwquality_dcredit | default(-1) }} ucredit={{ cis_pam_pwquality_ucredit | default(-1) }} ocredit={{ cis_pam_pwquality_ocredit | default(-1) }} lcredit={{ cis_pam_pwquality_lcredit | default(-1) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.2.5
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.2.6 | Remediation | Ensure pam_pwquality lcredit is configured"
+  when: cis_5_3_3_2_6_pwquality_lcredit | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwquality\.so.*\blcredit='
+    line: 'password\trequisite\tpam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }} minlen={{ cis_pam_pwquality_minlen | default(14) }} dcredit={{ cis_pam_pwquality_dcredit | default(-1) }} ucredit={{ cis_pam_pwquality_ucredit | default(-1) }} ocredit={{ cis_pam_pwquality_ocredit | default(-1) }} lcredit={{ cis_pam_pwquality_lcredit | default(-1) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.2.6
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.2.7 | Remediation | Ensure pam_pwquality difok is configured"
+  when: cis_5_3_3_2_7_pwquality_difok | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwquality\.so.*\bdifok='
+    line: 'password\trequisite\tpam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }} minlen={{ cis_pam_pwquality_minlen | default(14) }} difok={{ cis_pam_pwquality_difok | default(3) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.2.7
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.2.8 | Remediation | Ensure pam_pwquality enforce_for_root is configured"
+  when: cis_5_3_3_2_8_pwquality_enforce_for_root | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwquality\.so.*\benforce_for_root\b'
+    line: 'password\trequisite\tpam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }} minlen={{ cis_pam_pwquality_minlen | default(14) }} enforce_for_root'
+    backup: yes
+  tags:
+    - level2-server
+    - level2-workstation
+    - remediation
+    - cis_5.3.3.2.8
+    - NIST800-53R5_IA-5
+    - pam
+
+# ------------------------------------------------------------------------------
+# 5.3.3.3 - pam_pwhistory arguments
+# ------------------------------------------------------------------------------
+- name: "CIS 5.3.3.3.1 | Remediation | Ensure pam_pwhistory remember is configured"
+  when: cis_5_3_3_3_1_pwhistory_remember | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwhistory\.so.*\bremember='
+    line: 'password\trequisite\tpam_pwhistory.so remember={{ cis_pam_pwhistory_remember | default(5) }}'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.3.1
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.3.2 | Remediation | Ensure pam_pwhistory enforce_for_root is configured"
+  when: cis_5_3_3_3_2_pwhistory_enforce_for_root | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwhistory\.so.*\benforce_for_root\b'
+    line: 'password\trequisite\tpam_pwhistory.so remember={{ cis_pam_pwhistory_remember | default(5) }} enforce_for_root'
+    backup: yes
+  tags:
+    - level2-server
+    - level2-workstation
+    - remediation
+    - cis_5.3.3.3.2
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.3.3 | Remediation | Ensure pam_pwhistory use_authtok is configured"
+  when: cis_5_3_3_3_3_pwhistory_use_authtok | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_pwhistory\.so.*\buse_authtok\b'
+    line: 'password\trequisite\tpam_pwhistory.so remember={{ cis_pam_pwhistory_remember | default(5) }} use_authtok'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.3.3
+    - NIST800-53R5_IA-5
+    - pam
+
+# ------------------------------------------------------------------------------
+# 5.3.3.4 - pam_unix arguments
+# ------------------------------------------------------------------------------
+- name: "CIS 5.3.3.4.1 | Remediation | Ensure pam_unix sha512 is configured"
+  when: cis_5_3_3_4_1_unix_sha512 | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_unix\.so.*\b(sha512|yescrypt)\b'
+    line: 'password\t[success=1 default=ignore]\tpam_unix.so obscure yescrypt'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.4.1
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.4.2 | Remediation | Ensure pam_unix obscure is configured"
+  when: cis_5_3_3_4_2_unix_obscure | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_unix\.so.*\bobscure\b'
+    line: 'password\t[success=1 default=ignore]\tpam_unix.so obscure yescrypt'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.4.2
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.4.3 | Remediation | Ensure pam_unix rounds is configured"
+  when: cis_5_3_3_4_3_unix_rounds | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_unix\.so.*\brounds='
+    line: 'password\t[success=1 default=ignore]\tpam_unix.so obscure yescrypt rounds={{ cis_pam_unix_rounds | default(5000) }}'
+    backup: yes
+  tags:
+    - level2-server
+    - level2-workstation
+    - remediation
+    - cis_5.3.3.4.3
+    - NIST800-53R5_IA-5
+    - pam
+
+- name: "CIS 5.3.3.4.4 | Remediation | Ensure pam_unix use_authtok is configured"
+  when: cis_5_3_3_4_4_unix_use_authtok | default(true)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^\s*password\s+.*\bpam_unix\.so.*\buse_authtok\b'
+    line: 'password\t[success=1 default=ignore]\tpam_unix.so obscure yescrypt use_authtok'
+    backup: yes
+  tags:
+    - level1-server
+    - level1-workstation
+    - remediation
+    - cis_5.3.3.4.4
+    - NIST800-53R5_IA-5
+    - pam

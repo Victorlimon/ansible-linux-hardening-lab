@@ -1,0 +1,55 @@
+---
+# =================================================================
+# CIS 1.1.2.3 | Configure /home Partition
+# =================================================================
+
+- name: "CIS 1.1.2.3.1 | AUDIT | Check if /home is a separate partition"
+  ansible.builtin.shell: findmnt -kn /home
+  changed_when: false
+  failed_when: false
+  register: _cis_home_mount
+  tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'home']
+
+- name: "CIS 1.1.2.3.2 | Remediation | Ensure nodev option set on /home"
+  when:
+    - _cis_home_mount.rc == 0
+    - _cis_home_mount.stdout_lines | length > 0
+    - cis_1_1_2_home_nodev | default(true)
+  block:
+    - name: "CIS 1.1.2.3.2 | AUDIT | Re-read /home mount options"
+      ansible.builtin.shell: findmnt -kn /home -o OPTIONS
+      changed_when: false
+      register: _cis_home_opts
+      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'home']
+
+    - name: "CIS 1.1.2.3.2 | Remediation | Apply nodev to /home"
+      when: "'nodev' not in _cis_home_opts.stdout"
+      ansible.posix.mount:
+        path: /home
+        src: "{{ _cis_home_mount.stdout.split()[1] }}"
+        fstype: "{{ _cis_home_mount.stdout.split()[2] }}"
+        opts: "{{ (_cis_home_opts.stdout | trim).split(',') | union(['nodev']) | join(',') }}"
+        state: mounted
+      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'home']
+
+- name: "CIS 1.1.2.3.3 | Remediation | Ensure nosuid option set on /home"
+  when:
+    - _cis_home_mount.rc == 0
+    - _cis_home_mount.stdout_lines | length > 0
+    - cis_1_1_2_home_nosuid | default(true)
+  block:
+    - name: "CIS 1.1.2.3.3 | AUDIT | Re-read /home mount options"
+      ansible.builtin.shell: findmnt -kn /home -o OPTIONS
+      changed_when: false
+      register: _cis_home_opts
+      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'home']
+
+    - name: "CIS 1.1.2.3.3 | Remediation | Apply nosuid to /home"
+      when: "'nosuid' not in _cis_home_opts.stdout"
+      ansible.posix.mount:
+        path: /home
+        src: "{{ _cis_home_mount.stdout.split()[1] }}"
+        fstype: "{{ _cis_home_mount.stdout.split()[2] }}"
+        opts: "{{ (_cis_home_opts.stdout | trim).split(',') | union(['nosuid']) | join(',') }}"
+        state: mounted
+      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'home']

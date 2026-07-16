@@ -1,0 +1,123 @@
+# =============================================================================
+# .gitignore - ansible-cis-benchmark
+# =============================================================================
+
+# --- Ansible ---
+# Vault decrypted files (keep .vault, exclude decrypted)
+*.vault.decrypted
+*.decrypted
+*_vault_decrypted
+
+# Ansible fact cache
+ansible_facts/
+*.fact
+
+# Ansible retry files
+*.retry
+
+# Ansible log files
+ansible.log
+*.log
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# --- Vagrant ---
+.vagrant/
+*.box
+*.box.*
+vagrant_private_key
+vagrant_private_key.pub
+
+# --- VirtualBox ---
+*.vbox*
+*.vdi
+*.vmdk
+*.vhd
+*.nvram
+*.log
+*.lck
+*.tmp
+
+# --- Reports and Output ---
+# Generated audit reports (keep structure, exclude data)
+playbooks/reports/*.json
+!playbooks/reports/.gitkeep
+reports/*.json
+!reports/.gitkeep
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+
+# --- Documentation ---
+# Keep source docs, exclude generated
+docs/_build/
+docs/build/
+
+# --- Secrets ---
+# NEVER commit these
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets.yml
+secrets.yaml
+*.secret
+*.env
+.env.local
+.env.*.local
+
+# --- Make ---
+# Keep makefile, exclude generated artifacts
+*.o
+*.a
+
+# --- Local Overrides ---
+# Allow example files, exclude local customizations
+group_vars/*_override.yml
+group_vars/*.local.yml
+inventories/*/group_vars/*_override.yml
+inventories/*/group_vars/*.local.yml
+
+# --- CI/CD ---
+# Keep config, exclude local artifacts
+.cicd/local/
+.cicd/cache/

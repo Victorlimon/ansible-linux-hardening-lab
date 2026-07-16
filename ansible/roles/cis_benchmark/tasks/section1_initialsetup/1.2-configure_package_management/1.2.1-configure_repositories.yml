@@ -1,0 +1,74 @@
+---
+# =============================================================================
+# CIS Ubuntu 24.04 LTS Benchmark v1.0.0 - Section 1.2.1: Configure Repositories
+# Verifica que los repositorios oficiales estén configurados y firmados.
+# Sin dependencias de templates externos.
+# =============================================================================
+
+- name: "CIS 1.2.1 | AUDIT | Verify apt sources configuration"
+  block:
+    - name: "CIS 1.2.1 | AUDIT | Check /etc/apt/sources.list.d/ubuntu.sources"
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/ubuntu.sources
+      register: _cis_ubuntu_sources
+      tags: ['cis_sec1', 'cis_1.2.1', 'packages']
+
+    - name: "CIS 1.2.1 | AUDIT | Check /etc/apt/sources.list"
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list
+      register: _cis_sources_list
+      tags: ['cis_sec1', 'cis_1.2.1', 'packages']
+
+    - name: "CIS 1.2.1 | REPORT | Display repository configuration status"
+      ansible.builtin.debug:
+        msg:
+          - "=== CIS 1.2.1 - Repository Configuration ==="
+          - "ubuntu.sources exists: {{ _cis_ubuntu_sources.stat.exists }}"
+          - "sources.list exists: {{ _cis_sources_list.stat.exists }}"
+          - "Note: CIS 1.2.1 requires official Ubuntu repositories to be configured."
+          - "If using default Ubuntu 24.04, repositories are pre-configured correctly."
+      when: not _cis_ubuntu_sources.stat.exists and not _cis_sources_list.stat.exists
+      tags: ['cis_sec1', 'cis_1.2.1', 'packages']
+
+- name: "CIS 1.2.1 | Remediation | Ensure official repositories are present"
+  when:
+    - not _cis_ubuntu_sources.stat.exists
+    - not _cis_sources_list.stat.exists
+  block:
+    - name: "CIS 1.2.1 | Create ubuntu.sources with official repositories"
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/ubuntu.sources
+        content: |
+          Types: deb
+          URIs: http://archive.ubuntu.com/ubuntu/
+          Suites: {{ ansible_facts.distribution_release }} {{ ansible_facts.distribution_release }}-updates {{ ansible_facts.distribution_release }}-backports
+          Components: main restricted universe multiverse
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+          Types: deb
+          URIs: http://security.ubuntu.com/ubuntu/
+          Suites: {{ ansible_facts.distribution_release }}-security
+          Components: main restricted universe multiverse
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+        owner: root
+        group: root
+        mode: '0644'
+      tags: ['cis_sec1', 'cis_1.2.1', 'packages']
+
+- name: "CIS 1.2.1 | Remediation | Remove third-party repositories (if configured)"
+  when: cis_1_2_1_remove_third_party | default(false)
+  block:
+    - name: "CIS 1.2.1 | Find non-official repository files"
+      ansible.builtin.find:
+        paths: /etc/apt/sources.list.d
+        patterns: "*.sources,*.list"
+        excludes: "ubuntu.sources"
+      register: _cis_third_party_repos
+      tags: ['cis_sec1', 'cis_1.2.1', 'packages']
+
+    - name: "CIS 1.2.1 | Archive third-party repositories"
+      ansible.builtin.command: "mv {{ item.path }} {{ item.path }}.cis_disabled"
+      loop: "{{ _cis_third_party_repos.files }}"
+      when: _cis_third_party_repos.files | length > 0
+      changed_when: true
+      tags: ['cis_sec1', 'cis_1.2.1', 'packages']

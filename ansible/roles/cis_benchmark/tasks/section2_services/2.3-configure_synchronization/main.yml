@@ -1,0 +1,163 @@
+---
+# ==============================================================================
+# CIS Ubuntu 24.04 LTS Benchmark v1.0.0 - Section 2.3: Configure Time Synchronization
+# Hardening idempotente, basado en facts y compatible con --check
+# CIS Ref: Only ONE time sync daemon should be active. Skip unused daemon sections.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 2.3.1.1 | Ensure a single time synchronization daemon is in use
+# ------------------------------------------------------------------------------
+- name: "CIS 2.3.1.1 | Remediation | Ensure a single time synchronization daemon is in use"
+  block:
+    # ── Chrony seleccionado ──
+    - name: "CIS 2.3.1.1 | Install chrony package"
+      ansible.builtin.apt:
+        name: chrony
+        state: present
+      when:
+        - cis_time_sync_daemon == 'chrony'
+        - "'chrony' not in ansible_facts.packages"
+
+    - name: "CIS 2.3.1.1 | Stop and mask systemd-timesyncd (chrony in use)"
+      ansible.builtin.systemd:
+        name: systemd-timesyncd.service
+        state: stopped
+        enabled: false
+        masked: true
+      when:
+        - cis_time_sync_daemon == 'chrony'
+        - "'systemd-timesyncd.service' in ansible_facts.services"
+
+    # ── systemd-timesyncd seleccionado ──
+    - name: "CIS 2.3.1.1 | Remove chrony package (timesyncd in use)"
+      ansible.builtin.apt:
+        name: chrony
+        state: absent
+        purge: true
+        autoremove: true
+      when:
+        - cis_time_sync_daemon == 'systemd-timesyncd'
+        - "'chrony' in ansible_facts.packages"
+
+    - name: "CIS 2.3.1.1 | Unmask, enable and start systemd-timesyncd"
+      ansible.builtin.systemd:
+        name: systemd-timesyncd.service
+        state: started
+        enabled: true
+        masked: false
+      when:
+        - cis_time_sync_daemon == 'systemd-timesyncd'
+        - "'systemd-timesyncd.service' in ansible_facts.services"
+  when:
+    - cis_section2_services | default(true)
+    - cis_2_3_time_sync['2_3_1_1_single_daemon'] | default(true)
+  tags: ['cis_sec2', 'cis_2.3.1.1', 'level1-server', 'level1-workstation', 'NIST800-53R5_AU-3', 'NIST800-53R5_AU-12']
+
+# ------------------------------------------------------------------------------
+# 2.3.2 Configure systemd-timesyncd (SOLO si timesyncd está en uso)
+# ------------------------------------------------------------------------------
+- name: "CIS 2.3.2.1 | Remediation | Ensure systemd-timesyncd configured with authorized timeserver"
+  block:
+    - name: "CIS 2.3.2.1 | Create timesyncd drop-in directory"
+      ansible.builtin.file:
+        path: /etc/systemd/timesyncd.conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: "CIS 2.3.2.1 | Configure timesyncd NTP servers"
+      ansible.builtin.copy:
+        dest: /etc/systemd/timesyncd.conf.d/60-timesyncd.conf
+        content: |
+          [Time]
+          NTP={{ cis_timesyncd_servers }}
+          FallbackNTP={{ cis_timesyncd_fallback }}
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart systemd-timesyncd
+  when:
+    - cis_section2_services | default(true)
+    - cis_2_3_time_sync['2_3_2_1_timesyncd_config'] | default(true)
+    - cis_time_sync_daemon == 'systemd-timesyncd'
+  tags: ['cis_sec2', 'cis_2.3.2.1', 'level1-server', 'level1-workstation', 'NIST800-53R5_AU-7', 'NIST800-53R5_AU-8']
+
+- name: "CIS 2.3.2.2 | Remediation | Ensure systemd-timesyncd is enabled and running"
+  ansible.builtin.systemd:
+    name: systemd-timesyncd.service
+    state: started
+    enabled: true
+    masked: false
+  when:
+    - cis_section2_services | default(true)
+    - cis_2_3_time_sync['2_3_2_2_timesyncd_enabled'] | default(true)
+    - cis_time_sync_daemon == 'systemd-timesyncd'
+    - "'systemd-timesyncd.service' in ansible_facts.services"
+  tags: ['cis_sec2', 'cis_2.3.2.2', 'level1-server', 'level1-workstation', 'NIST800-53R5_AU-7', 'NIST800-53R5_AU-8']
+
+# ------------------------------------------------------------------------------
+# 2.3.3 Configure chrony (SOLO si chrony está en uso)
+# ------------------------------------------------------------------------------
+- name: "CIS 2.3.3.1 | Remediation | Ensure chrony is configured with authorized timeserver"
+  block:
+    - name: "CIS 2.3.3.1 | Create chrony sources.d directory"
+      ansible.builtin.file:
+        path: /etc/chrony/sources.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: "CIS 2.3.3.1 | Configure chrony NTP sources"
+      ansible.builtin.copy:
+        dest: /etc/chrony/sources.d/60-sources.sources
+        content: |
+          # CIS 2.3.3.1 - Authorized NTP sources
+          {% for server in cis_chrony_servers %}
+          {{ server }}
+          {% endfor %}
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart chrony
+
+    - name: "CIS 2.3.3.1 | Ensure sourcedir directive exists in chrony.conf"
+      ansible.builtin.lineinfile:
+        path: /etc/chrony/chrony.conf
+        regexp: '^sourcedir\s+/etc/chrony/sources.d'
+        line: 'sourcedir /etc/chrony/sources.d'
+        create: false
+      notify: Restart chrony
+  when:
+    - cis_section2_services | default(true)
+    - cis_2_3_time_sync['2_3_3_1_chrony_config'] | default(true)
+    - cis_time_sync_daemon == 'chrony'
+  tags: ['cis_sec2', 'cis_2.3.3.1', 'level1-server', 'level1-workstation', 'NIST800-53R5_AU-3', 'NIST800-53R5_AU-12']
+
+- name: "CIS 2.3.3.2 | Remediation | Ensure chrony is running as user _chrony"
+  ansible.builtin.lineinfile:
+    path: /etc/chrony/chrony.conf
+    regexp: '^user\s+'
+    line: 'user _chrony'
+    create: false
+  when:
+    - cis_section2_services | default(true)
+    - cis_2_3_time_sync['2_3_3_2_chrony_user'] | default(true)
+    - cis_time_sync_daemon == 'chrony'
+    - "'chrony' in ansible_facts.packages"
+  tags: ['cis_sec2', 'cis_2.3.3.2', 'level1-server', 'level1-workstation', 'NIST800-53R5_AU-8']
+
+- name: "CIS 2.3.3.3 | Remediation | Ensure chrony is enabled and running"
+  ansible.builtin.systemd:
+    name: chrony.service
+    state: started
+    enabled: true
+    masked: false
+  when:
+    - cis_section2_services | default(true)
+    - cis_2_3_time_sync['2_3_3_3_chrony_enabled'] | default(true)
+    - cis_time_sync_daemon == 'chrony'
+    - "'chrony.service' in ansible_facts.services"
+  tags: ['cis_sec2', 'cis_2.3.3.3', 'level1-server', 'level1-workstation', 'NIST800-53R5_AU-8']

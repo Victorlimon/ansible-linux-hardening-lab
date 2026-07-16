@@ -1,0 +1,255 @@
+---
+# =================================================================
+# CIS Benchmark 6.2.2: Configure Data Retention
+# Ubuntu 24.04 LTS - Idempotent Implementation
+# 
+# VM NOTES:
+# - All controls are applicable in VM environments
+# - Changes to auditd.conf require 'Restart auditd' handler (applied automatically)
+# - No reboot required for these controls (unlike 6.2.1.3/6.2.1.4 which modify GRUB)
+# =================================================================
+
+# Helper: Read current auditd.conf settings for idempotent comparison
+- name: "6.2.2 | HELPER | Read current auditd.conf settings"
+  ansible.builtin.command: "grep -E '^{{ item.param }}\\s*=' /etc/audit/auditd.conf"
+  register: auditd_conf_values
+  loop:
+    - { param: 'max_log_file', section: '6_2_2_1_max_log_file' }
+    - { param: 'max_log_file_action', section: '6_2_2_2_max_log_file_action' }
+    - { param: 'disk_full_action', section: '6_2_2_3_disk_actions' }
+    - { param: 'disk_error_action', section: '6_2_2_3_disk_actions' }
+    - { param: 'space_left', section: '6_2_2_4_space_warnings' }
+    - { param: 'space_left_action', section: '6_2_2_4_space_warnings' }
+    - { param: 'admin_space_left', section: '6_2_2_4_space_warnings' }
+    - { param: 'admin_space_left_action', section: '6_2_2_4_space_warnings' }
+    - { param: 'action_mail_acct', section: '6_2_2_4_space_warnings' }
+  loop_control:
+    label: "{{ item.param }}"
+  changed_when: false
+  failed_when: false
+  when: not auditd_unresponsive | default(false)
+
+# -----------------------------------------------------------------
+# 6.2.2.1 | Ensure audit log storage size is configured (Automated)
+# -----------------------------------------------------------------
+- name: "6.2.2.1 | Ensure audit log storage size is configured"
+  block:
+    - name: "REMEDIATE | Set max_log_file if different from desired"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^max_log_file\s*='
+        line: "max_log_file = {{ section6_logging['6_2_2_1_max_log_file'].value }}"
+        owner: root
+        group: root
+        mode: '0640'
+        backup: true
+      when: 
+        - item.stdout is defined and item.stdout != ''
+        - (item.stdout | regex_replace('^.*=\s*(\S+).*', '\1')) != (section6_logging['6_2_2_1_max_log_file'].value | string)
+      loop: "{{ auditd_conf_values.results }}"
+      loop_control:
+        label: "{{ item.item.param }}"
+      notify: Restart auditd
+  when: 
+    - section6_logging['6_2_2_1_max_log_file'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_2
+    - cis_6_2_2_1
+    - auditd
+    - retention
+    - storage
+
+# -----------------------------------------------------------------
+# 6.2.2.2 | Ensure audit logs are not automatically deleted (Automated)
+# -----------------------------------------------------------------
+- name: "6.2.2.2 | Ensure audit logs are not automatically deleted"
+  block:
+    - name: "REMEDIATE | Set max_log_file_action to keep_logs"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^max_log_file_action\s*='
+        line: "max_log_file_action = {{ section6_logging['6_2_2_2_max_log_file_action'].value }}"
+        owner: root
+        group: root
+        mode: '0640'
+        backup: true
+      when: 
+        - item.stdout is defined and item.stdout != ''
+        - (item.stdout | regex_replace('^.*=\s*(\S+).*', '\1')) != section6_logging['6_2_2_2_max_log_file_action'].value
+      loop: "{{ auditd_conf_values.results }}"
+      loop_control:
+        label: "{{ item.item.param }}"
+      notify: Restart auditd
+  when: 
+    - section6_logging['6_2_2_2_max_log_file_action'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_2
+    - cis_6_2_2_2
+    - auditd
+    - retention
+    - keep_logs
+
+# -----------------------------------------------------------------
+# 6.2.2.3 | Ensure system is disabled when audit logs are full (Automated)
+# LAB-SAFE: Defaults use 'syslog' instead of 'halt' for safety
+# -----------------------------------------------------------------
+- name: "6.2.2.3 | Ensure system is disabled when audit logs are full"
+  block:
+    - name: "REMEDIATE | Configure disk_full_action (LAB: syslog, PROD: halt)"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^disk_full_action\s*='
+        line: "disk_full_action = {{ section6_logging['6_2_2_3_disk_actions'].disk_full_action }}"
+        owner: root
+        group: root
+        mode: '0640'
+        backup: true
+      when: 
+        - item.stdout is defined and item.stdout != ''
+        - (item.stdout | regex_replace('^.*=\s*(\S+).*', '\1')) != section6_logging['6_2_2_3_disk_actions'].disk_full_action
+      loop: "{{ auditd_conf_values.results }}"
+      loop_control:
+        label: "disk_full_action"
+      notify: Restart auditd
+
+    - name: "REMEDIATE | Configure disk_error_action"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^disk_error_action\s*='
+        line: "disk_error_action = {{ section6_logging['6_2_2_3_disk_actions'].disk_error_action }}"
+        owner: root
+        group: root
+        mode: '0640'
+        backup: true
+      when: 
+        - item.stdout is defined and item.stdout != ''
+        - (item.stdout | regex_replace('^.*=\s*(\S+).*', '\1')) != section6_logging['6_2_2_3_disk_actions'].disk_error_action
+      loop: "{{ auditd_conf_values.results }}"
+      loop_control:
+        label: "disk_error_action"
+      notify: Restart auditd
+  when: 
+    - section6_logging['6_2_2_3_disk_actions'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_2
+    - cis_6_2_2_3
+    - auditd
+    - retention
+    - disk_actions
+    - lab_safe
+
+# -----------------------------------------------------------------
+# 6.2.2.4 | Ensure system warns when audit logs are low on space (Automated)
+# VM NOTE: All parameters configured; changes require 'Restart auditd' handler
+# -----------------------------------------------------------------
+- name: "6.2.2.4 | Ensure system warns when audit logs are low on space"
+  block:
+    # PRE-COMPUTE: Build simple dictionary of current values for idempotent comparison
+    # This avoids complex inline Jinja2 that can cause parsing errors
+    - name: "PRE-COMPUTE | Build dictionary of current auditd config values"
+      ansible.builtin.set_fact:
+        auditd_current_config: >-
+          {{ 
+            auditd_current_config | default({}) | combine({
+              item.item.param: (item.stdout | regex_replace('^.*=\s*(\S+).*', '\1', ignorecase=true))
+            })
+          }}
+      loop: "{{ auditd_conf_values.results }}"
+      when: item.stdout is defined and item.stdout | length > 0
+      changed_when: false
+
+    # Configure each warning parameter individually with simple idempotent checks
+    - name: "REMEDIATE | Configure space_left parameter"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^space_left\s*='
+        line: "space_left = {{ section6_logging['6_2_2_4_space_warnings'].space_left }}"
+        owner: root
+        group: root
+        mode: '0640'
+        backup: true
+      when: 
+        auditd_current_config.space_left | default('') 
+        != 
+        section6_logging['6_2_2_4_space_warnings'].space_left | string
+      notify: Restart auditd
+
+    - name: "REMEDIATE | Configure space_left_action parameter"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^space_left_action\s*='
+        line: "space_left_action = {{ section6_logging['6_2_2_4_space_warnings'].space_left_action }}"
+        owner: root
+        group: root
+        mode: '0640'
+        backup: true
+      when: 
+        auditd_current_config.space_left_action | default('') 
+        != 
+        section6_logging['6_2_2_4_space_warnings'].space_left_action | string
+      notify: Restart auditd
+
+    - name: "REMEDIATE | Configure admin_space_left parameter"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^admin_space_left\s*='
+        line: "admin_space_left = {{ section6_logging['6_2_2_4_space_warnings'].admin_space_left }}"
+        owner: root
+        group: root
+        mode: '0640'
+        backup: true
+      when: 
+        auditd_current_config.admin_space_left | default('') 
+        != 
+        section6_logging['6_2_2_4_space_warnings'].admin_space_left | string
+      notify: Restart auditd
+
+    - name: "REMEDIATE | Configure admin_space_left_action parameter"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^admin_space_left_action\s*='
+        line: "admin_space_left_action = {{ section6_logging['6_2_2_4_space_warnings'].admin_space_left_action }}"
+        owner: root
+        group: root
+        mode: '0640'
+        backup: true
+      when: 
+        auditd_current_config.admin_space_left_action | default('') 
+        != 
+        section6_logging['6_2_2_4_space_warnings'].admin_space_left_action | string
+      notify: Restart auditd
+
+    - name: "REMEDIATE | Configure action_mail_acct parameter"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^action_mail_acct\s*='
+        line: "action_mail_acct = {{ section6_logging['6_2_2_4_space_warnings'].action_mail_acct }}"
+        owner: root
+        group: root
+        mode: '0640'
+        backup: true
+      when: 
+        auditd_current_config.action_mail_acct | default('') 
+        != 
+        section6_logging['6_2_2_4_space_warnings'].action_mail_acct | string
+      notify: Restart auditd
+  when: 
+    - section6_logging['6_2_2_4_space_warnings'].enabled | default(true)
+    - not auditd_unresponsive | default(false)
+  tags:
+    - cis_6
+    - cis_6_2
+    - cis_6_2_2
+    - cis_6_2_2_4
+    - auditd
+    - warnings
+    - space

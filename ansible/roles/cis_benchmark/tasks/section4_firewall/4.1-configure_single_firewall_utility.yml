@@ -1,0 +1,105 @@
+- name: "4.1.1 | Ensure a single firewall configuration utility is in use"
+  tags:
+    - level1-server
+    - level1-workstation
+    - audit
+    - rule_4.1.1
+  block:
+    # Verificar UFW
+    - name: "4.1.1 | Check UFW"
+      command: bash -c "command -v ufw &>/dev/null && systemctl is-enabled --quiet ufw && systemctl is-active --quiet ufw"
+      register: ufw_check
+      failed_when: false
+      changed_when: false
+      ignore_errors: true
+
+    # Verificar nftables
+    - name: "4.1.1 | Check nftables"
+      command: bash -c "command -v nft &>/dev/null && systemctl is-enabled --quiet nftables && systemctl is-active --quiet nftables"
+      register: nftables_check
+      failed_when: false
+      changed_when: false
+      ignore_errors: true
+
+    # Verificar iptables (tal cual el script: fallará si systemctl falla, pero lo dejamos)
+    - name: "4.1.1 | Check iptables"
+      command: bash -c "command -v iptables &>/dev/null && systemctl is-enabled --quiet iptables && systemctl is-active --quiet iptables"
+      register: iptables_check
+      failed_when: false
+      changed_when: false
+      ignore_errors: true
+
+    # Construir lista de activos según código de retorno (0 = éxito)
+    - name: "4.1.1 | Build active list"
+      set_fact:
+        active_firewalls: >-
+          {{ 
+            (['ufw'] if ufw_check.rc == 0 else []) +
+            (['nftables'] if nftables_check.rc == 0 else []) +
+            (['iptables'] if iptables_check.rc == 0 else [])
+          }}
+
+    # Mostrar resultado exactamente como el script
+    - name: "4.1.1 | Audit result"
+      debug:
+        msg: |
+          Audit Results:
+          {% if active_firewalls | length == 1 %}
+          ** PASS **
+          - A single firewall is in use. Follow the recommendation in {{ active_firewalls[0] }} subsection ONLY.
+          {% elif active_firewalls | length == 0 %}
+          ** FAIL **
+          - No firewall in use or unable to determine firewall status.
+          {% else %}
+          ** FAIL **
+          - Multiple firewalls are in use: {{ active_firewalls | join(', ') }}
+          {% endif %}
+
+## ==================== REMEDIACIÓN (solo desactiva los sobrantes) ====================
+#    - when: cis_remediate | default(true)
+#      block:
+#        # Determinar firewall preferido (solo para decidir cuál conservar si hay múltiples)
+#        - name: "Set preferred firewall based on OS"
+#          set_fact:
+#            preferred_firewall: >-
+#              {{
+#                cis_preferred_firewall | default(
+#                  'ufw' if ansible_distribution == 'Ubuntu' else
+#                  'nftables' if ansible_distribution == 'Debian' else
+#                  'iptables'
+#                )
+#              }}
+#
+#        - name: "Show remediation policy"
+#          debug:
+#            msg: "If multiple firewalls active, will keep {{ preferred_firewall }} (if active) or the first active one"
+#
+#        # Solo actuar si hay más de un firewall activo
+#        - name: "Apply remediation when multiple firewalls"
+#          when: active_firewalls | length > 1
+#          block:
+#            # Elegir cuál conservar: el preferido si está activo, si no, el primero de la lista
+#            - name: "Determine which firewall to keep"
+#              set_fact:
+#                keep_firewall: "{{ preferred_firewall if preferred_firewall in active_firewalls else active_firewalls[0] }}"
+#
+#            # Detener y deshabilitar los demás (solo los que son servicios systemd)
+#            - name: "Stop and disable non-kept firewalls"
+#              systemd:
+#                name: "{{ item }}"
+#                state: stopped
+#                enabled: false
+#                masked: no
+#              loop: "{{ active_firewalls | difference([keep_firewall]) }}"
+#              when: item != "iptables"
+#
+#            # No se tocan reglas de iptables ni se activa nada nuevo
+#            - name: "Remediation result"
+#              debug:
+#                msg: "Disabled firewalls: {{ active_firewalls | difference([keep_firewall]) | join(', ') }}. Kept: {{ keep_firewall }}"
+#
+#        # Si ya hay 0 o 1 firewall activo, no hacer nada
+#        - name: "No remediation needed"
+#          debug:
+#            msg: "Already have {{ active_firewalls | length }} active firewall(s). No action taken."
+#          when: active_firewalls | length != 1

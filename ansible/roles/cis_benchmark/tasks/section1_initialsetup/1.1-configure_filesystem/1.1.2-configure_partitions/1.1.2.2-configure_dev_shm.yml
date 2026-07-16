@@ -1,0 +1,53 @@
+---
+# =============================================================================
+# CIS 1.1.2.2 | Configure /dev/shm Partition
+# Idempotente, optimizado (lectura única de mount), compatible con check_mode
+# =============================================================================
+
+- name: "CIS 1.1.2.2 | AUDIT | Check /dev/shm mount and options"
+  ansible.builtin.shell: |
+    findmnt -kn /dev/shm -o TARGET,SOURCE,FSTYPE,OPTIONS 2>/dev/null || echo "not_mounted"
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  register: _cis_devshm_mount_info
+  tags: ['cis_sec1', 'cis_1.1.2.2', 'partitions', 'dev_shm']
+
+- name: "CIS 1.1.2.2.2 | Remediation | Ensure nodev option set on /dev/shm"
+  when:
+    - _cis_devshm_mount_info.stdout != "not_mounted"
+    - "'nodev' not in _cis_devshm_mount_info.stdout"
+    - cis_1_1_2_dev_shm_nodev | default(true)
+  ansible.posix.mount:
+    path: /dev/shm
+    src: "{{ _cis_devshm_mount_info.stdout.split()[1] }}"
+    fstype: "{{ _cis_devshm_mount_info.stdout.split()[2] }}"
+    opts: "{{ (_cis_devshm_mount_info.stdout.split()[-1] | trim).split(',') | union(['nodev']) | join(',') }}"
+    state: mounted
+  tags: ['cis_sec1', 'cis_1.1.2.2', 'partitions', 'dev_shm']
+
+- name: "CIS 1.1.2.2.3 | Remediation | Ensure nosuid option set on /dev/shm"
+  when:
+    - _cis_devshm_mount_info.stdout != "not_mounted"
+    - "'nosuid' not in _cis_devshm_mount_info.stdout"
+    - cis_1_1_2_dev_shm_nosuid | default(true)
+  ansible.posix.mount:
+    path: /dev/shm
+    src: "{{ _cis_devshm_mount_info.stdout.split()[1] }}"
+    fstype: "{{ _cis_devshm_mount_info.stdout.split()[2] }}"
+    opts: "{{ (_cis_devshm_mount_info.stdout.split()[-1] | trim).split(',') | union(['nosuid']) | join(',') }}"
+    state: mounted
+  tags: ['cis_sec1', 'cis_1.1.2.2', 'partitions', 'dev_shm']
+
+- name: "CIS 1.1.2.2.4 | Remediation | Ensure noexec option set on /dev/shm"
+  when:
+    - _cis_devshm_mount_info.stdout != "not_mounted"
+    - "'noexec' not in _cis_devshm_mount_info.stdout"
+    - cis_1_1_2_dev_shm_noexec | default(true)
+  ansible.posix.mount:
+    path: /dev/shm
+    src: "{{ _cis_devshm_mount_info.stdout.split()[1] }}"
+    fstype: "{{ _cis_devshm_mount_info.stdout.split()[2] }}"
+    opts: "{{ (_cis_devshm_mount_info.stdout.split()[-1] | trim).split(',') | union(['noexec']) | join(',') }}"
+    state: mounted
+  tags: ['cis_sec1', 'cis_1.1.2.2', 'partitions', 'dev_shm']
