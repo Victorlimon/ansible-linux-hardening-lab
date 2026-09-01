@@ -3,9 +3,16 @@ SCRIPTS_DIR := ./lab/scripts
 SCRIPTS_DIR_VAGRANT := ./lab/vagrant/scripts
 
 
-.PHONY: all up destroy setup-ssh provision-lab stop start ansible-control ubuntu24-ssh
+.PHONY: all help check-host up destroy setup-ssh provision-lab stop start status ansible-control ubuntu24-ssh debian12-ssh
 
 all: up
+
+help:
+	@echo "Objetivos seguros en el host: check-host, status, start y stop"
+	@echo "Ansible se valida dentro de ansible-control con scripts/check_control.sh"
+
+check-host:
+	@./scripts/check_host.sh
 
 # --- Generar claves SSH ---
 setup-ssh:
@@ -40,6 +47,10 @@ start:
 	@echo "  Ejecutando lab-start.sh..."
 	@cd $(SCRIPTS_DIR) && ./lab-start.sh
 
+# --- Consultar estado del laboratorio ---
+status:
+	@cd ./lab/vagrant && vagrant.exe status
+
 # --- Conectarse a ansible-control ---
 ansible-control:
 	@echo "🔗 Conectando a ansible-control..."
@@ -49,6 +60,11 @@ ansible-control:
 ubuntu24-ssh:
 	@echo "🔗 Conectando a ubuntu24..."
 	cd ./lab/vagrant && vagrant.exe ssh ubuntu24
+
+# --- Conectarse a Debian 12 ---
+debian12-ssh:
+	@echo "🔗 Conectando a debian12..."
+	cd ./lab/vagrant && vagrant.exe ssh debian12
 
 
 

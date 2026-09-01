@@ -11,6 +11,8 @@
 # Ansible fact cache
 ansible_facts/
 *.fact
+.ansible/
+ansible/.cache/
 
 # Ansible retry files
 *.retry
@@ -46,6 +48,8 @@ venv/
 ENV/
 env/
 .venv/
+.pytest_cache/
+.mypy_cache/
 
 # --- Vagrant ---
 .vagrant/
@@ -81,6 +85,7 @@ reports/*.json
 # --- IDE / Editor ---
 .vscode/
 .idea/
+.opencode/
 *.sublime-project
 *.sublime-workspace
 *.code-workspace
@@ -91,8 +96,12 @@ reports/*.json
 docs/_build/
 docs/build/
 
+# Local clone of the upstream Ansible documentation used as an agent reference
+docs/ansible-documentation/
+
 # --- Secrets ---
 # NEVER commit these
+lab/vagrant/ssh/
 *.pem
 *.key
 *.crt
@@ -104,6 +113,10 @@ secrets.yaml
 *.env
 .env.local
 .env.*.local
+.vault_password
+.vault-password
+vault_password_file
+*.vault-pass
 
 # --- Make ---
 # Keep makefile, exclude generated artifacts

@@ -1,6 +1,11 @@
 #!/bin/bash
+set -euo pipefail
+
 # lab/vagrant/scripts/setup-postprovision.sh
 # Tareas adicionales: actualizar paquetes en todas las VMs
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
 
 VMS=("ansible-control" "debian12" "ubuntu24")
 
