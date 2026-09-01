@@ -80,3 +80,28 @@ No se instalarán en el host. La toolchain se preparará dentro de
 | P7 Producción | PLANNED | Gates, staging y runbooks |
 | P8 Compatibilidad anterior | PLANNED | Servidores principales released |
 | P9 Docker | DEFERRED | Proyecto de servidores concluido |
+
+## 2026-09-01 — Consolidación y preparación de P1
+
+### Consolidación Git — COMPLETED
+
+Se crearon cuatro commits locales y no se realizó push:
+
+- arquitectura Ubuntu/Debian y baseline de hardening;
+- seguridad del laboratorio y eliminación de claves rastreadas;
+- baseline DevSecOps;
+- documentación y plan maestro de producción.
+
+Después de los commits, `git status --short` quedó vacío y
+`git diff --check` no reportó errores.
+
+### Diseño de toolchain — PARTIAL
+
+- `ansible-core` se fijó en 2.21.2.
+- La ubicación prevista es `/home/vagrant/.venvs/ansible-cis`.
+- La primera provisión generará `requirements-dev.lock` con hashes dentro de
+  `ansible-control`; después el lock será obligatorio y versionado.
+- Se fijaron las versiones observadas de python3-venv, pip, ShellCheck,
+  Gitleaks y git-filter-repo disponibles para Ubuntu 24.04 del nodo de control.
+- Se eliminó el `apt upgrade` implícito del flujo de provisión.
+- La instalación todavía no se ejecutó.

@@ -8,6 +8,12 @@ fi
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPOSITORY_ROOT="$(cd "$PROJECT_ROOT/.." && pwd)"
+TOOLCHAIN_BIN="/home/vagrant/.venvs/ansible-cis/bin"
+
+if [[ -d "$TOOLCHAIN_BIN" ]]; then
+  export PATH="$TOOLCHAIN_BIN:$PATH"
+fi
+
 cd "$PROJECT_ROOT"
 
 for command_name in ansible ansible-inventory ansible-playbook; do

@@ -2,6 +2,11 @@
 # Read-only Section 6 validation. Run only from ansible-control.
 set -euo pipefail
 
+TOOLCHAIN_BIN="/home/vagrant/.venvs/ansible-cis/bin"
+if [[ -d "$TOOLCHAIN_BIN" ]]; then
+    export PATH="$TOOLCHAIN_BIN:$PATH"
+fi
+
 if [[ "$(hostname -s)" != "ansible-control" ]]; then
   echo "ERROR: run this script only inside ansible-control." >&2
   exit 1
