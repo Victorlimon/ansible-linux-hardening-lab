@@ -1,0 +1,14 @@
+---
+profile: basic
+exclude_paths:
+  - docs/ansible-documentation/
+  - lab/vagrant/.vagrant/
+  - .opencode/
+  - docs/CIS_Debian_Linux_12_Benchmark_v1.1.0.md
+  - docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session01.md
+  - docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session02.md
+  - docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session03.md
+  - docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session04.md
+  - docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session05.md
+  - docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session06.md
+  - docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session07.md

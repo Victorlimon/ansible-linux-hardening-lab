@@ -1,0 +1,24 @@
+---
+extends: default
+
+ignore: |
+  docs/ansible-documentation/
+  docs/CIS_Debian_Linux_12_Benchmark_v1.1.0.md
+  docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session01.md
+  docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session02.md
+  docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session03.md
+  docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session04.md
+  docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session05.md
+  docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session06.md
+  docs/CIS_Debian_Linux_12_Benchmark_v1.1.0_session07.md
+  lab/vagrant/.vagrant/
+  .opencode/
+
+rules:
+  document-start: disable
+  line-length:
+    max: 120
+    level: warning
+  truthy:
+    allowed-values: ['true', 'false']
+    check-keys: false

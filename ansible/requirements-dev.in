@@ -1,0 +1,6 @@
+# Resolve and lock these dependencies from ansible-control. Do not install them
+# on the editing host.
+ansible-core>=2.16,<2.22
+ansible-lint
+yamllint
+pre-commit

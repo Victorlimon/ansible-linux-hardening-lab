@@ -1,0 +1,4 @@
+title = "ansible-cis project secret scanning policy"
+
+[extend]
+useDefault = true
