@@ -55,19 +55,18 @@ git checkout -b docs/update-readme-examples
 ### 4. Desarrollar y Validar
 
 ```bash
-# 1. Validar sintaxis Ansible
-ansible-playbook playbooks/cis_hardening.yml --syntax-check
+# En el host: no ejecutar Ansible
+./scripts/check_host.sh
 
-# 2. Ejecutar ansible-lint
-ansible-lint playbooks/cis_hardening.yml
+# Dentro de ansible-control
+./scripts/check_control.sh
+./scripts/test_contracts.sh
 
-# 3. Validar YAML
-yamllint roles/cis_benchmark/tasks/
-
-# 4. Probar idempotencia (ejecutar dos veces)
-ansible-playbook playbooks/cis_hardening.yml --check --tags cis_X.Y
-ansible-playbook playbooks/cis_hardening.yml --check --tags cis_X.Y
-# Segunda ejecución debe mostrar changed=0
+# Probar un control: check, dos aplicaciones reales y verificación funcional
+ansible-playbook -i inventories/local/hosts.yml PLAYBOOK \
+  --limit HOST --tags TAG --check --diff
+ansible-playbook -i inventories/local/hosts.yml PLAYBOOK --limit HOST --tags TAG
+ansible-playbook -i inventories/local/hosts.yml PLAYBOOK --limit HOST --tags TAG
 ```
 
 ### 5. Commit y Push
@@ -179,13 +178,11 @@ cis_ssh_config.AccessControl_bol: yes  # mixed_case, sufijo inconsistente
 ### Manejo de Errores
 
 ```yaml
-# Para tareas que pueden fallar en ciertos entornos:
+# Tratar explícitamente la aplicabilidad; no ocultar fallos de hardening:
 - name: "CIS X.X.X | Remediation | Configure service"
-  ansible.builtin.systemd:
+  ansible.builtin.systemd_service:
     name: some-service
     state: restarted
-  ignore_errors: true
-  failed_when: false
   when: "'some-service.service' in ansible_facts.services"
 ```
 
@@ -211,11 +208,12 @@ ansible-lint playbooks/cis_hardening.yml
 ### 3. Idempotencia
 
 ```bash
-# Primera ejecución (puede haber cambios)
-ansible-playbook playbooks/cis_hardening.yml --check --tags cis_X.Y
+# Vista previa
+ansible-playbook -i inventories/local/hosts.yml playbooks/cis_hardening.yml --limit ubuntu24 --check --diff --tags cis_X.Y
 
-# Segunda ejecución (debe mostrar changed=0)
-ansible-playbook playbooks/cis_hardening.yml --check --tags cis_X.Y
+# Primera aplicación y segunda aplicación real
+ansible-playbook -i inventories/local/hosts.yml playbooks/cis_hardening.yml --limit ubuntu24 --tags cis_X.Y
+ansible-playbook -i inventories/local/hosts.yml playbooks/cis_hardening.yml --limit ubuntu24 --tags cis_X.Y
 ```
 
 ### 4. Prueba en Laboratorio
@@ -225,7 +223,7 @@ ansible-playbook playbooks/cis_hardening.yml --check --tags cis_X.Y
 make up
 
 # Ejecutar contra VM de prueba
-ansible-playbook playbooks/cis_hardening.yml --tags cis_X.Y -i inventories/local/hosts.yml
+ansible-playbook -i inventories/local/hosts.yml playbooks/cis_hardening.yml --limit ubuntu24 --tags cis_X.Y
 
 # Verificar resultado manual
 vagrant ssh ubuntu24 -c "sshd -T | grep permitrootlogin"

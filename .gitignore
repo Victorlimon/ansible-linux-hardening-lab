@@ -99,6 +99,9 @@ docs/build/
 # Local clone of the upstream Ansible documentation used as an agent reference
 docs/ansible-documentation/
 
+# Licensed CIS source copies are local references, not project deliverables.
+/docs/CIS_Debian_Linux_12_Benchmark_v*.md
+
 # --- Secrets ---
 # NEVER commit these
 lab/vagrant/ssh/

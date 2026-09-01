@@ -1,154 +1,41 @@
-# 📁 Archivos de Documentación Creados
+# Índice de documentación
 
-Este archivo lista todos los archivos de documentación generados para el proyecto `ansible-cis-benchmark`.
+La documentación mantenida del proyecto es:
 
----
+| Archivo | Contenido |
+|---|---|
+| [`README.md`](../README.md) | Alcance, requisitos y primera ejecución segura |
+| [`docs/README.md`](README.md) | Arquitectura real, inventario, usuarios, tags y pruebas |
+| [`docs/PRODUCTION_UBUNTU24.md`](PRODUCTION_UBUNTU24.md) | Preparación, ejecución y recuperación para Ubuntu 24.04 Server |
+| [`docs/CIS_CONTROL_MATRIX.md`](CIS_CONTROL_MATRIX.md) | Estado automatizado, manual u opt-in y riesgos por secciones 1-7 |
+| [`docs/ARCHITECTURE_CIS_MULTI_PLATFORM.md`](ARCHITECTURE_CIS_MULTI_PLATFORM.md) | Arquitectura incremental para Ubuntu 24.04 y Debian 12 |
+| [`docs/CIS_DEBIAN12_IMPLEMENTATION_PLAN.md`](CIS_DEBIAN12_IMPLEMENTATION_PLAN.md) | Hitos y Definition of Done para Debian 12 |
+| [`docs/CIS_DEBIAN12_CONTROL_MATRIX.md`](CIS_DEBIAN12_CONTROL_MATRIX.md) | Estado y riesgos por control del adaptador Debian 12 |
+| [`docs/SCALABILITY.md`](SCALABILITY.md) | Capas, contratos y migración incremental Ubuntu/Debian |
+| [`docs/DEVSECOPS.md`](DEVSECOPS.md) | Validación host/control, gates y estrategia CI |
+| [`docs/PRODUCTION_MIGRATION_MASTER_PLAN.md`](PRODUCTION_MIGRATION_MASTER_PLAN.md) | Plan integral de arquitectura, migración, producción, SIEM, drift, compatibilidad y contenedores |
+| [`docs/MIGRATION_EXECUTION_LOG.md`](MIGRATION_EXECUTION_LOG.md) | Evidencia cronológica de fases y validaciones realmente ejecutadas |
+| [`SECURITY.md`](../SECURITY.md) | Reporte de vulnerabilidades y respuesta ante secretos |
+| [`docs/adr/README.md`](adr/README.md) | Decisiones de arquitectura versionadas |
 
-## 📄 Archivos en Raíz del Proyecto
+## Fuente de verdad
 
-| Archivo | Propósito | Estado |
-|---------|-----------|--------|
-| `README.md` | Documentación principal para usuarios y GitHub | ✅ Creado |
-| `CONTRIBUTING.md` | Guía para contribuidores y estándares de código | ✅ Creado |
-| `LICENSE` | Licencia MIT del proyecto | ✅ Creado |
-| `.gitignore` | Archivos y directorios ignorados por Git | ✅ Creado |
-| `CHANGELOG.md` | Historial de versiones y cambios notables | ✅ Creado |
+Para validar que la documentación sigue correspondiendo al código, revise:
 
----
+- `ansible/playbooks/cis_ubuntu_2404_hardening.yml` y los entry points Debian
+  para los patrones de hosts; `cis_hardening.yml` es compatibilidad Ubuntu.
+- `ansible/roles/cis_benchmark/tasks/main.yml` para secciones y tags.
+- `ansible/roles/cis_benchmark/defaults/main/*.yml` para defaults efectivos.
+- `ansible/inventories/local/hosts.yml` y `group_vars/ubuntu_2404.yml` para el
+  laboratorio.
+- `ansible/playbooks/cis_debian_12_audit.yml`,
+  `ansible/playbooks/cis_debian_12_hardening.yml` y `roles/cis_debian_12/` para
+  auditoría y canarios Debian 12.
+- `ansible/requirements.yml` para colecciones.
+- `Makefile`, `lab/vagrant/Vagrantfile` y scripts de provisión para usuarios y
+  flujo del laboratorio.
 
-## 📚 Documentación Técnica (`docs/`)
-
-| Archivo | Propósito | Estado |
-|---------|-----------|--------|
-| `docs/README.md` | Documentación técnica interna (arquitectura, flujo, variables, tags, troubleshooting) | ✅ Creado |
-
----
-
-## 🗂️ Estructura Final de Documentación
-
-```
-ansible_prod_ia/
-├── README.md              ← Documentación principal (GitHub-ready)
-├── CONTRIBUTING.md        ← Guía para contribuidores
-├── LICENSE                ← Licencia MIT
-├── .gitignore             ← Configuración de Git
-├── CHANGELOG.md           ← Historial de versiones
-├── docs/
-│   └── README.md          ← Documentación técnica interna
-└── ... (resto del proyecto)
-```
-
----
-
-## 🚀 Próximos Pasos para Publicar en GitHub
-
-1. **Inicializar repositorio Git** (si no está hecho):
-   ```bash
-   cd C:\Users\Victor\Desktop\ansible_prod_ia
-   git init
-   git add .
-   git commit -m "feat: initial commit with CIS Benchmark hardening project"
-   ```
-
-2. **Crear repositorio en GitHub**:
-   - Ve a https://github.com/new
-   - Nombre: `ansible-cis-benchmark`
-   - Descripción: "CIS Benchmark Hardening & Auditing for Ubuntu 24.04 / Debian 12 with Ansible"
-   - Visibility: Public (recomendado para open source)
-
-3. **Conectar y push**:
-   ```bash
-   git remote add origin https://github.com/tu-usuario/ansible-cis-benchmark.git
-   git branch -M main
-   git push -u origin main
-   ```
-
-4. **Configurar GitHub**:
-   - Agregar badges en README.md con URLs reales
-   - Configurar GitHub Actions para CI/CD (opcional)
-   - Habilitar Issues, Discussions, y Wiki según necesidades
-
-5. **Proteger rama main** (recomendado):
-   - En Settings → Branches → Add rule: `main`
-   - Requerir PR reviews antes de merge
-   - Requerir status checks (ansible-lint, syntax-check)
-
----
-
-## 📋 Checklist de Calidad Pre-Publicación
-
-- [x] README.md completo con badges, tabla de contenidos y ejemplos
-- [x] CONTRIBUTING.md con flujo de trabajo y estándares de código
-- [x] LICENSE con licencia MIT clara
-- [x] .gitignore con exclusiones apropiadas para Ansible/Vagrant/Python
-- [x] CHANGELOG.md con historial de versiones y roadmap
-- [x] docs/README.md con arquitectura técnica detallada
-- [x] Validación de sintaxis Ansible: `--syntax-check` pasa
-- [x] Ansible Lint: sin errores críticos
-- [x] Idempotencia verificada: segunda ejecución muestra `changed=0`
-- [ ] Tests automatizados (Molecule) - *Opcional para v1.0*
-- [ ] GitHub Actions workflow - *Opcional para v1.0*
-
----
-
-## 🎯 Estado del Proyecto
-
-| Componente | Estado | Notas |
-|------------|--------|-------|
-| **Sección 1: Initial Setup** | ✅ Completo | Filesystem, packages, AppArmor, bootloader, banners |
-| **Sección 2: Services** | ✅ Completo | Server/client services, time sync, job schedulers |
-| **Sección 3: Network** | ✅ Completo | Network protocols, kernel parameters |
-| **Sección 4: Firewall** | ✅ Completo | UFW (Ubuntu) / nftables (Debian) / iptables |
-| **Sección 5: Access Control** | ✅ Completo | SSH, sudo, PAM, user accounts |
-| **Sección 6: Logging/Auditing** | ✅ Completo | journald, rsyslog, auditd, AIDE |
-| **Sección 7: System Maintenance** | ✅ Completo | File permissions, user/group settings |
-| **Documentación** | ✅ Completo | README, CONTRIBUTING, LICENSE, .gitignore, CHANGELOG, docs/ |
-| **Testing** | 🟡 Parcial | Validación manual, falta Molecule/CI automatizado |
-| **CI/CD** | 🔴 Pendiente | GitHub Actions workflow por implementar |
-
----
-
-## 🔄 Mantenimiento Futuro
-
-### Actualización de CIS Benchmark
-
-Cuando se publique una nueva versión del CIS Benchmark:
-
-1. Revisar changelog oficial de CIS
-2. Identificar controles nuevos, modificados o eliminados
-3. Actualizar `defaults/main.yml` con nuevas variables
-4. Crear/modificar tasks en la sección correspondiente
-5. Actualizar tags y mapeo NIST si aplica
-6. Incrementar versión en `CHANGELOG.md` y `cis_benchmark_version`
-
-### Adición de Nueva Distribución
-
-Para agregar soporte para RHEL/CentOS, SUSE, etc.:
-
-1. Crear variables condicionales en `defaults/main.yml`:
-   ```yaml
-   cis_firewall_engine: >-
-     {{ 'ufw' if ansible_facts.distribution == 'Ubuntu'
-        else 'nftables' if ansible_facts.distribution == 'Debian'
-        else 'firewalld' }}
-   ```
-
-2. Agregar lógica condicional en tasks afectados
-3. Documentar diferencias en `docs/README.md`
-4. Probar en laboratorio con la nueva distribución
-
-### Integración con AWX/Tower
-
-Para ejecución programada y gestión centralizada:
-
-1. Crear proyecto en AWX apuntando al repositorio Git
-2. Configurar inventarios dinámicos o estáticos
-3. Definir templates de job con tags específicos
-4. Configurar notificaciones (email, Slack, webhook)
-5. Programar ejecuciones periódicas de auditoría
-
----
-
-> **Última actualización**: Mayo 2026  
-> **Versión del proyecto**: 1.0.0  
-> **CIS Benchmark**: Ubuntu 24.04 LTS / Debian 12 v1.0.0
+Los inventarios `staging` y `production` están vacíos. No constituyen evidencia
+de soporte multiambiente. La referencia vendorizada en
+`docs/ansible-documentation/` es documentación oficial local de consulta y no
+forma parte de la documentación editable del proyecto.
