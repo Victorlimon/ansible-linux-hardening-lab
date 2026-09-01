@@ -1,111 +1,174 @@
 ---
-# =============================================================================
-# CIS Ubuntu 24.04 LTS / Debian 12 Benchmark v1.0.0 - Section 5.3.2: PAM Auth-Update Profiles
-# =============================================================================
-
-- name: "CIS 5.3.2.1 | Remediation | Ensure pam_unix is configured for password authentication"
+- name: "CIS 5.3.2.1 | Remediation | Install managed pam_unix profile"
   when: cis_5_3_2_1_pam_unix | default(true)
-  block:
-    - name: "CIS 5.3.2.1 | AUDIT | Check pam_unix in common-auth"
-      ansible.builtin.command: grep -E '^\s*auth\s+.*\bpam_unix\.so\b' /etc/pam.d/common-auth
-      register: _cis_pam_unix_auth
-      changed_when: false
-      failed_when: false
-
-    - name: "CIS 5.3.2.1 | Remediation | Ensure pam_unix is present in common-auth"
-      ansible.builtin.lineinfile:
-        path: /etc/pam.d/common-auth
-        regexp: '^\s*auth\s+.*\bpam_unix\.so\b'
-        line: 'auth\t[success=1 default=ignore]\tpam_unix.so obscure'
-        backup: yes
-      when: _cis_pam_unix_auth.rc != 0
-
-    - name: "CIS 5.3.2.1 | AUDIT | Check pam_unix in common-password"
-      ansible.builtin.command: grep -E '^\s*password\s+.*\bpam_unix\.so\b' /etc/pam.d/common-password
-      register: _cis_pam_unix_pass
-      changed_when: false
-      failed_when: false
-
-    - name: "CIS 5.3.2.1 | Remediation | Ensure pam_unix is present in common-password"
-      ansible.builtin.lineinfile:
-        path: /etc/pam.d/common-password
-        regexp: '^\s*password\s+.*\bpam_unix\.so\b'
-        line: 'password\t[success=1 default=ignore]\tpam_unix.so obscure yescrypt'
-        backup: yes
-      when: _cis_pam_unix_pass.rc != 0
+  ansible.builtin.copy:
+    dest: /usr/share/pam-configs/unix
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      Name: Unix authentication
+      Default: yes
+      Priority: 256
+      Auth-Type: Primary
+      Auth:
+              [success=end default=ignore] pam_unix.so try_first_pass
+      Auth-Initial:
+              [success=end default=ignore] pam_unix.so
+      Account-Type: Primary
+      Account:
+              [success=end new_authtok_reqd=done default=ignore] pam_unix.so
+      Account-Initial:
+              [success=end new_authtok_reqd=done default=ignore] pam_unix.so
+      Session-Type: Additional
+      Session:
+              required pam_unix.so
+      Session-Initial:
+              required pam_unix.so
+      Password-Type: Primary
+      Password:
+              [success=end default=ignore] pam_unix.so obscure use_authtok try_first_pass yescrypt
+      Password-Initial:
+              [success=end default=ignore] pam_unix.so obscure yescrypt
+  register: _cis_pam_unix_profile
   tags:
     - level1-server
     - level1-workstation
     - remediation
     - cis_5.3.2.1
-    - NIST800-53R5_IA-5
+    - cis_5.3.3.4.1
+    - cis_5.3.3.4.2
+    - cis_5.3.3.4.3
+    - cis_5.3.3.4.4
     - pam
 
-- name: "CIS 5.3.2.2 | Remediation | Ensure pam_faillock is configured for account lockout"
+- name: "CIS 5.3.2.2 | Remediation | Install pam_faillock profiles"
   when: cis_5_3_2_2_pam_faillock | default(true)
   block:
-    - name: "CIS 5.3.2.2 | Remediation | Ensure pam_faillock.so is in common-auth (preauth)"
-      ansible.builtin.lineinfile:
-        path: /etc/pam.d/common-auth
-        regexp: '^\s*auth\s+.*\bpam_faillock\.so\s+preauth\b'
-        line: 'auth\trequired\tpam_faillock.so preauth silent audit deny={{ cis_pam_faillock_deny | default(5) }} unlock_time={{ cis_pam_faillock_unlock_time | default(900) }}'
-        insertbefore: '^\s*auth\s+.*\bpam_unix\.so\b'
-        backup: yes
+    - name: "CIS 5.3.2.2 | Remediation | Install faillock authfail profile"
+      ansible.builtin.copy:
+        dest: /usr/share/pam-configs/faillock
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          Name: Enable pam_faillock to deny access
+          Default: yes
+          Priority: 0
+          Auth-Type: Primary
+          Auth:
+                  [default=die] pam_faillock.so authfail
+      register: _cis_pam_faillock_profile
 
-    - name: "CIS 5.3.2.2 | Remediation | Ensure pam_faillock.so is in common-auth (authfail)"
-      ansible.builtin.lineinfile:
-        path: /etc/pam.d/common-auth
-        regexp: '^\s*auth\s+.*\bpam_faillock\.so\s+authfail\b'
-        line: 'auth\t[default=die]\tpam_faillock.so authfail audit deny={{ cis_pam_faillock_deny | default(5) }} unlock_time={{ cis_pam_faillock_unlock_time | default(900) }}'
-        insertafter: '^\s*auth\s+.*\bpam_unix\.so\b'
-        backup: yes
+    - name: "CIS 5.3.2.2 | Remediation | Install faillock preauth and account profile"
+      ansible.builtin.copy:
+        dest: /usr/share/pam-configs/faillock_notify
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          Name: Notify failed login attempts and reset count on success
+          Default: yes
+          Priority: 1024
+          Auth-Type: Primary
+          Auth:
+                  requisite pam_faillock.so preauth
+          Account-Type: Primary
+          Account:
+                  required pam_faillock.so
+      register: _cis_pam_faillock_notify_profile
+  tags: [level1-server, level1-workstation, remediation, cis_5.3.2.2, pam]
 
-    - name: "CIS 5.3.2.2 | Remediation | Ensure pam_faillock.so is in common-account"
-      ansible.builtin.lineinfile:
-        path: /etc/pam.d/common-account
-        regexp: '^\s*account\s+.*\bpam_faillock\.so\b'
-        line: 'account\trequired\tpam_faillock.so'
-        backup: yes
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.3.2.2
-    - NIST800-53R5_AC-7
-    - pam
-
-- name: "CIS 5.3.2.3 | Remediation | Ensure pam_pwquality is configured for password quality"
+- name: "CIS 5.3.2.3 | Remediation | Install pam_pwquality profile"
   when: cis_5_3_2_3_pam_pwquality | default(true)
-  block:
-    - name: "CIS 5.3.2.3 | Remediation | Ensure pam_pwquality.so is in common-password"
-      ansible.builtin.lineinfile:
-        path: /etc/pam.d/common-password
-        regexp: '^\s*password\s+.*\bpam_pwquality\.so\b'
-        line: 'password\trequisite\tpam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }} minlen={{ cis_pam_pwquality_minlen | default(14) }} dcredit={{ cis_pam_pwquality_dcredit | default(-1) }} ucredit={{ cis_pam_pwquality_ucredit | default(-1) }} ocredit={{ cis_pam_pwquality_ocredit | default(-1) }} lcredit={{ cis_pam_pwquality_lcredit | default(-1) }}'
-        insertbefore: '^\s*password\s+.*\bpam_unix\.so\b'
-        backup: yes
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.3.2.3
-    - NIST800-53R5_IA-5
-    - pam
+  ansible.builtin.copy:
+    dest: /usr/share/pam-configs/pwquality
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      Name: Pwquality password strength checking
+      Default: yes
+      Priority: 1024
+      Conflicts: cracklib
+      Password-Type: Primary
+      Password:
+              requisite pam_pwquality.so retry={{ cis_pam_pwquality_retry | default(3) }}
+  register: _cis_pam_pwquality_profile
+  tags: [level1-server, level1-workstation, remediation, cis_5.3.2.3, pam]
 
-- name: "CIS 5.3.2.4 | Remediation | Ensure pam_pwhistory is configured for password history"
+- name: "CIS 5.3.2.4 | Remediation | Install pam_pwhistory profile"
   when: cis_5_3_2_4_pam_pwhistory | default(true)
-  block:
-    - name: "CIS 5.3.2.4 | Remediation | Ensure pam_pwhistory.so is in common-password"
-      ansible.builtin.lineinfile:
-        path: /etc/pam.d/common-password
-        regexp: '^\s*password\s+.*\bpam_pwhistory\.so\b'
-        line: 'password\trequisite\tpam_pwhistory.so remember={{ cis_pam_pwhistory_remember | default(5) }}'
-        insertbefore: '^\s*password\s+.*\bpam_unix\.so\b'
-        backup: yes
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.3.2.4
-    - NIST800-53R5_IA-5
-    - pam
+  ansible.builtin.copy:
+    dest: /usr/share/pam-configs/pwhistory
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      Name: Pwhistory password history checking
+      Default: yes
+      Priority: 1024
+      Password-Type: Primary
+      Password:
+              requisite pam_pwhistory.so remember={{ [cis_pam_pwhistory_remember | default(24) | int, 24] | max }} enforce_for_root try_first_pass use_authtok
+  register: _cis_pam_pwhistory_profile
+  tags: [level1-server, level1-workstation, remediation, cis_5.3.2.4, pam]
+
+- name: "CIS 5.3.2 | Audit | Check modules in generated PAM stacks"
+  ansible.builtin.shell: |
+    grep -q 'pam_unix\.so' /etc/pam.d/common-auth &&
+    grep -q 'pam_unix\.so' /etc/pam.d/common-account &&
+    grep -q 'pam_unix\.so' /etc/pam.d/common-password &&
+    grep -q 'pam_faillock\.so.*preauth' /etc/pam.d/common-auth &&
+    grep -q 'pam_faillock\.so.*authfail' /etc/pam.d/common-auth &&
+    grep -q 'pam_faillock\.so' /etc/pam.d/common-account &&
+    grep -q 'pam_pwquality\.so' /etc/pam.d/common-password &&
+    grep -q 'pam_pwhistory\.so' /etc/pam.d/common-password
+  args:
+    executable: /bin/bash
+  register: _cis_pam_modules_present
+  changed_when: false
+  failed_when: _cis_pam_modules_present.rc not in [0, 1]
+  check_mode: false
+  tags: [verification, cis_5.3.2.1, cis_5.3.2.2, cis_5.3.2.3, cis_5.3.2.4, pam]
+
+- name: "CIS 5.3.2 | Remediation | Regenerate PAM stacks from enabled profiles"
+  when: >-
+    (_cis_pam_unix_profile | default({'changed': false})).changed or
+    (_cis_pam_faillock_profile | default({'changed': false})).changed or
+    (_cis_pam_faillock_notify_profile | default({'changed': false})).changed or
+    (_cis_pam_pwquality_profile | default({'changed': false})).changed or
+    (_cis_pam_pwhistory_profile | default({'changed': false})).changed or
+    (_cis_pam_modules_present.rc | default(1)) == 1
+  ansible.builtin.command:
+    argv:
+      - /usr/sbin/pam-auth-update
+      - --force
+      - --enable
+      - unix
+      - --enable
+      - faillock
+      - --enable
+      - faillock_notify
+      - --enable
+      - pwquality
+      - --enable
+      - pwhistory
+  register: _cis_pam_auth_update
+  changed_when: _cis_pam_auth_update.rc == 0
+  tags: [level1-server, level1-workstation, remediation, cis_5.3.2.1, cis_5.3.2.2, cis_5.3.2.3, cis_5.3.2.4, pam]
+
+- name: "CIS 5.3.2 | Verification | Verify all generated PAM stacks"
+  ansible.builtin.shell: |
+    grep -q 'pam_unix\.so' /etc/pam.d/common-auth &&
+    grep -q 'pam_unix\.so' /etc/pam.d/common-account &&
+    grep -q 'pam_unix\.so' /etc/pam.d/common-password &&
+    grep -q 'pam_faillock\.so.*preauth' /etc/pam.d/common-auth &&
+    grep -q 'pam_faillock\.so.*authfail' /etc/pam.d/common-auth &&
+    grep -q 'pam_faillock\.so' /etc/pam.d/common-account &&
+    grep -q 'pam_pwquality\.so' /etc/pam.d/common-password &&
+    grep -q 'pam_pwhistory\.so' /etc/pam.d/common-password
+  args:
+    executable: /bin/bash
+  changed_when: false
+  tags: [verification, cis_5.3.2.1, cis_5.3.2.2, cis_5.3.2.3, cis_5.3.2.4, pam]

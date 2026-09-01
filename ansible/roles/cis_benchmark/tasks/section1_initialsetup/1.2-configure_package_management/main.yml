@@ -4,12 +4,17 @@
 # Importa configuración de repositorios y actualizaciones
 # =============================================================================
 
+- name: Include package manager GPG key configuration
+  when: cis_1_2_1_1_gpg_keys | bool
+  ansible.builtin.import_tasks: 1.2.1.1-configure_gpg_keys.yml
+  tags: ['cis_sec1', 'cis_1.2.1', 'cis_1.2.1.1', 'packages', 'gpg']
+
 - name: Include repositories configuration
   when: cis_1_2_1_configure_repositories | default(true)
   ansible.builtin.import_tasks: 1.2.1-configure_repositories.yml
-  tags: ['cis_sec1', 'cis_1.2.1', 'packages', 'repositories']
+  tags: ['cis_sec1', 'cis_1.2.1', 'cis_1.2.1.2', 'packages', 'repositories']
 
 - name: Include updates configuration
   when: cis_1_2_2_configure_updates | default(true)
   ansible.builtin.import_tasks: 1.2.2-configure_updates.yml
-  tags: ['cis_sec1', 'cis_1.2.2', 'packages', 'updates']
+  tags: ['cis_sec1', 'cis_1.2.2', 'cis_1.2.2.1', 'packages', 'updates']

@@ -1,203 +1,57 @@
 ---
-# =================================================================
-# CIS Benchmark 6.2.1: Configure auditd Service
-# Ubuntu 24.04 LTS - Idempotent & Resilient Implementation
-#
-# VM NOTES:
-# - Controls 6.2.1.1 and 6.2.1.2: Fully applicable in VMs (service management)
-# - Control 6.2.1.3: GRUB parameter 'audit=1' configured, BUT requires SYSTEM REBOOT to take effect
-# - Control 6.2.1.4: GRUB parameter 'audit_backlog_limit' configured, BUT requires SYSTEM REBOOT to take effect
-# - Systemd module replaced with direct 'systemctl' commands for Vagrant/D-Bus compatibility
-# - Extended timeouts (60s) added for service checks in resource-constrained VMs
-# =================================================================
+- name: "6.2.1.1 | Install auditd packages"
+  ansible.builtin.apt:
+    name: "{{ section6_logging['6_2_1_1_auditd_packages'].packages | default(['auditd', 'audispd-plugins']) }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: section6_logging['6_2_1_1_auditd_packages'].enabled | default(true) | bool
+  tags: [cis_6, cis_6_2, cis_6_2_1, cis_6_2_1_1, auditd]
 
-# -----------------------------------------------------------------
-# 6.2.1.1 | Ensure auditd packages are installed (Automated)
-# -----------------------------------------------------------------
-- name: "6.2.1.1 | Ensure auditd packages are installed"
-  block:
-    - name: "AUDIT | Check if auditd is installed"
-      ansible.builtin.command: dpkg -s auditd
-      register: auditd_pkg_check
-      changed_when: false
-      failed_when: false
+- name: "6.2.1.2 | Enable and start auditd"
+  ansible.builtin.systemd_service:
+    name: auditd.service
+    state: started
+    enabled: true
+    masked: false
+  when:
+    - section6_logging['6_2_1_2_auditd_enabled'].enabled | default(true) | bool
+    - not ansible_check_mode or 'auditd' in ansible_facts.packages
+  tags: [cis_6, cis_6_2, cis_6_2_1, cis_6_2_1_2, auditd]
 
-    - name: "REMEDIATE | Install auditd and audispd-plugins if needed"
-      ansible.builtin.apt:
-        name: "{{ section6_logging['6_2_1_1_auditd_packages'].packages }}"
-        state: present
-        update_cache: true
-        cache_valid_time: 3600
-      when: auditd_pkg_check.rc != 0
-  when: section6_logging['6_2_1_1_auditd_packages'].enabled | default(true)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_1
-    - cis_6_2_1_1
-    - auditd
-    - install
-    - packages
+- name: "6.2.1.3 | Add early boot auditing to GRUB"
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: '^(GRUB_CMDLINE_LINUX="(?![^"]*\baudit=1\b)[^"]*)"$'
+    replace: '\1 audit=1"'
+    backup: true
+  register: cis_grub_audit
+  when: section6_logging['6_2_1_3_audit_boot_param'].enabled | default(true) | bool
+  tags: [cis_6, cis_6_2, cis_6_2_1, cis_6_2_1_3, auditd, grub]
 
-# -----------------------------------------------------------------
-# 6.2.1.2 | Ensure auditd service is enabled and active (Automated)
-# -----------------------------------------------------------------
-- name: "6.2.1.2 | Ensure auditd service is enabled and active"
-  block:
-    - name: "AUDIT | Check auditd service status via command (VM-resilient)"
-      ansible.builtin.command: systemctl is-active auditd.service
-      register: auditd_active_check
-      timeout: 60
-      changed_when: false
-      failed_when: false
-      ignore_errors: true
-      # NOTE: In Vagrant/VM environments, D-Bus may be slow; extended timeout helps
+- name: "6.2.1.4 | Replace an existing audit backlog limit"
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: '(?m)^(GRUB_CMDLINE_LINUX="[^"]*\baudit_backlog_limit=)\d+(\b[^"]*"$)'
+    replace: '\g<1>{{ section6_logging["6_2_1_4_audit_backlog_limit"].value | default(8192) }}\2'
+    backup: true
+  register: cis_grub_backlog_replace
+  when: section6_logging['6_2_1_4_audit_backlog_limit'].enabled | default(true) | bool
+  tags: [cis_6, cis_6_2, cis_6_2_1, cis_6_2_1_4, auditd, grub]
 
-    - name: "REMEDIATE | Ensure auditd service is enabled and active (Idempotent)"
-      block:
-        # 1. Unmask (only if masked)
-        - name: "Check if masked"
-          ansible.builtin.command: systemctl is-enabled auditd.service
-          register: mask_check
-          changed_when: false
-          failed_when: false
+- name: "6.2.1.4 | Add a missing audit backlog limit"
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: '^(GRUB_CMDLINE_LINUX="(?![^"]*\baudit_backlog_limit=)[^"]*)"$'
+    replace: '\1 audit_backlog_limit={{ section6_logging["6_2_1_4_audit_backlog_limit"].value | default(8192) }}"'
+    backup: true
+  register: cis_grub_backlog_add
+  when: section6_logging['6_2_1_4_audit_backlog_limit'].enabled | default(true) | bool
+  tags: [cis_6, cis_6_2, cis_6_2_1, cis_6_2_1_4, auditd, grub]
 
-        - name: "Unmask if needed"
-          ansible.builtin.command: systemctl unmask auditd.service
-          when: "'masked' in mask_check.stdout"
-          changed_when: false  # VM: Can't reliably detect change with D-Bus issues
-          ignore_errors: true
-          failed_when: false
-
-        # 2. Enable (only if not enabled)
-        - name: "Check if enabled"
-          ansible.builtin.command: systemctl is-enabled auditd.service
-          register: enable_check
-          changed_when: false
-          failed_when: false
-
-        - name: "Enable if needed"
-          ansible.builtin.command: systemctl enable auditd.service
-          when: enable_check.stdout != 'enabled'
-          changed_when: false  # VM: Can't reliably detect change with D-Bus issues
-          ignore_errors: true
-          failed_when: false
-
-        # 3. Start (only if not active)
-        - name: "Check if active"
-          ansible.builtin.command: systemctl is-active auditd.service
-          register: active_check
-          changed_when: false
-          failed_when: false
-
-        - name: "Start if needed"
-          ansible.builtin.command: systemctl start auditd.service
-          when: active_check.stdout != 'active'
-          changed_when: false  # VM: Can't reliably detect change with D-Bus issues
-          ignore_errors: true
-          failed_when: false
-
-      when: 
-        - not auditd_unresponsive | default(false)
-        - auditd_active_check.rc is defined
-        - auditd_active_check.rc != 0 or auditd_active_check.stdout != "active"
-      # NOTE: In VM environments where systemd is unresponsive, these tasks are skipped gracefully
-  when: section6_logging['6_2_1_2_auditd_enabled'].enabled | default(true)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_1
-    - cis_6_2_1_2
-    - auditd
-    - service
-    - systemd
-
-# -----------------------------------------------------------------
-# 6.2.1.3 | Ensure auditing for processes that start prior to auditd is enabled (Automated)
-# NOTE: Requires system reboot to take effect (GRUB parameter change)
-# -----------------------------------------------------------------
-- name: "6.2.1.3 | Ensure auditing for processes that start prior to auditd is enabled"
-  block:
-    - name: "AUDIT | Check GRUB for audit=1 parameter"
-      ansible.builtin.command: grep -E '^GRUB_CMDLINE_LINUX=.*audit=1' /etc/default/grub
-      register: grub_audit_check
-      changed_when: false
-      failed_when: false
-
-    - name: "REMEDIATE | Add audit=1 to GRUB_CMDLINE_LINUX if missing"
-      ansible.builtin.lineinfile:
-        path: /etc/default/grub
-        regexp: '^(GRUB_CMDLINE_LINUX=.*)"'
-        line: '\1 audit=1"'
-        backrefs: true
-        backup: true
-      when: grub_audit_check.rc != 0
-      notify: Update grub
-
-    - name: "INFO | Reboot required notice for audit=1 parameter"
-      ansible.builtin.debug:
-        msg: "  Control 6.2.1.3: GRUB parameter 'audit=1' was updated. A SYSTEM REBOOT is required for this change to take effect."
-      when: grub_audit_check.rc != 0 and not ansible_check_mode
-  when: 
-    - section6_logging['6_2_1_3_audit_boot_param'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_1
-    - cis_6_2_1_3
-    - auditd
-    - grub
-    - boot
-
-# -----------------------------------------------------------------
-# 6.2.1.4 | Ensure audit_backlog_limit is sufficient (Automated)
-# NOTE: Requires system reboot to take effect (GRUB parameter change)
-# -----------------------------------------------------------------
-- name: "6.2.1.4 | Ensure audit_backlog_limit is sufficient"
-  block:
-    - name: "AUDIT | Check GRUB for audit_backlog_limit parameter"
-      ansible.builtin.command: grep -E '^GRUB_CMDLINE_LINUX=.*audit_backlog_limit=\d+' /etc/default/grub
-      register: grub_backlog_check
-      changed_when: false
-      failed_when: false
-
-    - name: "REMEDIATE | Update audit_backlog_limit if exists with different value"
-      ansible.builtin.lineinfile:
-        path: /etc/default/grub
-        regexp: '^(GRUB_CMDLINE_LINUX=.*)audit_backlog_limit=\d+(.*)"'
-        line: '\1audit_backlog_limit={{ section6_logging["6_2_1_4_audit_backlog_limit"].value }}\2"'
-        backrefs: true
-        backup: true
-      when: 
-        - grub_backlog_check.rc == 0
-        - grub_backlog_check.stdout | regex_search('audit_backlog_limit=\d+') != 'audit_backlog_limit=' + section6_logging["6_2_1_4_audit_backlog_limit"].value | string
-      notify: Update grub
-
-    - name: "REMEDIATE | Add audit_backlog_limit if parameter doesn't exist at all"
-      ansible.builtin.lineinfile:
-        path: /etc/default/grub
-        regexp: '^(GRUB_CMDLINE_LINUX=.*)"'
-        line: '\1 audit_backlog_limit={{ section6_logging["6_2_1_4_audit_backlog_limit"].value }}"'
-        backrefs: true
-        backup: true
-      when: 
-        - grub_backlog_check.rc != 0
-        - "'audit_backlog_limit' not in grub_backlog_check.stdout"
-      notify: Update grub
-
-    - name: "INFO | Reboot required notice for audit_backlog_limit"
-      ansible.builtin.debug:
-        msg: "  Control 6.2.1.4: GRUB parameter 'audit_backlog_limit' was updated. A SYSTEM REBOOT is required for this change to take effect."
-      when: (grub_backlog_check.rc == 0 or grub_backlog_check.rc != 0) and not ansible_check_mode
-  when: 
-    - section6_logging['6_2_1_4_audit_backlog_limit'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_1
-    - cis_6_2_1_4
-    - auditd
-    - grub
-    - backlog
+- name: "6.2.1.3-4 | Regenerate GRUB configuration"
+  ansible.builtin.command: update-grub
+  register: cis_update_grub
+  changed_when: true
+  when: cis_grub_audit.changed | default(false) or cis_grub_backlog_replace.changed | default(false) or cis_grub_backlog_add.changed | default(false)
+  tags: [cis_6, cis_6_2, cis_6_2_1, cis_6_2_1_3, cis_6_2_1_4, auditd, grub]

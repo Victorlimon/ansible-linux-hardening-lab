@@ -1,450 +1,114 @@
 ---
-# =================================================================
-# CIS Benchmark 6.2.4: Configure auditd File Access
-# Ubuntu 24.04 LTS - Idempotent Implementation
-# =================================================================
-
-# Helper: Get audit log directory from auditd.conf
-- name: "6.2.4 | HELPER | Get audit log directory path"
-  ansible.builtin.shell: |
-    if [ -f /etc/audit/auditd.conf ]; then
-      dirname "$(awk -F= '/^\s*log_file\s*/{print $2}' /etc/audit/auditd.conf | xargs)"
-    else
-      echo "/var/log/audit"
-    fi
-  register: audit_log_dir
+- name: "6.2.4 | Read configured audit log file"
+  ansible.builtin.command:
+    argv: [awk, '-F=', '/^[[:space:]]*log_file[[:space:]]*=/{gsub(/[[:space:]]/, "", $2); print $2}', /etc/audit/auditd.conf]
+  register: cis_audit_log_file
   changed_when: false
-  failed_when: false
-  when: not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - auditd
-    - helper
+  check_mode: false
+  tags: [cis_6, cis_6_2, cis_6_2_4, auditd]
 
-# -----------------------------------------------------------------
-# 6.2.4.1 | Ensure audit log files mode is configured (Automated)
-# Mode: 0640 or more restrictive
-# -----------------------------------------------------------------
-- name: "6.2.4.1 | Ensure audit log files mode is configured"
-  block:
-    - name: "AUDIT | Find audit log files with incorrect permissions"
-      ansible.builtin.find:
-        paths: "{{ audit_log_dir.stdout | default('/var/log/audit') }}"
-        patterns: "*.log"
-        file_type: file
-        recurse: false
-      register: audit_log_files
-      failed_when: false
+- name: "6.2.4 | Derive audit log directory and group"
+  ansible.builtin.set_fact:
+    cis_audit_log_directory: "{{ (cis_audit_log_file.stdout | default('/var/log/audit/audit.log', true)) | dirname }}"
+    cis_audit_log_group: "{{ (section6_logging | default({})).get('6_2_4_3_log_group', {}).get('value', (section6_logging | default({})).get('6_2_4_3_audit_log_group', {}).get('log_group_param', 'adm')) }}"
+  changed_when: false
+  tags: [cis_6, cis_6_2, cis_6_2_4, auditd]
 
-    - name: "REMEDIATE | Fix permissions on audit log files"
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        mode: '0640'
-        owner: root
-        # Fixed: Use correct variable name and attribute
-        group: "{{ (section6_logging['6_2_4_3_audit_log_group'].log_group_param) | default('adm') }}"
-        state: file
-      loop: "{{ audit_log_files.files }}"
-      when: 
-        - item.mode is defined
-        - (item.mode | regex_replace('^0?', '')) != '640'
-      notify: Reload auditd config
+- name: "6.2.4.1-3 | Find audit log files"
+  ansible.builtin.find:
+    paths: "{{ cis_audit_log_directory }}"
+    file_type: file
+    recurse: false
+  register: cis_audit_log_files
+  tags: [cis_6, cis_6_2, cis_6_2_4, cis_6_2_4_1, cis_6_2_4_2, cis_6_2_4_3, auditd]
 
-    - name: "REPORT | Audit log file permissions status"
-      ansible.builtin.debug:
-        msg: "6.2.4.1 | Found {{ audit_log_files.files | length }} audit log files; {{ audit_log_files.files | selectattr('mode', 'defined') | selectattr('mode', 'match', '^(?!0?640$)') | list | length }} needed permission fixes"
-      when: not ansible_check_mode
-  when: 
-    - section6_logging['6_2_4_1_log_mode'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_1
-    - auditd
-    - permissions
-    - log_files
+- name: "6.2.4.1-3 | Secure audit log files"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: file
+    owner: root
+    group: "{{ cis_audit_log_group }}"
+    mode: 'u-x,g-wx,o-rwx'
+  loop: "{{ cis_audit_log_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  tags: [cis_6, cis_6_2, cis_6_2_4, cis_6_2_4_1, cis_6_2_4_2, cis_6_2_4_3, auditd]
 
-# -----------------------------------------------------------------
-# 6.2.4.2 | Ensure audit log files owner is configured (Automated)
-# Owner: root
-# -----------------------------------------------------------------
-- name: "6.2.4.2 | Ensure audit log files owner is configured"
-  block:
-    - name: "AUDIT | Find audit log files with incorrect owner"
-      ansible.builtin.find:
-        paths: "{{ audit_log_dir.stdout | default('/var/log/audit') }}"
-        patterns: "*.log"
-        file_type: file
-        recurse: false
-      register: audit_log_files_owner
-      failed_when: false
+- name: "6.2.4.3 | Configure audit log group"
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    regexp: '^\s*log_group\s*='
+    line: "log_group = {{ cis_audit_log_group }}"
+    backup: true
+  register: cis_audit_log_group_config
+  tags: [cis_6, cis_6_2, cis_6_2_4, cis_6_2_4_3, auditd]
 
-    - name: "REMEDIATE | Fix owner on audit log files"
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        owner: root
-        state: file
-      loop: "{{ audit_log_files_owner.files }}"
-      when: 
-        - item.pw_name is defined
-        - item.pw_name != 'root'
-      notify: Reload auditd config
-  when: 
-    - section6_logging['6_2_4_2_log_owner'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_2
-    - auditd
-    - permissions
-    - log_owner
+- name: "6.2.4.4 | Secure audit log directory without broadening access"
+  ansible.builtin.file:
+    path: "{{ cis_audit_log_directory }}"
+    state: directory
+    owner: root
+    group: "{{ cis_audit_log_group }}"
+    mode: 'g-w,o-rwx'
+  tags: [cis_6, cis_6_2, cis_6_2_4, cis_6_2_4_4, auditd]
 
-# -----------------------------------------------------------------
-# 6.2.4.3 | Ensure audit log files group owner is configured (Automated)
-# Group: adm or root
-# -----------------------------------------------------------------
-- name: "6.2.4.3 | Ensure audit log files group owner is configured"
-  block:
-    - name: "REMEDIATE | Set log_group parameter in auditd.conf"
-      ansible.builtin.lineinfile:
-        path: /etc/audit/auditd.conf
-        regexp: '^log_group\s*='
-        # Fixed: Use correct variable name and attribute from defaults/main.yml
-        # Variable is '6_2_4_3_audit_log_group' with 'log_group_param' attribute
-        line: "log_group = {{ (section6_logging['6_2_4_3_audit_log_group'].log_group_param) | default('adm') }}"
-        owner: root
-        group: root
-        mode: '0640'
-        backup: true
-        # validate removed - grep with spaces/quotes in pattern causes parsing issues in VMs
-        # lineinfile with regexp is already idempotent for this use case
-      notify: Restart auditd
+- name: "6.2.4.5-7 | Find audit configuration files"
+  ansible.builtin.find:
+    paths: /etc/audit
+    patterns: ['*.conf', '*.rules']
+    file_type: file
+    recurse: true
+  register: cis_audit_config_files
+  tags: [cis_6, cis_6_2, cis_6_2_4, cis_6_2_4_5, cis_6_2_4_6, cis_6_2_4_7, auditd]
 
-    - name: "AUDIT | Find audit log files with incorrect group"
-      ansible.builtin.find:
-        paths: "{{ audit_log_dir.stdout | default('/var/log/audit') }}"
-        patterns: "*.log"
-        file_type: file
-        recurse: false
-      register: audit_log_files_group
-      failed_when: false
+- name: "6.2.4.5-7 | Secure audit configuration files"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: file
+    owner: root
+    group: root
+    mode: 'u-x,g-wx,o-rwx'
+  loop: "{{ cis_audit_config_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  tags: [cis_6, cis_6_2, cis_6_2_4, cis_6_2_4_5, cis_6_2_4_6, cis_6_2_4_7, auditd]
 
-    - name: "REMEDIATE | Fix group on audit log files"
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        # Fixed: Use correct variable name and attribute
-        group: "{{ (section6_logging['6_2_4_3_audit_log_group'].log_group_param) | default('adm') }}"
-        state: file
-      loop: "{{ audit_log_files_group.files }}"
-      when: 
-        - item.gr_name is defined
-        - item.gr_name not in ['root', (section6_logging['6_2_4_3_audit_log_group'].log_group_param) | default('adm')]
-      notify: Reload auditd config
-  when: 
-    - section6_logging['6_2_4_3_audit_log_group'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_3
-    - auditd
-    - permissions
-    - log_group
+- name: "6.2.4.8-10 | Inspect audit tools"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /usr/sbin/auditctl
+    - /usr/sbin/aureport
+    - /usr/sbin/ausearch
+    - /usr/sbin/autrace
+    - /usr/sbin/auditd
+    - /usr/sbin/augenrules
+  register: cis_audit_tools
+  tags: [cis_6, cis_6_2, cis_6_2_4, cis_6_2_4_8, cis_6_2_4_9, cis_6_2_4_10, auditd]
 
-# -----------------------------------------------------------------
-# 6.2.4.4 | Ensure the audit log file directory mode is configured (Automated)
-# Directory mode: 0750 or more restrictive
-# -----------------------------------------------------------------
-- name: "6.2.4.4 | Ensure the audit log file directory mode is configured"
-  block:
-    - name: "AUDIT | Check audit log directory permissions"
-      ansible.builtin.stat:
-        path: "{{ audit_log_dir.stdout | default('/var/log/audit') }}"
-      register: audit_log_dir_stat
-      failed_when: false
+- name: "6.2.4.8-10 | Secure existing audit tools without adding permissions"
+  ansible.builtin.file:
+    path: "{{ item.item }}"
+    state: file
+    owner: root
+    group: root
+    mode: 'go-w'
+  loop: "{{ cis_audit_tools.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stat.exists
+  tags: [cis_6, cis_6_2, cis_6_2_4, cis_6_2_4_8, cis_6_2_4_9, cis_6_2_4_10, auditd]
 
-    - name: "REMEDIATE | Fix audit log directory permissions"
-      ansible.builtin.file:
-        path: "{{ audit_log_dir.stdout | default('/var/log/audit') }}"
-        state: directory
-        mode: '0750'
-        owner: root
-        # Fixed: Use correct variable name and attribute
-        group: "{{ (section6_logging['6_2_4_3_audit_log_group'].log_group_param) | default('adm') }}"
-      when: 
-        - audit_log_dir_stat.stat.exists
-        - audit_log_dir_stat.stat.mode is defined
-        - (audit_log_dir_stat.stat.mode | regex_replace('^0?', '')) != '750'
-      notify: Reload auditd config
-  when: 
-    - section6_logging['6_2_4_4_log_dir_mode'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_4
-    - auditd
-    - permissions
-    - log_directory
+- name: "6.2.4 | Validate changed auditd configuration"
+  ansible.builtin.command:
+    argv: [auditd, -t]
+  changed_when: false
+  when: cis_audit_log_group_config.changed
+  tags: [cis_6, cis_6_2, cis_6_2_4, auditd]
 
-# -----------------------------------------------------------------
-# 6.2.4.5 | Ensure audit configuration files mode is configured (Automated)
-# Config files mode: 0640 or more restrictive
-# -----------------------------------------------------------------
-- name: "6.2.4.5 | Ensure audit configuration files mode is configured"
-  block:
-    - name: "AUDIT | Find audit config files with incorrect permissions"
-      ansible.builtin.find:
-        paths: /etc/audit
-        patterns: "*.conf,*.rules"
-        file_type: file
-        recurse: true
-      register: audit_config_files
-      failed_when: false
-
-    - name: "REMEDIATE | Fix permissions on audit config files"
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        mode: '0640'
-        owner: root
-        group: root
-        state: file
-      loop: "{{ audit_config_files.files }}"
-      when: 
-        - item.mode is defined
-        - (item.mode | regex_replace('^0?', '')) != '640'
-  when: 
-    - section6_logging['6_2_4_5_config_mode'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_5
-    - auditd
-    - permissions
-    - config_files
-
-# -----------------------------------------------------------------
-# 6.2.4.6 | Ensure audit configuration files owner is configured (Automated)
-# Owner: root
-# -----------------------------------------------------------------
-- name: "6.2.4.6 | Ensure audit configuration files owner is configured"
-  block:
-    - name: "AUDIT | Find audit config files with incorrect owner"
-      ansible.builtin.find:
-        paths: /etc/audit
-        patterns: "*.conf,*.rules"
-        file_type: file
-        recurse: true
-      register: audit_config_files_owner
-      failed_when: false
-
-    - name: "REMEDIATE | Fix owner on audit config files"
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        owner: root
-        state: file
-      loop: "{{ audit_config_files_owner.files }}"
-      when: 
-        - item.pw_name is defined
-        - item.pw_name != 'root'
-  when: 
-    - section6_logging['6_2_4_6_config_owner'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_6
-    - auditd
-    - permissions
-    - config_owner
-
-# -----------------------------------------------------------------
-# 6.2.4.7 | Ensure audit configuration files group owner is configured (Automated)
-# Group: root
-# -----------------------------------------------------------------
-- name: "6.2.4.7 | Ensure audit configuration files group owner is configured"
-  block:
-    - name: "AUDIT | Find audit config files with incorrect group"
-      ansible.builtin.find:
-        paths: /etc/audit
-        patterns: "*.conf,*.rules"
-        file_type: file
-        recurse: true
-      register: audit_config_files_group
-      failed_when: false
-
-    - name: "REMEDIATE | Fix group on audit config files"
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        group: root
-        state: file
-      loop: "{{ audit_config_files_group.files }}"
-      when: 
-        - item.gr_name is defined
-        - item.gr_name != 'root'
-  when: 
-    - section6_logging['6_2_4_7_config_group'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_7
-    - auditd
-    - permissions
-    - config_group
-
-# -----------------------------------------------------------------
-# 6.2.4.8 | Ensure audit tools mode is configured (Automated)
-# Tools mode: 0755 or more restrictive (no write for group/other)
-# -----------------------------------------------------------------
-- name: "6.2.4.8 | Ensure audit tools mode is configured"
-  block:
-    - name: "AUDIT | Get current permissions of audit tools"
-      ansible.builtin.stat:
-        path: "{{ tool_path }}"
-      loop:
-        - /sbin/auditctl
-        - /sbin/aureport
-        - /sbin/ausearch
-        - /sbin/autrace
-        - /sbin/auditd
-        - /sbin/augenrules
-      loop_control:
-        loop_var: tool_path
-        label: "{{ tool_path }}"
-      register: audit_tools_stat
-      failed_when: false
-
-    - name: "REMEDIATE | Fix permissions on audit tools"
-      ansible.builtin.file:
-        path: "{{ tool_audit.stat.path }}"
-        mode: '0755'
-        state: file
-      loop: "{{ audit_tools_stat.results }}"
-      loop_control:
-        loop_var: tool_audit
-        label: "{{ tool_audit.stat.path }}"
-      when: 
-        - tool_audit.stat.exists | default(false)
-        - tool_audit.stat.mode is defined
-        - (tool_audit.stat.mode | regex_replace('^0?', '')) != '755'
-      ignore_errors: true
-  when: 
-    - section6_logging['6_2_4_8_tools_mode'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_8
-    - auditd
-    - permissions
-    - audit_tools
-
-# -----------------------------------------------------------------
-# 6.2.4.9 | Ensure audit tools owner is configured (Automated)
-# Owner: root
-# -----------------------------------------------------------------
-- name: "6.2.4.9 | Ensure audit tools owner is configured"
-  block:
-    - name: "AUDIT | Get current owner of audit tools"
-      ansible.builtin.stat:
-        path: "{{ tool_path }}"
-      loop:
-        - /sbin/auditctl
-        - /sbin/aureport
-        - /sbin/ausearch
-        - /sbin/autrace
-        - /sbin/auditd
-        - /sbin/augenrules
-      loop_control:
-        loop_var: tool_path
-        label: "{{ tool_path }}"
-      register: audit_tools_owner_stat
-      failed_when: false
-
-    - name: "REMEDIATE | Fix owner on audit tools"
-      ansible.builtin.file:
-        path: "{{ tool_owner_audit.stat.path }}"
-        owner: root
-        state: file
-      loop: "{{ audit_tools_owner_stat.results }}"
-      loop_control:
-        loop_var: tool_owner_audit
-        label: "{{ tool_owner_audit.stat.path }}"
-      when: 
-        - tool_owner_audit.stat.exists | default(false)
-        - tool_owner_audit.stat.pw_name is defined
-        - tool_owner_audit.stat.pw_name != 'root'
-      ignore_errors: true
-  when: 
-    - section6_logging['6_2_4_9_tools_owner'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_9
-    - auditd
-    - permissions
-    - tools_owner
-
-# -----------------------------------------------------------------
-# 6.2.4.10 | Ensure audit tools group owner is configured (Automated)
-# Group: root
-# -----------------------------------------------------------------
-- name: "6.2.4.10 | Ensure audit tools group owner is configured"
-  block:
-    - name: "AUDIT | Get current group of audit tools"
-      ansible.builtin.stat:
-        path: "{{ tool_path }}"
-      loop:
-        - /sbin/auditctl
-        - /sbin/aureport
-        - /sbin/ausearch
-        - /sbin/autrace
-        - /sbin/auditd
-        - /sbin/augenrules
-      loop_control:
-        loop_var: tool_path
-        label: "{{ tool_path }}"
-      register: audit_tools_group_stat
-      failed_when: false
-
-    - name: "REMEDIATE | Fix group on audit tools"
-      ansible.builtin.file:
-        path: "{{ tool_group_audit.stat.path }}"
-        group: root
-        state: file
-      loop: "{{ audit_tools_group_stat.results }}"
-      loop_control:
-        loop_var: tool_group_audit
-        label: "{{ tool_group_audit.stat.path }}"
-      when: 
-        - tool_group_audit.stat.exists | default(false)
-        - tool_group_audit.stat.gr_name is defined
-        - tool_group_audit.stat.gr_name != 'root'
-      ignore_errors: true
-  when: 
-    - section6_logging['6_2_4_10_tools_group'].enabled | default(true)
-    - not auditd_unresponsive | default(false)
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - cis_6_2_4_10
-    - auditd
-    - permissions
-    - tools_group
+- name: "6.2.4 | Reload changed auditd configuration"
+  ansible.builtin.command:
+    argv: [service, auditd, reload]
+  changed_when: true
+  when: cis_audit_log_group_config.changed
+  tags: [cis_6, cis_6_2, cis_6_2_4, auditd]

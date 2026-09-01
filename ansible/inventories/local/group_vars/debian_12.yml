@@ -1,0 +1,3 @@
+---
+# Debian 12 permite únicamente controles canario explícitos. El master gate de
+# remediación permanece desactivado y debe habilitarse en cada ejecución.

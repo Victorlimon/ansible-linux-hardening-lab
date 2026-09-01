@@ -1,13 +1,30 @@
 ---
 
+- name: Run the common platform and release preflight
+  ansible.builtin.import_role:
+    name: cis_platform_preflight
+  tags: [always, preflight, platform]
+
 - name: Gather package facts
-  package_facts:
+  ansible.builtin.package_facts:
     manager: auto
+  tags: always
 
 - name: Gather service facts
-  service_facts:
+  ansible.builtin.service_facts:
+  tags: always
 
-  # =============================================================================
+- name: Validate Ubuntu 24.04 target
+  ansible.builtin.assert:
+    that:
+      - cis_platform_id == 'ubuntu_2404'
+    fail_msg: >-
+      This role supports Ubuntu 24.04 only;
+      detected {{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }}.
+    success_msg: Validated Ubuntu 24.04 target.
+  tags: always
+
+# =============================================================================
 # SECTION 1: INITIAL SETUP
 # =============================================================================
 - name: Include section 1 initial setup
@@ -16,14 +33,6 @@
   tags:
     - cis_1
     - cis_sec1
-    - initial_setup
-    - filesystem
-    - packages
-    - apparmor
-    - bootloader
-    - process_hardening
-    - banners
-    - gdm
 
 # BEGIN SECTION 2 BLOCK
 # Section 2: Services
@@ -32,45 +41,18 @@
   ansible.builtin.import_tasks: section2_services/main.yml
   tags:
     - cis_2
-    - cis_2_1
-    - cis_2_2
-    - cis_2_3
-    - cis_2_4
-    - services
-    - time_sync
-    - job_schedulers
+    - cis_sec2
 # END SECTION 2 BLOCK
 
 
 - name: Include section 3 network configuration
-  when: section3_network.enabled | default(true)
+  when:
+    - cis_section3_network | bool
+    - section3_network.enabled | bool
   ansible.builtin.import_tasks: section3_network/main.yml
   tags:
     - cis_3
-    - cis_3_1
-    - cis_3_2
-    - cis_3_3
-    - cis_3_1_1
-    - cis_3_1_2
-    - cis_3_1_3
-    - cis_3_2_1
-    - cis_3_2_2
-    - cis_3_2_3
-    - cis_3_2_4
-    - cis_3_3_1
-    - cis_3_3_2
-    - cis_3_3_3
-    - cis_3_3_4
-    - cis_3_3_5
-    - cis_3_3_6
-    - cis_3_3_7
-    - cis_3_3_8
-    - cis_3_3_9
-    - cis_3_3_10
-    - network
-    - network_devices
-    - network_modules
-    - network_sysctl
+    - cis_sec3
     
 
 # =============================================================================
@@ -82,10 +64,6 @@
   tags:
     - cis_4
     - cis_sec4
-    - firewall
-    - ufw
-    - nftables
-    - iptables
 
 # =============================================================================
 # SECTION 5: ACCESS CONTROL
@@ -96,11 +74,6 @@
   tags:
     - cis_5
     - cis_sec5
-    - access_control
-    - ssh
-    - sudo
-    - pam
-    - users
 
 
 
@@ -108,31 +81,20 @@
 # BEGIN SECTION 6 BLOCK
 # Section 6: Logging and Auditing
 - name: Include section 6 logging and auditing
-  when: section6_logging.enabled | default(true)
-  ansible.builtin.include_tasks: section6_logging/main.yml
+  when: cis_section6_logging_audit | bool
+  ansible.builtin.import_tasks: section6_logging/main.yml
   tags:
     - cis_6
-    - cis_6_1
-    - cis_6_2
-    - cis_6_3
-    - cis_6_1_1
-    - cis_6_1_2
-    - cis_6_1_3
-    - cis_6_1_4
-    - cis_6_2_1
-    - cis_6_2_2
-    - cis_6_2_3
-    - cis_6_2_4
-    - cis_6_3_1
-    - cis_6_3_2
-    - cis_6_3_3
-    - logging
-    - auditing
-    - aide
-    - aide_install
-    - aide_timer
-    - aide_rules
-    - aide_config
+    - cis_sec6
 # END SECTION 6 BLOCK
 
-
+# =============================================================================
+# SECTION 7: SYSTEM MAINTENANCE
+# =============================================================================
+- name: Include section 7 system maintenance
+  when: cis_section7_system | bool
+  ansible.builtin.import_tasks: section7_system/main.yml
+  tags:
+    - cis_7
+    - cis_sec7
+    - system_maintenance

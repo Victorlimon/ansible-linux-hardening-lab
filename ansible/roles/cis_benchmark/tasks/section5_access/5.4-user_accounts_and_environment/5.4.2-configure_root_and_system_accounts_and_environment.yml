@@ -1,215 +1,192 @@
 ---
-# =============================================================================
-# CIS Ubuntu 24.04 LTS / Debian 12 Benchmark v1.0.0 - Section 5.4.2: Root and System Accounts
-# =============================================================================
-
-- name: "CIS 5.4.2.1 | Remediation | Ensure root is the only UID 0 account"
+- name: "CIS 5.4.2.1 | Audit | Find non-root UID 0 accounts"
   when: cis_5_4_2_1_root_uid_zero | default(true)
-  block:
-    - name: "CIS 5.4.2.1 | AUDIT | Find accounts with UID 0"
-      ansible.builtin.command: "awk -F: '($3 == 0) {print $1}' /etc/passwd"
-      register: _cis_uid_zero_accounts
-      changed_when: false
-      failed_when: false
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/awk
+      - "-F:"
+      - '$3 == 0 && $1 != "root" {print $1}'
+      - /etc/passwd
+  register: _cis_nonroot_uid_zero
+  changed_when: false
+  check_mode: false
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.1, users]
 
-    - name: "CIS 5.4.2.1 | Remediation | Ensure root has UID 0"
-      ansible.builtin.user:
-        name: root
-        uid: 0
+- name: "CIS 5.4.2.1 | Manual | Report non-root UID 0 accounts"
+  when:
+    - cis_5_4_2_1_root_uid_zero | default(true)
+    - _cis_nonroot_uid_zero.stdout_lines | length > 0
+  ansible.builtin.debug:
+    msg: "Assign a reviewed unique UID; no passwd line was removed: {{ _cis_nonroot_uid_zero.stdout_lines }}"
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.1, users]
 
-    - name: "CIS 5.4.2.1 | REPORT | Alert if non-root accounts have UID 0"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 5.4.2.1 — WARNING: Non-root accounts with UID 0 ==="
-          - "Accounts: {{ _cis_uid_zero_accounts.stdout_lines | difference(['root']) }}"
-          - "Action: Manually review and remove or change UID for these accounts"
-      when: _cis_uid_zero_accounts.stdout_lines | difference(['root']) | length > 0
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.2.1
-    - NIST800-53R5_AC-3
-    - users
-
-- name: "CIS 5.4.2.2 | Remediation | Ensure root is the only GID 0 account"
+- name: "CIS 5.4.2.2 | Audit | Find unauthorized primary GID 0 accounts"
   when: cis_5_4_2_2_root_gid_zero | default(true)
-  block:
-    - name: "CIS 5.4.2.2 | AUDIT | Find accounts with primary GID 0"
-      ansible.builtin.command: "awk -F: '($4 == 0 && $1 != \"root\") {print $1}' /etc/passwd"
-      register: _cis_gid_zero_accounts
-      changed_when: false
-      failed_when: false
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/awk
+      - "-F:"
+      - '$1 !~ /^(root|sync|shutdown|halt|operator)$/ && $4 == 0 {print $1}'
+      - /etc/passwd
+  register: _cis_nonroot_gid_zero
+  changed_when: false
+  check_mode: false
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.2, users]
 
-    - name: "CIS 5.4.2.2 | Remediation | Ensure root has primary GID 0"
-      ansible.builtin.user:
-        name: root
-        group: root
+- name: "CIS 5.4.2.2 | Manual | Report unauthorized primary GID 0 accounts"
+  when:
+    - cis_5_4_2_2_root_gid_zero | default(true)
+    - _cis_nonroot_gid_zero.stdout_lines | length > 0
+  ansible.builtin.debug:
+    msg: "Assign a reviewed primary group: {{ _cis_nonroot_gid_zero.stdout_lines }}"
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.2, users]
 
-    - name: "CIS 5.4.2.2 | Remediation | Ensure root group has GID 0"
-      ansible.builtin.group:
-        name: root
-        gid: 0
-
-    - name: "CIS 5.4.2.2 | REPORT | Alert if non-root accounts have GID 0"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 5.4.2.2 — WARNING: Non-root accounts with primary GID 0 ==="
-          - "Accounts: {{ _cis_gid_zero_accounts.stdout_lines }}"
-          - "Action: Manually review and change primary group for these accounts"
-      when: _cis_gid_zero_accounts.stdout_lines | length > 0
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.2.2
-    - NIST800-53R5_AC-3
-    - users
-
-- name: "CIS 5.4.2.3 | Remediation | Ensure group root is the only GID 0 group"
+- name: "CIS 5.4.2.3 | Audit | Find non-root GID 0 groups"
   when: cis_5_4_2_3_root_group_gid_zero | default(true)
-  block:
-    - name: "CIS 5.4.2.3 | AUDIT | Find groups with GID 0"
-      ansible.builtin.command: "awk -F: '($3 == 0) {print $1}' /etc/group"
-      register: _cis_gid_zero_groups
-      changed_when: false
-      failed_when: false
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/awk
+      - "-F:"
+      - '$3 == 0 && $1 != "root" {print $1}'
+      - /etc/group
+  register: _cis_nonroot_gid_zero_groups
+  changed_when: false
+  check_mode: false
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.3, users]
 
-    - name: "CIS 5.4.2.3 | Remediation | Ensure root group has GID 0"
-      ansible.builtin.group:
-        name: root
-        gid: 0
+- name: "CIS 5.4.2.3 | Manual | Report non-root GID 0 groups"
+  when:
+    - cis_5_4_2_3_root_group_gid_zero | default(true)
+    - _cis_nonroot_gid_zero_groups.stdout_lines | length > 0
+  ansible.builtin.debug:
+    msg: "Assign a reviewed unique GID: {{ _cis_nonroot_gid_zero_groups.stdout_lines }}"
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.3, users]
 
-    - name: "CIS 5.4.2.3 | REPORT | Alert if non-root groups have GID 0"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 5.4.2.3 — WARNING: Non-root groups with GID 0 ==="
-          - "Groups: {{ _cis_gid_zero_groups.stdout_lines | difference(['root']) }}"
-          - "Action: Manually review and change GID for these groups"
-      when: _cis_gid_zero_groups.stdout_lines | difference(['root']) | length > 0
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.2.3
-    - NIST800-53R5_AC-3
-    - users
-
-- name: "CIS 5.4.2.4 | Remediation | Ensure root account access is controlled"
+- name: "CIS 5.4.2.4 | Verification | Check root password is set or locked"
   when: cis_5_4_2_4_root_access_controlled | default(true)
-  block:
-    - name: "CIS 5.4.2.4 | AUDIT | Check root password status"
-      ansible.builtin.command: "passwd -S root"
-      register: _cis_root_passwd_status
-      changed_when: false
-      failed_when: false
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/passwd
+      - -S
+      - root
+  register: _cis_root_password_status
+  changed_when: false
+  check_mode: false
+  tags: [level1-server, level1-workstation, verification, cis_5.4.2.4, users]
 
-    - name: "CIS 5.4.2.4 | Remediation | Lock root password if not already locked"
-      when: "'L' not in _cis_root_passwd_status.stdout and 'LK' not in _cis_root_passwd_status.stdout"
-      ansible.builtin.user:
-        name: root
-        password_lock: true
+- name: "CIS 5.4.2.4 | Verification | Require controlled root access"
+  when: cis_5_4_2_4_root_access_controlled | default(true)
+  ansible.builtin.assert:
+    that:
+      - _cis_root_password_status.stdout.split()[1] in ['P', 'L', 'LK']
+    fail_msg: "Root must have a password set or be locked; no automatic lock was applied."
+  tags: [level1-server, level1-workstation, verification, cis_5.4.2.4, users]
 
-    - name: "CIS 5.4.2.4 | REPORT | Display root account status"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 5.4.2.4 — Root account status ==="
-          - "Status: {{ _cis_root_passwd_status.stdout }}"
-          - "Note: Root should be locked; use sudo for privileged access"
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.2.4
-    - NIST800-53R5_AC-3
-    - users
-
-- name: "CIS 5.4.2.5 | Remediation | Ensure root PATH integrity"
+- name: "CIS 5.4.2.5 | Audit | Check root PATH integrity"
   when: cis_5_4_2_5_root_path_integrity | default(true)
-  block:
-    - name: "CIS 5.4.2.5 | AUDIT | Check for world-writable directories in root PATH"
-      ansible.builtin.shell: |
-        IFS=:; for path in $PATH; do
-          [ -d "$path" ] && [ "$(stat -c '%a' "$path" 2>/dev/null)" ] && \
-          [ $(( $(stat -c '%a' "$path") & 002 )) -ne 0 ] && echo "$path"
-        done
-      register: _cis_writable_paths
-      changed_when: false
-      failed_when: false
+  ansible.builtin.shell: |
+    set -o pipefail
+    root_path=$(env -i HOME=/root /bin/bash -lc 'printf %s "$PATH"')
+    case "$root_path" in *::*|:*|*:) printf '%s\n' 'empty PATH component';; esac
+    old_ifs=$IFS
+    IFS=:
+    for path in $root_path; do
+      if [ "$path" = "." ] || [ ! -d "$path" ]; then
+        printf '%s\n' "$path"
+      elif [ "$(stat -Lc '%U' "$path")" != root ] || [ $(( 8#$(stat -Lc '%a' "$path") & 8#022 )) -ne 0 ]; then
+        printf '%s\n' "$path"
+      fi
+    done
+    IFS=$old_ifs
+  args:
+    executable: /bin/bash
+  register: _cis_root_path_findings
+  changed_when: false
+  check_mode: false
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.5, users]
 
-    - name: "CIS 5.4.2.5 | REPORT | Alert on world-writable PATH directories"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 5.4.2.5 — WARNING: World-writable directories in PATH ==="
-          - "Paths: {{ _cis_writable_paths.stdout_lines }}"
-          - "Action: Remove write permissions: chmod o-w <path>"
-      when: _cis_writable_paths.stdout_lines | length > 0
+- name: "CIS 5.4.2.5 | Manual | Report root PATH findings"
+  when: _cis_root_path_findings.stdout_lines | default([]) | length > 0
+  ansible.builtin.debug:
+    msg: "Review root PATH manually: {{ _cis_root_path_findings.stdout_lines }}"
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.5, users]
 
-    - name: "CIS 5.4.2.5 | AUDIT | Check for empty directories in root PATH"
-      ansible.builtin.shell: |
-        IFS=:; for path in $PATH; do
-          [ -d "$path" ] && [ -z "$(ls -A "$path" 2>/dev/null)" ] && echo "$path"
-        done
-      register: _cis_empty_paths
-      changed_when: false
-      failed_when: false
-
-    - name: "CIS 5.4.2.5 | REPORT | Alert on empty directories in PATH"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 5.4.2.5 — WARNING: Empty directories in PATH ==="
-          - "Paths: {{ _cis_empty_paths.stdout_lines }}"
-          - "Action: Remove empty directories from PATH or populate them"
-      when: _cis_empty_paths.stdout_lines | length > 0
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.2.5
-    - NIST800-53R5_CM-6
-    - users
-
-- name: "CIS 5.4.2.6 | Remediation | Ensure root is the only UID 0 account in /etc/passwd"
-  when: cis_5_4_2_6_root_only_uid_zero | default(true)
+- name: "CIS 5.4.2.6 | Remediation | Configure root umask"
+  when: cis_5_4_2_6_root_umask | default(cis_5_4_2_6_root_only_uid_zero | default(true))
   ansible.builtin.lineinfile:
-    path: /etc/passwd
-    regexp: '^(?!root:)[^:]+:[^:]*:0:'
-    state: absent
-    backup: yes
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.2.6
-    - NIST800-53R5_AC-3
-    - users
+    path: /root/.bashrc
+    regexp: '^\s*umask\s+'
+    line: "umask {{ cis_root_umask | default('027') }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0600"
+  tags: [level1-server, level1-workstation, remediation, cis_5.4.2.6, users]
 
-- name: "CIS 5.4.2.7 | Remediation | Ensure no legacy '+' entries exist in /etc/passwd"
-  when: cis_5_4_2_7_no_legacy_entries | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/passwd
-    regexp: '^\+:'
-    state: absent
-    backup: yes
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.2.7
-    - NIST800-53R5_CM-6
-    - users
+- name: "CIS 5.4.2.7 | Audit | Find system accounts with valid login shells"
+  when: cis_5_4_2_7_system_account_shells | default(cis_5_4_2_7_no_legacy_entries | default(true))
+  ansible.builtin.shell: |
+    uid_min=$(awk '$1 == "UID_MIN" {print $2}' /etc/login.defs)
+    awk -F: -v uid_min="$uid_min" '
+      NR == FNR {if ($0 ~ /^\// && $0 !~ /nologin$/) shell[$0]=1; next}
+      $1 !~ /^(root|halt|sync|shutdown|nfsnobody)$/ && ($3 < uid_min || $3 == 65534) && shell[$7] {print $1}
+    ' /etc/shells /etc/passwd
+  args:
+    executable: /bin/bash
+  register: _cis_system_accounts_valid_shell
+  changed_when: false
+  check_mode: false
+  tags: [level1-server, level1-workstation, audit, cis_5.4.2.7, users]
 
-- name: "CIS 5.4.2.8 | Remediation | Ensure no legacy '+' entries exist in /etc/group"
-  when: cis_5_4_2_8_no_legacy_group_entries | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/group
-    regexp: '^\+:'
-    state: absent
-    backup: yes
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.2.8
-    - NIST800-53R5_CM-6
-    - users
+- name: "CIS 5.4.2.7 | Manual | Report system accounts with valid shells"
+  when:
+    - _cis_system_accounts_valid_shell.stdout_lines | default([]) | length > 0
+    - not (cis_5_4_2_7_remediate_system_shells | default(false))
+  ansible.builtin.debug:
+    msg: >-
+      Review service dependencies before changing shells:
+      {{ _cis_system_accounts_valid_shell.stdout_lines }}.
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.7, users]
+
+- name: "CIS 5.4.2.7 | Destructive remediation | Disable approved system account shells"
+  when: cis_5_4_2_7_remediate_system_shells | default(false)
+  ansible.builtin.user:
+    name: "{{ item }}"
+    shell: /usr/sbin/nologin
+  loop: "{{ _cis_system_accounts_valid_shell.stdout_lines | default([]) }}"
+  tags: [never, destructive-remediation, cis_5.4.2.7, users]
+
+- name: "CIS 5.4.2.8 | Audit | Find unlocked accounts without valid login shells"
+  when: cis_5_4_2_8_lock_invalid_shell_accounts | default(cis_5_4_2_8_no_legacy_group_entries | default(true))
+  ansible.builtin.shell: |
+    set -o pipefail
+    awk -F: 'NR == FNR {if ($0 ~ /^\// && $0 !~ /nologin$/) shell[$0]=1; next}
+      $1 != "root" && !shell[$7] {print $1}' /etc/shells /etc/passwd |
+    while IFS= read -r user; do
+      status=$(passwd -S "$user" | awk '{print $2}')
+      case "$status" in L|LK) ;; *) printf '%s\n' "$user";; esac
+    done
+  args:
+    executable: /bin/bash
+  register: _cis_unlocked_nologin_accounts
+  changed_when: false
+  check_mode: false
+  tags: [level1-server, level1-workstation, audit, cis_5.4.2.8, users]
+
+- name: "CIS 5.4.2.8 | Manual | Report unlocked non-login accounts"
+  when:
+    - _cis_unlocked_nologin_accounts.stdout_lines | default([]) | length > 0
+    - not (cis_5_4_2_8_lock_nologin_accounts | default(false))
+  ansible.builtin.debug:
+    msg: >-
+      Review service authentication before locking accounts:
+      {{ _cis_unlocked_nologin_accounts.stdout_lines }}.
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.2.8, users]
+
+- name: "CIS 5.4.2.8 | Destructive remediation | Lock approved non-login accounts"
+  when: cis_5_4_2_8_lock_nologin_accounts | default(false)
+  ansible.builtin.user:
+    name: "{{ item }}"
+    password_lock: true
+  loop: "{{ _cis_unlocked_nologin_accounts.stdout_lines | default([]) }}"
+  tags: [never, destructive-remediation, cis_5.4.2.8, users]

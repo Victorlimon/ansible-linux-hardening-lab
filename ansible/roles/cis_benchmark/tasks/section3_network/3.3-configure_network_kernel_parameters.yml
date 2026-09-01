@@ -1,419 +1,144 @@
 ---
-# =================================================================
-# CIS 3.3 | Configure Network Kernel Parameters (Sysctl)
-# Basado en CIS Benchmark Ubuntu 24.04 LTS v1.0.0
-# =================================================================
-# ⚠️ ADVERTENCIA CRÍTICA DE CONECTIVIDAD:
-#   - 3.3.1: Deshabilitar IP forwarding puede romper routing
-#   - 3.3.2/3.3.5-3.3.6: Configurar ICMP puede afectar troubleshooting
-#   - 3.3.7: Reverse path filtering puede romper routing asimétrico
-#   - 3.3.8: Source routing settings pueden afectar redes complejas
-#   ⚠️ Verificar compatibilidad con entorno antes de aplicar!
-# =================================================================
+# CIS Ubuntu 24.04 LTS 3.3. The same late-loading file is used for every
+# parameter so the persistent and running configurations cannot diverge.
 
-# =================================================================
-# CONTROL 3.3.1 | Ensure IP forwarding is disabled (Automated)
-# Level 1 - Server/Workstation
-# =================================================================
 - name: "3.3.1 | Ensure IP forwarding is disabled"
-  block:
-    - name: "3.3.1 | AUDIT | Check IPv4 forwarding"
-      ansible.builtin.command: sysctl -n net.ipv4.ip_forward
-      register: _ipv4_forward
-      changed_when: false
-      failed_when: false
+  when: section3_network['3_3_network_kernel_parameters'].ip_forward_disabled | default(true) | bool
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '0'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  loop: >-
+    {{ ['net.ipv4.ip_forward'] +
+       (['net.ipv6.conf.all.forwarding']
+        if section3_network['3_1_network_devices'].ipv6_enabled | default(true) | bool
+        else []) }}
+  tags: [cis_3, cis_3_3, cis_3_3_1, network, sysctl, level_1]
 
-    - name: "3.3.1 | AUDIT | Check IPv6 forwarding"
-      ansible.builtin.command: sysctl -n net.ipv6.conf.all.forwarding
-      register: _ipv6_forward
-      changed_when: false
-      failed_when: false
+- name: "3.3.2 | Ensure packet redirect sending is disabled"
+  when: section3_network['3_3_network_kernel_parameters'].send_redirects_disabled | default(true) | bool
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '0'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  loop:
+    - net.ipv4.conf.all.send_redirects
+    - net.ipv4.conf.default.send_redirects
+  tags: [cis_3, cis_3_3, cis_3_3_2, network, sysctl, level_1]
 
-    - name: "3.3.1 | REPORT | IP forwarding status"
-      ansible.builtin.debug:
-        msg: |
-          === CIS 3.3.1 — IP Forwarding Status ===
-          IPv4 forwarding: {{ _ipv4_forward.stdout | default('N/A') }}
-          IPv6 forwarding: {{ _ipv6_forward.stdout | default('N/A') }}
-          
-          ⚠️ Para deshabilitar forwarding, configure:
-          section3_network['3_3_network_kernel_parameters'].ip_forward_disabled: true
-          
-          ⚠️ ADVERTENCIA: Esto puede romper routing en sistemas multi-interfaz!
-      tags: [report]
+- name: "3.3.3 | Ensure bogus ICMP responses are ignored"
+  when: section3_network['3_3_network_kernel_parameters'].icmp_ignore_bogus | default(true) | bool
+  ansible.posix.sysctl:
+    name: net.ipv4.icmp_ignore_bogus_error_responses
+    value: '1'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  tags: [cis_3, cis_3_3, cis_3_3_3, network, sysctl, level_1]
 
-    - name: "3.3.1 | Remediation | Disable IPv4 forwarding"
-      ansible.posix.sysctl:
-        name: net.ipv4.ip_forward
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: true
-        ignoreerrors: true
-      when:
-        - section3_network['3_3_network_kernel_parameters'].ip_forward_disabled | default(false) | bool
-        - _ipv4_forward.stdout | default('0') != '0'
-      tags: [remediation]
+- name: "3.3.4 | Ensure broadcast ICMP requests are ignored"
+  when: section3_network['3_3_network_kernel_parameters'].icmp_echo_ignore_broadcasts | default(true) | bool
+  ansible.posix.sysctl:
+    name: net.ipv4.icmp_echo_ignore_broadcasts
+    value: '1'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  tags: [cis_3, cis_3_3, cis_3_3_4, network, sysctl, level_1]
 
-    - name: "3.3.1 | Remediation | Disable IPv6 forwarding"
-      ansible.posix.sysctl:
-        name: net.ipv6.conf.all.forwarding
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: true
-        ignoreerrors: true
-      when:
-        - section3_network['3_3_network_kernel_parameters'].ip_forward_disabled | default(false) | bool
-        - _ipv6_forward.stdout | default('0') != '0'
-      tags: [remediation]
+- name: "3.3.5 | Ensure ICMP redirects are not accepted"
+  when: section3_network['3_3_network_kernel_parameters'].accept_redirects_disabled | default(true) | bool
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '0'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  loop: >-
+    {{ ['net.ipv4.conf.all.accept_redirects',
+        'net.ipv4.conf.default.accept_redirects'] +
+       (['net.ipv6.conf.all.accept_redirects',
+         'net.ipv6.conf.default.accept_redirects']
+        if section3_network['3_1_network_devices'].ipv6_enabled | default(true) | bool
+        else []) }}
+  tags: [cis_3, cis_3_3, cis_3_3_5, network, sysctl, ipv6, level_1]
 
-  rescue:
-    - name: "3.3.1 | ERROR | IP forwarding remediation failed"
-      ansible.builtin.debug:
-        msg: "No se pudo configurar IP forwarding. Verificar manualmente."
+- name: "3.3.6 | Ensure secure ICMP redirects are not accepted"
+  when: section3_network['3_3_network_kernel_parameters'].secure_redirects_disabled | default(true) | bool
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '0'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  loop:
+    - net.ipv4.conf.all.secure_redirects
+    - net.ipv4.conf.default.secure_redirects
+  tags: [cis_3, cis_3_3, cis_3_3_6, network, sysctl, level_1]
 
-  tags:
-    - cis_3
-    - cis_3_3
-    - cis_3_3_1
-    - network
-    - sysctl
-    - ip_forward
-    - level_1
+- name: "3.3.7 | Ensure reverse path filtering is enabled"
+  when: section3_network['3_3_network_kernel_parameters'].rp_filter_enabled | default(true) | bool
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '1'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  loop:
+    - net.ipv4.conf.all.rp_filter
+    - net.ipv4.conf.default.rp_filter
+  tags: [cis_3, cis_3_3, cis_3_3_7, network, sysctl, level_1]
 
-- name: "CIS 3.3.1 | Remediation | Ensure IP forwarding is disabled"
-  when: section3_network['3_3_network_kernel_parameters'].ip_forward_disabled | default(true)
-  block:
-    - name: "CIS 3.3.1 | AUDIT | Check IP forwarding status"
-      ansible.builtin.command: sysctl net.ipv4.ip_forward
-      register: _cis_ip_forward_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.1', 'sysctl', 'audit']
+- name: "3.3.8 | Ensure source routed packets are not accepted"
+  when: section3_network['3_3_network_kernel_parameters'].accept_source_route_disabled | default(true) | bool
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '0'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  loop: >-
+    {{ ['net.ipv4.conf.all.accept_source_route',
+        'net.ipv4.conf.default.accept_source_route'] +
+       (['net.ipv6.conf.all.accept_source_route',
+         'net.ipv6.conf.default.accept_source_route']
+        if section3_network['3_1_network_devices'].ipv6_enabled | default(true) | bool
+        else []) }}
+  tags: [cis_3, cis_3_3, cis_3_3_8, network, sysctl, ipv6, level_1]
 
-    - name: "CIS 3.3.1 | AUDIT | Check IPv6 forwarding status"
-      ansible.builtin.command: sysctl net.ipv6.conf.all.forwarding
-      register: _cis_ipv6_forward_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.1', 'sysctl', 'audit']
+- name: "3.3.9 | Ensure suspicious packets are logged"
+  when: section3_network['3_3_network_kernel_parameters'].log_martians | default(true) | bool
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '1'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  loop:
+    - net.ipv4.conf.all.log_martians
+    - net.ipv4.conf.default.log_martians
+  tags: [cis_3, cis_3_3, cis_3_3_9, network, sysctl, level_1]
 
-    - name: "CIS 3.3.1 | Remediation | Configure net.ipv4.ip_forward = 0"
-      ansible.posix.sysctl:
-        name: net.ipv4.ip_forward
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_ip_forward_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.1', 'sysctl', 'remediation']
-
-    - name: "CIS 3.3.1 | Remediation | Configure net.ipv6.conf.all.forwarding = 0"
-      ansible.posix.sysctl:
-        name: net.ipv6.conf.all.forwarding
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_ipv6_forward_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.1', 'sysctl', 'remediation']
-
-- name: "CIS 3.3.2 | Remediation | Ensure packet redirect sending is disabled"
-  when: section3_network['3_3_network_kernel_parameters'].send_redirects_disabled | default(true)
-  block:
-    - name: "CIS 3.3.2 | AUDIT | Check send_redirects status (all)"
-      ansible.builtin.command: sysctl net.ipv4.conf.all.send_redirects
-      register: _cis_send_redirects_all_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.2', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.2 | AUDIT | Check send_redirects status (default)"
-      ansible.builtin.command: sysctl net.ipv4.conf.default.send_redirects
-      register: _cis_send_redirects_default_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.2', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.2 | Remediation | Configure net.ipv4.conf.all.send_redirects = 0"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.all.send_redirects
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_send_redirects_all_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.2', 'sysctl', 'remediation']
-
-    - name: "CIS 3.3.2 | Remediation | Configure net.ipv4.conf.default.send_redirects = 0"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.default.send_redirects
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_send_redirects_default_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.2', 'sysctl', 'remediation']
-
-- name: "CIS 3.3.3 | Remediation | Ensure bogus ICMP responses are ignored"
-  when: section3_network['3_3_network_kernel_parameters'].icmp_ignore_bogus | default(true)
-  block:
-    - name: "CIS 3.3.3 | AUDIT | Check icmp_ignore_bogus_error_responses status"
-      ansible.builtin.command: sysctl net.ipv4.icmp_ignore_bogus_error_responses
-      register: _cis_icmp_ignore_bogus_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.3', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.3 | Remediation | Configure net.ipv4.icmp_ignore_bogus_error_responses = 1"
-      ansible.posix.sysctl:
-        name: net.ipv4.icmp_ignore_bogus_error_responses
-        value: '1'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_icmp_ignore_bogus_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 1
-      tags: ['section3', 'network', 'cis_3.3.3', 'sysctl', 'remediation']
-
-- name: "CIS 3.3.4 | Remediation | Ensure broadcast ICMP requests are ignored"
-  when: section3_network['3_3_network_kernel_parameters'].icmp_echo_ignore_broadcasts | default(true)
-  block:
-    - name: "CIS 3.3.4 | AUDIT | Check icmp_echo_ignore_broadcasts status"
-      ansible.builtin.command: sysctl net.ipv4.icmp_echo_ignore_broadcasts
-      register: _cis_icmp_echo_ignore_broadcasts_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.4', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.4 | Remediation | Configure net.ipv4.icmp_echo_ignore_broadcasts = 1"
-      ansible.posix.sysctl:
-        name: net.ipv4.icmp_echo_ignore_broadcasts
-        value: '1'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_icmp_echo_ignore_broadcasts_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 1
-      tags: ['section3', 'network', 'cis_3.3.4', 'sysctl', 'remediation']
-
-- name: "CIS 3.3.5 | Remediation | Ensure ICMP redirects are not accepted"
-  when: section3_network['3_3_network_kernel_parameters'].accept_redirects_disabled | default(true)
-  block:
-    - name: "CIS 3.3.5 | AUDIT | Check accept_redirects status (IPv4 all)"
-      ansible.builtin.command: sysctl net.ipv4.conf.all.accept_redirects
-      register: _cis_accept_redirects_ipv4_all_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.5', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.5 | AUDIT | Check accept_redirects status (IPv4 default)"
-      ansible.builtin.command: sysctl net.ipv4.conf.default.accept_redirects
-      register: _cis_accept_redirects_ipv4_default_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.5', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.5 | Remediation | Configure net.ipv4.conf.all.accept_redirects = 0"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.all.accept_redirects
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_accept_redirects_ipv4_all_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.5', 'sysctl', 'remediation']
-
-    - name: "CIS 3.3.5 | Remediation | Configure net.ipv4.conf.default.accept_redirects = 0"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.default.accept_redirects
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_accept_redirects_ipv4_default_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.5', 'sysctl', 'remediation']
-
-- name: "CIS 3.3.6 | Remediation | Ensure secure ICMP redirects are not accepted"
-  when: section3_network['3_3_network_kernel_parameters'].secure_redirects_disabled | default(true)
-  block:
-    - name: "CIS 3.3.6 | AUDIT | Check secure_redirects status (all)"
-      ansible.builtin.command: sysctl net.ipv4.conf.all.secure_redirects
-      register: _cis_secure_redirects_all_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.6', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.6 | AUDIT | Check secure_redirects status (default)"
-      ansible.builtin.command: sysctl net.ipv4.conf.default.secure_redirects
-      register: _cis_secure_redirects_default_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.6', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.6 | Remediation | Configure net.ipv4.conf.all.secure_redirects = 0"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.all.secure_redirects
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_secure_redirects_all_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.6', 'sysctl', 'remediation']
-
-    - name: "CIS 3.3.6 | Remediation | Configure net.ipv4.conf.default.secure_redirects = 0"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.default.secure_redirects
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_secure_redirects_default_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.6', 'sysctl', 'remediation']
-
-- name: "CIS 3.3.7 | Remediation | Ensure reverse path filtering is enabled"
-  when: section3_network['3_3_network_kernel_parameters'].rp_filter_enabled | default(true)
-  block:
-    - name: "CIS 3.3.7 | AUDIT | Check rp_filter status (all)"
-      ansible.builtin.command: sysctl net.ipv4.conf.all.rp_filter
-      register: _cis_rp_filter_all_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.7', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.7 | AUDIT | Check rp_filter status (default)"
-      ansible.builtin.command: sysctl net.ipv4.conf.default.rp_filter
-      register: _cis_rp_filter_default_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.7', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.7 | Remediation | Configure net.ipv4.conf.all.rp_filter = 1"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.all.rp_filter
-        value: '1'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_rp_filter_all_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 1
-      tags: ['section3', 'network', 'cis_3.3.7', 'sysctl', 'remediation']
-
-    - name: "CIS 3.3.7 | Remediation | Configure net.ipv4.conf.default.rp_filter = 1"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.default.rp_filter
-        value: '1'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_rp_filter_default_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 1
-      tags: ['section3', 'network', 'cis_3.3.7', 'sysctl', 'remediation']
-
-- name: "CIS 3.3.8 | Remediation | Ensure source routed packets are not accepted"
-  when: section3_network['3_3_network_kernel_parameters'].accept_source_route_disabled | default(true)
-  block:
-    - name: "CIS 3.3.8 | AUDIT | Check accept_source_route status (IPv4 all)"
-      ansible.builtin.command: sysctl net.ipv4.conf.all.accept_source_route
-      register: _cis_accept_source_route_ipv4_all_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.8', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.8 | AUDIT | Check accept_source_route status (IPv4 default)"
-      ansible.builtin.command: sysctl net.ipv4.conf.default.accept_source_route
-      register: _cis_accept_source_route_ipv4_default_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.8', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.8 | Remediation | Configure net.ipv4.conf.all.accept_source_route = 0"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.all.accept_source_route
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_accept_source_route_ipv4_all_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.8', 'sysctl', 'remediation']
-
-    - name: "CIS 3.3.8 | Remediation | Configure net.ipv4.conf.default.accept_source_route = 0"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.default.accept_source_route
-        value: '0'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_accept_source_route_ipv4_default_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 0
-      tags: ['section3', 'network', 'cis_3.3.8', 'sysctl', 'remediation']
-
-- name: "CIS 3.3.9 | Remediation | Ensure suspicious packets are logged"
-  when: section3_network['3_3_network_kernel_parameters'].log_martians | default(true)
-  block:
-    - name: "CIS 3.3.9 | AUDIT | Check log_martians status (all)"
-      ansible.builtin.command: sysctl net.ipv4.conf.all.log_martians
-      register: _cis_log_martians_all_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.9', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.9 | AUDIT | Check log_martians status (default)"
-      ansible.builtin.command: sysctl net.ipv4.conf.default.log_martians
-      register: _cis_log_martians_default_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.9', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.9 | Remediation | Configure net.ipv4.conf.all.log_martians = 1"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.all.log_martians
-        value: '1'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_log_martians_all_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 1
-      tags: ['section3', 'network', 'cis_3.3.9', 'sysctl', 'remediation']
-
-    - name: "CIS 3.3.9 | Remediation | Configure net.ipv4.conf.default.log_martians = 1"
-      ansible.posix.sysctl:
-        name: net.ipv4.conf.default.log_martians
-        value: '1'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_log_martians_default_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 1
-      tags: ['section3', 'network', 'cis_3.3.9', 'sysctl', 'remediation']
-
-- name: "CIS 3.3.10 | Remediation | Ensure TCP SYN cookies is enabled"
-  when: section3_network['3_3_network_kernel_parameters'].tcp_syncookies | default(true)
-  block:
-    - name: "CIS 3.3.10 | AUDIT | Check tcp_syncookies status"
-      ansible.builtin.command: sysctl net.ipv4.tcp_syncookies
-      register: _cis_tcp_syncookies_current
-      changed_when: false
-      failed_when: false
-      tags: ['section3', 'network', 'cis_3.3.10', 'sysctl', 'audit']
-
-    - name: "CIS 3.3.10 | Remediation | Configure net.ipv4.tcp_syncookies = 1"
-      ansible.posix.sysctl:
-        name: net.ipv4.tcp_syncookies
-        value: '1'
-        sysctl_file: /etc/sysctl.d/99-cis-network.conf
-        state: present
-        reload: yes
-        ignoreerrors: yes
-      when: _cis_tcp_syncookies_current.stdout | default('') | trim | regex_replace('^.*=\\s*', '') | int != 1
-      tags: ['section3', 'network', 'cis_3.3.10', 'sysctl', 'remediation']
+- name: "3.3.10 | Ensure TCP SYN cookies are enabled"
+  when: section3_network['3_3_network_kernel_parameters'].tcp_syncookies | default(true) | bool
+  ansible.posix.sysctl:
+    name: net.ipv4.tcp_syncookies
+    value: '1'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cis-network.conf
+    sysctl_set: true
+    reload: true
+  tags: [cis_3, cis_3_3, cis_3_3_10, network, sysctl, level_1]

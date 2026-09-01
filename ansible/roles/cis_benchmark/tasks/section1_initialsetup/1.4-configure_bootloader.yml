@@ -11,16 +11,18 @@
     - cis_grub_password is defined
   block:
     - name: "CIS 1.4.1 | Configure GRUB password in /etc/grub.d/40_custom"
-      ansible.builtin.lineinfile:
+      ansible.builtin.blockinfile:
         path: /etc/grub.d/40_custom
-        regexp: '^set superusers='
-        line: |
+        marker: '# {mark} CIS 1.4.1 managed block'
+        block: |
           set superusers="root"
           password_pbkdf2 root {{ cis_grub_password }}
-        create: yes
+        create: true
         mode: '0755'
-        backup: yes
+        backup: true
       notify: Update grub
+      no_log: true
+  tags: ['cis_sec1', 'cis_1.4.1']
 
 - name: "CIS 1.4.2 | Remediation | Ensure permissions on bootloader config"
   ansible.builtin.file:
@@ -40,6 +42,7 @@
   failed_when:
     - _grub_perms.stat.mode != '0600'
     - cis_1_4_2_grub_permissions | default(true)
+    - not ansible_check_mode
   when:
     - cis_section1_4_bootloader | default(true)
     - cis_1_4_2_grub_permissions | default(true)

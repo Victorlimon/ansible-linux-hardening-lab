@@ -1,8 +1,5 @@
 ---
-- name: Aplicar hardening CIS
-  hosts: all
-  become: yes
-  vars_files:
-    - ../group_vars/{{ env | default('local') }}.yml
-  roles:
-    - cis_benchmark
+# Entry point de compatibilidad. Las nuevas automatizaciones deben usar el
+# playbook de plataforma explícito.
+- name: Import the canonical Ubuntu 24.04 hardening playbook
+  ansible.builtin.import_playbook: cis_ubuntu_2404_hardening.yml

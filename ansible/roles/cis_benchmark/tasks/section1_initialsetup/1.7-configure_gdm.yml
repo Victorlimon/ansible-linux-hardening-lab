@@ -1,5 +1,26 @@
 ---
 # =============================================================================
+
+- name: "CIS 1.7 | Audit | Gather package facts for GDM controls"
+  ansible.builtin.package_facts:
+    manager: auto
+  tags: ['cis_sec1', 'cis_1.7.1', 'cis_1.7.2', 'cis_1.7.3', 'cis_1.7.4', 'cis_1.7.5', 'cis_1.7.6', 'cis_1.7.7', 'cis_1.7.8', 'cis_1.7.9', 'cis_1.7.10']
+
+- name: "CIS 1.7 | Remediation | Ensure required dconf directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /etc/dconf/profile
+    - /etc/dconf/db/gdm.d
+    - /etc/dconf/db/local.d/locks
+  when:
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
+  tags: ['cis_sec1', 'cis_1.7.2', 'cis_1.7.3', 'cis_1.7.4', 'cis_1.7.5', 'cis_1.7.6', 'cis_1.7.7', 'cis_1.7.8', 'cis_1.7.9']
 # CIS Ubuntu 24.04 LTS Benchmark v1.0.0 - Section 1.7: GDM Configuration
 # Controls: 1.7.1-1.7.10 | GNOME Display Manager hardening (Workstation only)
 # =============================================================================
@@ -13,6 +34,7 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_1_gdm_removed | default(false)
+    - "'gdm3' in ansible_facts.packages"
   tags: ['cis_sec1', 'cis_1.7.1', 'level2', 'NIST800-53R5_CM-11', 'workstation']
 
 # 1.7.2 | Ensure GDM login banner is configured
@@ -20,6 +42,8 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_2_gdm_login_banner | default(true)
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
   block:
     - name: "CIS 1.7.2 | Check if GDM user profile exists"
       ansible.builtin.stat:
@@ -48,7 +72,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Reload systemd daemon
+      notify: Update dconf databases
 
   tags: ['cis_sec1', 'cis_1.7.2', 'level1', 'NIST800-53R5_CM-1', 'workstation']
 
@@ -57,6 +81,8 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_3_gdm_disable_user_list | default(true)
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
   block:
     - name: "CIS 1.7.3 | Configure GDM disable-user-list via dconf"
       ansible.builtin.copy:
@@ -67,7 +93,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Reload systemd daemon
+      notify: Update dconf databases
   tags: ['cis_sec1', 'cis_1.7.3', 'level1', 'NIST800-53R5_CM-1', 'workstation']
 
 # 1.7.4 | Ensure GDM screen locks when the user is idle
@@ -75,6 +101,8 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_4_gdm_screen_lock_idle | default(true)
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
   block:
     - name: "CIS 1.7.4 | Configure GDM screen lock via dconf"
       ansible.builtin.copy:
@@ -87,7 +115,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Reload systemd daemon
+      notify: Update dconf databases
   tags: ['cis_sec1', 'cis_1.7.4', 'level1', 'NIST800-53R5_CM-1', 'workstation']
 
 # 1.7.5 | Ensure GDM screen locks cannot be overridden
@@ -95,6 +123,8 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_5_gdm_screen_lock_override | default(true)
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
   block:
     - name: "CIS 1.7.5 | Lock screen lock settings via dconf locks"
       ansible.builtin.copy:
@@ -105,7 +135,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Reload systemd daemon
+      notify: Update dconf databases
   tags: ['cis_sec1', 'cis_1.7.5', 'level1', 'NIST800-53R5_CM-11', 'workstation']
 
 # 1.7.6 | Ensure GDM automatic mounting of removable media is disabled
@@ -113,6 +143,8 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_6_gdm_automount_disabled | default(true)
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
   block:
     - name: "CIS 1.7.6 | Disable automount via dconf"
       ansible.builtin.copy:
@@ -124,7 +156,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Reload systemd daemon
+      notify: Update dconf databases
   tags: ['cis_sec1', 'cis_1.7.6', 'level1', 'NIST800-53R5_CM-1', 'workstation']
 
 # 1.7.7 | Ensure GDM disabling automatic mounting of removable media is not overridden
@@ -132,6 +164,8 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_7_gdm_automount_not_overridden | default(true)
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
   block:
     - name: "CIS 1.7.7 | Lock automount settings via dconf locks"
       ansible.builtin.copy:
@@ -142,7 +176,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Reload systemd daemon
+      notify: Update dconf databases
   tags: ['cis_sec1', 'cis_1.7.7', 'level1', 'NIST800-53R5_CM-11', 'workstation']
 
 # 1.7.8 | Ensure GDM autorun-never is enabled
@@ -150,6 +184,8 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_8_gdm_autorun_never | default(true)
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
   block:
     - name: "CIS 1.7.8 | Disable autorun via dconf"
       ansible.builtin.copy:
@@ -160,7 +196,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Reload systemd daemon
+      notify: Update dconf databases
   tags: ['cis_sec1', 'cis_1.7.8', 'level1', 'NIST800-53R5_CM-1', 'workstation']
 
 # 1.7.9 | Ensure GDM autorun-never is not overridden
@@ -168,6 +204,8 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_9_gdm_autorun_not_overridden | default(true)
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
   block:
     - name: "CIS 1.7.9 | Lock autorun settings via dconf locks"
       ansible.builtin.copy:
@@ -177,7 +215,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Reload systemd daemon
+      notify: Update dconf databases
   tags: ['cis_sec1', 'cis_1.7.9', 'level1', 'NIST800-53R5_CM-11', 'workstation']
 
 # 1.7.10 | Ensure XDMCP is not enabled
@@ -185,6 +223,8 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_10_xdmcp_disabled | default(true)
+    - "'gdm3' in ansible_facts.packages"
+    - not (cis_1_7_1_gdm_removed | default(false))
   block:
     - name: "CIS 1.7.10 | Find GDM config files with XDMCP section"
       ansible.builtin.find:
@@ -198,8 +238,8 @@
     - name: "CIS 1.7.10 | Disable XDMCP in GDM config files"
       ansible.builtin.replace:
         path: "{{ item.path }}"
-        regexp: '(?i)^\s*\[xdmcp\]\s*[\r\n]+.*?^\s*Enable\s*=\s*true'
-        replace: '[xdmcp]\n# Enable=false'
+        regexp: '(?ims)(^\s*\[xdmcp\]\s*$((?!^\s*\[).)*?^\s*Enable\s*=\s*)true\s*$'
+        replace: '\1false'
       loop: "{{ _cis_gdm_confs.files }}"
       when: _cis_gdm_confs.files | length > 0
   tags: ['cis_sec1', 'cis_1.7.10', 'level1', 'NIST800-53R5_SI-4', 'workstation']

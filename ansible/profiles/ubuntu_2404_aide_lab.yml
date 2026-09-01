@@ -1,0 +1,33 @@
+---
+# Perfil acotado para probar CIS 6.3 mediante --tags cis_6_3. No usar este
+# diccionario parcial para ejecutar otras subsecciones de CIS 6.
+cis_section6_logging_audit: true
+section6_logging:
+  enabled: true
+  '6_3_1_aide_installed':
+    enabled: true
+    packages: [aide, aide-common]
+  '6_3_1_aide_init':
+    # La inicialización completa se reserva para una ventana de I/O aprobada.
+    enabled: false
+    db_path: /var/lib/aide/aide.db
+    db_new_path: /var/lib/aide/aide.db.new
+  '6_3_2_aide_timer':
+    enabled: true
+    timer_name: dailyaidecheck.timer
+  '6_3_3_aide_audit_tools_integrity':
+    enabled: true
+    aide_conf: /etc/aide/aide.conf
+    audit_tool_attrs: p+i+n+u+g+s+b+acl+xattrs+sha512
+    audit_tools:
+      - /usr/sbin/auditctl
+      - /usr/sbin/auditd
+      - /usr/sbin/ausearch
+      - /usr/sbin/aureport
+      - /usr/sbin/autrace
+      - /usr/sbin/augenrules
+  '6_3_3_aide_config_validation':
+    enabled: true
+  '6_3_3_aide_database_update':
+    enabled: false
+    promote_candidate: false

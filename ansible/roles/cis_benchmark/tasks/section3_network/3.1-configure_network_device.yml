@@ -1,198 +1,66 @@
 ---
-# =================================================================
-# CIS 3.1 | Configure Network Devices
-# Basado en CIS Benchmark Ubuntu 24.04 LTS v1.0.0
-# =================================================================
-#  ADVERTENCIA DE CONECTIVIDAD:
-#   - 3.1.1: Deshabilitar IPv6 puede romper SSH en entornos Vagrant/Cloud
-#   - 3.1.2: Deshabilitar wireless puede desconectar laptops
-#   - 3.1.3: Deshabilitar Bluetooth puede afectar dispositivos periféricos
-# =================================================================
-
-# =================================================================
-# CONTROL 3.1.1 | Ensure IPv6 status is identified (Manual)
-# Level 1 - Server/Workstation
-# =================================================================
-- name: "3.1.1 | Ensure IPv6 status is identified"
+- name: "3.1.1 | Identify IPv6 status"
   block:
-    - name: "3.1.1 | AUDIT | Check IPv6 kernel parameter"
+    - name: "3.1.1 | Check the IPv6 kernel status file"
       ansible.builtin.stat:
         path: /sys/module/ipv6/parameters/disable
-      register: _ipv6_disable_file
-      changed_when: false
-      failed_when: false
+      register: _cis_ipv6_disable_file
 
-    - name: "3.1.1 | AUDIT | Read IPv6 disable value"
+    - name: "3.1.1 | Read the IPv6 kernel status"
       ansible.builtin.slurp:
         src: /sys/module/ipv6/parameters/disable
-      register: _ipv6_disable_value
-      when: _ipv6_disable_file.stat.exists
+      register: _cis_ipv6_disable_value
+      when: _cis_ipv6_disable_file.stat.exists
       changed_when: false
-      failed_when: false
 
-    - name: "3.1.1 | AUDIT | Check sysctl IPv6 all"
-      ansible.builtin.command: sysctl -n net.ipv6.conf.all.disable_ipv6
-      register: _ipv6_sysctl_all
-      changed_when: false
-      failed_when: false
-
-    - name: "3.1.1 | AUDIT | Check sysctl IPv6 default"
-      ansible.builtin.command: sysctl -n net.ipv6.conf.default.disable_ipv6
-      register: _ipv6_sysctl_default
-      changed_when: false
-      failed_when: false
-
-    - name: "3.1.1 | REPORT | IPv6 status summary"
+    - name: "3.1.1 | Report IPv6 status"
       ansible.builtin.debug:
-        msg: |
-          === CIS 3.1.1 — IPv6 Status ===
-          IPv6 enabled: {{ 'YES' if (_ipv6_disable_value.content | b64decode | trim != '0') or (_ipv6_sysctl_all.stdout | default('0') != '1') else 'NO' }}
-          Kernel parameter: {{ _ipv6_disable_value.content | b64decode | trim if _ipv6_disable_value.content is defined else 'N/A' }}
-          sysctl all: {{ _ipv6_sysctl_all.stdout | default('N/A') }}
-          sysctl default: {{ _ipv6_sysctl_default.stdout | default('N/A') }}
-          
-            Para deshabilitar IPv6, configure:
-          section3_network.3_1_network_devices.ipv6_enabled: false
-          
-            ADVERTENCIA: Deshabilitar IPv6 puede romper SSH en Vagrant/Cloud!
-      tags: [report]
+        msg: >-
+          IPv6 is {{ 'enabled' if
+          (_cis_ipv6_disable_value.content | default('MQ==') | b64decode | trim) == '0'
+          else 'disabled' }}; section 3 IPv6 controls are
+          {{ 'applicable' if section3_network['3_1_network_devices'].ipv6_enabled |
+          default(true) | bool else 'disabled by site policy' }}.
+  tags: [cis_3, cis_3_1, cis_3_1_1, network, ipv6, level_1]
 
-  rescue:
-    - name: "3.1.1 | ERROR | IPv6 check failed"
-      ansible.builtin.debug:
-        msg: "No se pudo determinar el estado de IPv6. Verificar manualmente."
-
-  tags:
-    - cis_3
-    - cis_3_1
-    - cis_3_1_1
-    - network
-    - ipv6
-    - level_1
-
-# =================================================================
-# CONTROL 3.1.2 | Ensure wireless interfaces are disabled (Automated)
-# Level 1 - Server
-# =================================================================
 - name: "3.1.2 | Ensure wireless interfaces are disabled"
+  when: section3_network['3_1_network_devices'].wireless_disabled | default(false) | bool
   block:
-    - name: "3.1.2 | AUDIT | Find wireless interfaces"
-      ansible.builtin.shell: |
-        find /sys/class/net/*/ -type d -name wireless 2>/dev/null | wc -l
+    - name: "3.1.2 | Find wireless interfaces"
+      ansible.builtin.command:
+        argv:
+          - find
+          - -L
+          - /sys/class/net
+          - -path
+          - '*/wireless'
+          - -type
+          - d
+      register: _cis_wireless_paths
       changed_when: false
-      failed_when: false
-      register: _wireless_count
 
-    - name: "3.1.2 | AUDIT | Gather wireless module names"
-      ansible.builtin.shell: |
-        for d in $(find /sys/class/net/*/ -type d -name wireless 2>/dev/null | xargs -0 dirname 2>/dev/null); do
-          basename "$(readlink -f "$d"/device/driver/module 2>/dev/null)" 2>/dev/null
-        done | sort -u
-      changed_when: false
-      failed_when: false
-      register: _wireless_modules
-      when: _wireless_count.stdout | int > 0
+    - name: "3.1.2 | Inspect wireless driver module links"
+      ansible.builtin.stat:
+        path: "{{ item | dirname }}/device/driver/module"
+        follow: false
+      loop: "{{ _cis_wireless_paths.stdout_lines }}"
+      register: _cis_wireless_module_links
 
-    - name: "3.1.2 | REPORT | Wireless interfaces detected"
-      ansible.builtin.debug:
-        msg: |
-          === CIS 3.1.2 — Wireless Status ===
-          Interfaces found: {{ _wireless_count.stdout | default('0') }}
-          Modules: {{ _wireless_modules.stdout_lines | default([]) }}
-          
-            Para deshabilitar wireless, configure:
-          section3_network.3_1_network_devices.wireless_disabled: true
-          
-            ADVERTENCIA: Esto puede desconectar laptops con WiFi!
-      when: _wireless_count.stdout | int > 0
-      tags: [report]
-
-    - name: "3.1.2 | Remediation | Disable wireless modules"
+    - name: "3.1.2 | Disable detected wireless driver modules"
       ansible.builtin.include_tasks: _disable_network_module.yml
-      loop: "{{ _wireless_modules.stdout_lines | default([]) | unique }}"
+      loop: >-
+        {{ _cis_wireless_module_links.results | default([]) |
+           selectattr('stat.lnk_source', 'defined') |
+           map(attribute='stat.lnk_source') | map('basename') | unique | list }}
       loop_control:
         loop_var: _module
-        label: "Disable {{ _module }}"
-      when:
-        - _wireless_modules.stdout_lines | default([]) | length > 0
-        - section3_network['3_1_network_devices'].wireless_disabled | default(false) | bool
-      tags: [remediation]
+        label: "{{ _module }}"
+  tags: [cis_3, cis_3_1, cis_3_1_2, network, wireless, level_1]
 
-  rescue:
-    - name: "3.1.2 | ERROR | Wireless disable failed"
-      ansible.builtin.debug:
-        msg: "No se pudo deshabilitar módulos wireless. Verificar manualmente."
-
-  tags:
-    - cis_3
-    - cis_3_1
-    - cis_3_1_2
-    - network
-    - wireless
-    - level_1
-
-# =================================================================
-# CONTROL 3.1.3 | Ensure Bluetooth services are not in use (Automated)
-# Level 1 - Server, Level 2 - Workstation
-# =================================================================
 - name: "3.1.3 | Ensure Bluetooth services are not in use"
-  block:
-    - name: "3.1.3 | AUDIT | Check bluez package"
-      ansible.builtin.package_facts:
-        manager: apt
-      register: _package_facts
-
-    - name: "3.1.3 | AUDIT | Check bluetooth.service status"
-      ansible.builtin.systemd:
-        name: bluetooth.service
-      register: _bluetooth_service
-      failed_when: false
-      changed_when: false
-
-    - name: "3.1.3 | REPORT | Bluetooth status"
-      ansible.builtin.debug:
-        msg: |
-          === CIS 3.1.3 — Bluetooth Status ===
-          Package bluez: {{ 'INSTALLED' if 'bluez' in (ansible_facts.packages | default({})) else 'NOT INSTALLED' }}
-          Service enabled: {{ _bluetooth_service.status.UnitFileState | default('N/A') }}
-          Service active: {{ _bluetooth_service.status.ActiveState | default('N/A') }}
-          
-            Para deshabilitar Bluetooth, configure:
-          section3_network.3_1_network_devices.bluetooth_disabled: true
-      tags: [report]
-
-    - name: "3.1.3 | Remediation | Stop and mask bluetooth.service"
-      ansible.builtin.systemd:
-        name: bluetooth.service
-        state: stopped
-        enabled: false
-        masked: true
-      when:
-        - section3_network['3_1_network_devices'].bluetooth_disabled | default(false) | bool
-        - _bluetooth_service.status.UnitFileState is defined
-      ignore_errors: true
-      tags: [remediation]
-
-    - name: "3.1.3 | Remediation | Remove bluez package (if not dependency)"
-      ansible.builtin.apt:
-        name: bluez
-        state: absent
-        purge: true
-      when:
-        - section3_network['3_1_network_devices'].bluetooth_disabled | default(false) | bool
-        - "'bluez' in (ansible_facts.packages | default({}))"
-      ignore_errors: true
-      tags: [remediation]
-
-  rescue:
-    - name: "3.1.3 | ERROR | Bluetooth remediation failed"
-      ansible.builtin.debug:
-        msg: "No se pudo deshabilitar Bluetooth. Verificar manualmente."
-
-  tags:
-    - cis_3
-    - cis_3_1
-    - cis_3_1_3
-    - network
-    - bluetooth
-    - level_1
+  when: section3_network['3_1_network_devices'].bluetooth_disabled | default(false) | bool
+  ansible.builtin.apt:
+    name: bluez
+    state: absent
+    purge: true
+  tags: [cis_3, cis_3_1, cis_3_1_3, network, bluetooth, level_1]

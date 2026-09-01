@@ -103,19 +103,17 @@
 # 2.4.1.8 | Ensure crontab is restricted to authorized users
 - name: "CIS 2.4.1.8 | Remediation | Ensure crontab is restricted to authorized users"
   block:
-    - name: "CIS 2.4.1.8 | Check if crontab group exists"
+    - name: "CIS 2.4.1.8 | Audit | Gather local groups"
       ansible.builtin.getent:
         database: group
-        key: crontab
-      ignore_errors: true
-      register: cis_crontab_group_check
 
-    - name: "CIS 2.4.1.8 | Create /etc/cron.allow if not exists"
-      ansible.builtin.file:
-        path: /etc/cron.allow
-        state: touch
+    - name: "CIS 2.4.1.8 | Remediation | Ensure /etc/cron.allow exists"
+      ansible.builtin.copy:
+        dest: /etc/cron.allow
+        content: ''
+        force: false
         owner: root
-        group: "{{ 'crontab' if cis_crontab_group_check is succeeded else 'root' }}"
+        group: "{{ 'crontab' if 'crontab' in ansible_facts.getent_group else 'root' }}"
         mode: '0640'
 
     - name: "CIS 2.4.1.8 | Remove /etc/cron.deny to enforce allow list"
@@ -130,19 +128,17 @@
 # 2.4.2.1 | Ensure at is restricted to authorized users
 - name: "CIS 2.4.2.1 | Remediation | Ensure at is restricted to authorized users"
   block:
-    - name: "CIS 2.4.2.1 | Check if daemon group exists"
+    - name: "CIS 2.4.2.1 | Audit | Gather local groups"
       ansible.builtin.getent:
         database: group
-        key: daemon
-      ignore_errors: true
-      register: cis_daemon_group_check
 
-    - name: "CIS 2.4.2.1 | Create /etc/at.allow if not exists"
-      ansible.builtin.file:
-        path: /etc/at.allow
-        state: touch
+    - name: "CIS 2.4.2.1 | Remediation | Ensure /etc/at.allow exists"
+      ansible.builtin.copy:
+        dest: /etc/at.allow
+        content: ''
+        force: false
         owner: root
-        group: "{{ 'daemon' if cis_daemon_group_check is succeeded else 'root' }}"
+        group: "{{ 'daemon' if 'daemon' in ansible_facts.getent_group else 'root' }}"
         mode: '0640'
 
     - name: "CIS 2.4.2.1 | Remove /etc/at.deny to enforce allow list"

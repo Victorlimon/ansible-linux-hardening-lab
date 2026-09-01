@@ -1,49 +1,9 @@
 ---
 # =============================================================================
-# CIS Ubuntu 24.04 LTS Benchmark v1.0.0 - Section 1.2.2: Configure Updates & GPG
-# Ensure GPG keys are configured and package verification is enabled
+# CIS Ubuntu 24.04 LTS Benchmark v1.0.0 - Updates
 # =============================================================================
 
-- name: "CIS 1.2.2 | Remediation | Ensure GPG keys are configured"
-  block:
-    - name: "CIS 1.2.2 | Ensure apt-transport-https is installed"
-      ansible.builtin.apt:
-        name: apt-transport-https
-        state: present
-        update_cache: yes
-
-    - name: "CIS 1.2.2 | Ensure Ubuntu archive keyring is installed"
-      ansible.builtin.apt:
-        name: ubuntu-keyring
-        state: present
-
-    - name: "CIS 1.2.2 | Verify GPG keys for configured repositories"
-      ansible.builtin.shell: |
-        apt-key list 2>/dev/null | grep -E "(Ubuntu|Canonical)" || true
-      register: _cis_gpg_keys
-      changed_when: false
-      failed_when: false
-
-    - name: "CIS 1.2.2 | Report if no Ubuntu GPG keys found"
-      ansible.builtin.debug:
-        msg: "WARNING: No Ubuntu/Canonical GPG keys found. Package verification may be compromised."
-      when: "'Ubuntu' not in _cis_gpg_keys.stdout and 'Canonical' not in _cis_gpg_keys.stdout"
-
-    - name: "CIS 1.2.2 | Ensure AllowUnauthenticated is not set in apt config"
-      ansible.builtin.lineinfile:
-        path: /etc/apt/apt.conf.d/99cis-secure
-        regexp: '^APT::Get::AllowUnauthenticated'
-        line: 'APT::Get::AllowUnauthenticated "false";'
-        create: yes
-        mode: '0644'
-        owner: root
-        group: root
-  when:
-    - cis_section1_2_packages | default(true)
-    - cis_1_2_2_configure_updates | default(true)
-  tags: ['cis_sec1', 'cis_1.2.2', 'level1', 'gpg', 'updates']
-
-- name: "CIS 1.2.2 | Remediation | Ensure automatic updates are configured (optional)"
+- name: "CIS 1.2.2.1 | Remediation | Configure automatic security updates when approved"
   when:
     - cis_section1_2_packages | default(true)
     - cis_1_2_2_auto_updates | default(false)  # Disabled by default, enable if needed
@@ -69,10 +29,8 @@
         backup: yes
 
     - name: "CIS 1.2.2 | Enable unattended-upgrades service"
-      ansible.builtin.systemd:
+      ansible.builtin.systemd_service:
         name: unattended-upgrades.service
         enabled: yes
         state: started
-      ignore_errors: true
-      failed_when: false
-  tags: ['cis_sec1', 'cis_1.2.2', 'level2', 'auto-updates']
+  tags: ['cis_sec1', 'cis_1.2.2', 'cis_1.2.2.1', 'level2', 'auto-updates']

@@ -1,0 +1,6 @@
+---
+# Adaptador estable de Ubuntu. Mantiene el rol histórico aislado mientras los
+# controles compartidos se extraen únicamente después de probar equivalencia.
+- name: Run the validated Ubuntu 24.04 benchmark implementation
+  ansible.builtin.import_role:
+    name: cis_benchmark

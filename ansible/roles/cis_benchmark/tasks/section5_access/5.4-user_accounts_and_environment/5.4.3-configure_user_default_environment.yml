@@ -1,115 +1,69 @@
 ---
-# =============================================================================
-# CIS Ubuntu 24.04 LTS / Debian 12 Benchmark v1.0.0 - Section 5.4.3: User Default Environment
-# =============================================================================
-
-- name: "CIS 5.4.3.1 | Remediation | Ensure nologin is not listed in /etc/shells"
+- name: "CIS 5.4.3.1 | Remediation | Remove nologin from valid shells"
   when: cis_5_4_3_1_nologin_not_in_shells | default(true)
-  block:
-    - name: "CIS 5.4.3.1 | AUDIT | Check if /sbin/nologin is in /etc/shells"
-      ansible.builtin.command: grep -x '/sbin/nologin' /etc/shells
-      register: _cis_nologin_in_shells
-      changed_when: false
-      failed_when: false
+  ansible.builtin.lineinfile:
+    path: /etc/shells
+    regexp: '^\s*[^#]*\/nologin\s*$'
+    state: absent
+  tags: [level2-server, level2-workstation, remediation, cis_5.4.3.1, users]
 
-    - name: "CIS 5.4.3.1 | Remediation | Remove /sbin/nologin from /etc/shells if present"
-      ansible.builtin.lineinfile:
-        path: /etc/shells
-        regexp: '^/sbin/nologin$'
-        state: absent
-        backup: yes
-      when: _cis_nologin_in_shells.rc == 0
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.3.1
-    - NIST800-53R5_CM-6
-    - users
+- name: "CIS 5.4.3.2 | Safety | Validate default shell timeout"
+  ansible.builtin.assert:
+    that:
+      - cis_default_shell_timeout | default(900) | int > 0
+      - cis_default_shell_timeout | default(900) | int <= 900
+    fail_msg: "TMOUT must be between 1 and 900 seconds."
+  tags: [cis_5.4.3.2, users]
 
-- name: "CIS 5.4.3.2 | Remediation | Ensure default user shell timeout is configured"
+- name: "CIS 5.4.3.2 | Remediation | Configure default shell timeout once"
   when: cis_5_4_3_2_default_shell_timeout | default(true)
-  block:
-    - name: "CIS 5.4.3.2 | Remediation | Set TMOUT in /etc/profile.d/tmout.sh"
-      ansible.builtin.copy:
-        dest: /etc/profile.d/tmout.sh
-        content: |
-          # CIS 5.4.3.2 - Default shell timeout
-          # Set timeout to {{ cis_default_shell_timeout | default(900) }} seconds (15 minutes)
-          TMOUT={{ cis_default_shell_timeout | default(900) }}
-          readonly TMOUT
-          export TMOUT
-        owner: root
-        group: root
-        mode: '0644'
-        backup: yes
+  ansible.builtin.copy:
+    dest: /etc/profile.d/99-cis-tmout.sh
+    content: |
+      # Managed by Ansible - CIS 5.4.3.2
+      readonly TMOUT={{ cis_default_shell_timeout | default(900) }}
+      export TMOUT
+    owner: root
+    group: root
+    mode: "0644"
+  tags: [level1-server, level1-workstation, remediation, cis_5.4.3.2, users]
 
-    - name: "CIS 5.4.3.2 | Remediation | Ensure TMOUT is set in /etc/bash.bashrc"
-      ansible.builtin.lineinfile:
-        path: /etc/bash.bashrc
-        regexp: '^TMOUT='
-        line: 'TMOUT={{ cis_default_shell_timeout | default(900) }}'
-        backup: yes
+- name: "CIS 5.4.3.2 | Audit | Find conflicting system-wide TMOUT values"
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep -RHE '^\s*(readonly\s+)?TMOUT=(0|9[0-9][1-9]|9[1-9][0-9]|[1-9][0-9]{3,})\b' \
+      /etc/profile /etc/bash.bashrc /etc/profile.d/*.sh | \
+      grep -v '^/etc/profile.d/99-cis-tmout.sh:'
+  args:
+    executable: /bin/bash
+  register: _cis_conflicting_tmout
+  changed_when: false
+  check_mode: false
+  failed_when: _cis_conflicting_tmout.rc not in [0, 1]
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.3.2, users]
 
-    - name: "CIS 5.4.3.2 | Remediation | Ensure TMOUT is readonly in /etc/bash.bashrc"
-      ansible.builtin.lineinfile:
-        path: /etc/bash.bashrc
-        regexp: '^readonly TMOUT'
-        line: 'readonly TMOUT'
-        backup: yes
+- name: "CIS 5.4.3.2 | Manual | Report conflicting TMOUT values"
+  when: _cis_conflicting_tmout.rc == 0
+  ansible.builtin.debug:
+    msg: "Review conflicting TMOUT definitions: {{ _cis_conflicting_tmout.stdout_lines }}"
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.4.3.2, users]
 
-    - name: "CIS 5.4.3.2 | Remediation | Ensure TMOUT is exported in /etc/bash.bashrc"
-      ansible.builtin.lineinfile:
-        path: /etc/bash.bashrc
-        regexp: '^export TMOUT'
-        line: 'export TMOUT'
-        backup: yes
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.3.2
-    - NIST800-53R5_AC-12
-    - users
-
-- name: "CIS 5.4.3.3 | Remediation | Ensure default user umask is configured"
+- name: "CIS 5.4.3.3 | Remediation | Configure secure login.defs umask"
   when: cis_5_4_3_3_default_umask | default(true)
-  block:
-    - name: "CIS 5.4.3.3 | Remediation | Set umask in /etc/login.defs"
-      ansible.builtin.lineinfile:
-        path: /etc/login.defs
-        regexp: '^UMASK\s'
-        line: 'UMASK           {{ cis_default_umask | default("027") }}'
-        backup: yes
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^\s*UMASK\s+'
+    line: "UMASK           {{ cis_default_umask | default('027') }}"
+  tags: [level1-server, level1-workstation, remediation, cis_5.4.3.3, users]
 
-    - name: "CIS 5.4.3.3 | Remediation | Set umask in /etc/profile"
-      ansible.builtin.lineinfile:
-        path: /etc/profile
-        regexp: '^umask\s'
-        line: 'umask {{ cis_default_umask | default("027") }}'
-        backup: yes
-
-    - name: "CIS 5.4.3.3 | Remediation | Set umask in /etc/bash.bashrc"
-      ansible.builtin.lineinfile:
-        path: /etc/bash.bashrc
-        regexp: '^umask\s'
-        line: 'umask {{ cis_default_umask | default("027") }}'
-        backup: yes
-
-    - name: "CIS 5.4.3.3 | Remediation | Create umask config in /etc/profile.d/"
-      ansible.builtin.copy:
-        dest: /etc/profile.d/umask.sh
-        content: |
-          # CIS 5.4.3.3 - Default umask configuration
-          umask {{ cis_default_umask | default("027") }}
-        owner: root
-        group: root
-        mode: '0644'
-        backup: yes
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.4.3.3
-    - NIST800-53R5_AC-3
-    - users
+- name: "CIS 5.4.3.3 | Remediation | Configure shell umask at highest system precedence"
+  when: cis_5_4_3_3_default_umask | default(true)
+  ansible.builtin.copy:
+    dest: /etc/profile.d/99-cis-umask.sh
+    content: |
+      # Managed by Ansible - CIS 5.4.3.3
+      umask {{ cis_default_umask | default('027') }}
+    owner: root
+    group: root
+    mode: "0644"
+  tags: [level1-server, level1-workstation, remediation, cis_5.4.3.3, users]

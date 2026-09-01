@@ -1,182 +1,138 @@
 ---
-# =============================================================================
-# CIS Ubuntu 24.04 LTS / Debian 12 Benchmark v1.0.0 - Section 5.2: Privilege Escalation
-# Sudo hardening and configuration
-# =============================================================================
-
 - name: "CIS 5.2.1 | Remediation | Ensure sudo is installed"
-  when:
-    - cis_5_2_1_sudo_install | default(true)
-    - "'sudo' not in ansible_facts.packages"
+  when: cis_5_2_1_sudo_install | default(true)
   ansible.builtin.apt:
     name: sudo
     state: present
-    update_cache: yes
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.2.1
-    - NIST800-53R5_AC-6
-    - sudo
+  tags: [level1-server, level1-workstation, remediation, cis_5.2.1, sudo]
 
-- name: "CIS 5.2.2 | Remediation | Ensure sudo commands use pty"
-  when: cis_5_2_2_sudo_use_pty | default(true)
-  block:
-    - name: "CIS 5.2.2 | Remediation | Remove !use_pty from all sudoers files"
-      ansible.builtin.replace:
-        path: "{{ item }}"
-        regexp: '^\s*Defaults\s+.*!use_pty.*$'
-        replace: ''
-        validate: '/usr/sbin/visudo -cf %s'
-      loop: "{{ lookup('ansible.builtin.fileglob', '/etc/sudoers.d/*', wantlist=True) | reject('search', '[~#]$') | list + ['/etc/sudoers'] }}"
-      ignore_errors: true
+- name: "CIS 5.2.2, 5.2.3 and 5.2.6 | Safety | Validate sudo policy values"
+  ansible.builtin.assert:
+    that:
+      - cis_sudo_timestamp_timeout | default(15) | int >= 0
+      - cis_sudo_timestamp_timeout | default(15) | int <= 15
+      - (cis_sudo_logfile | default('/var/log/sudo.log')) is match('^/\S+$')
+    fail_msg: "sudo logfile must be absolute and timestamp_timeout must be between 0 and 15."
+  tags: [cis_5.2.2, cis_5.2.3, cis_5.2.6, sudo]
 
-    - name: "CIS 5.2.2 | Remediation | Ensure Defaults use_pty is present"
-      ansible.builtin.lineinfile:
-        path: "/etc/sudoers.d/99-use-pty"
-        create: true
-        mode: '0440'
-        owner: root
-        group: root
-        line: "Defaults use_pty"
-        validate: '/usr/sbin/visudo -cf %s'
+- name: "CIS 5.2.2, 5.2.3 and 5.2.6 | Remediation | Install validated sudoers drop-in"
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/99-cis-hardening
+    content: |
+      # Managed by Ansible - CIS Ubuntu 24.04 section 5.2
+      {% if cis_5_2_2_sudo_use_pty | default(true) %}Defaults use_pty
+      {% endif %}
+      {% if cis_5_2_3_sudo_logfile | default(true) %}Defaults logfile="{{ cis_sudo_logfile | default('/var/log/sudo.log') }}"
+      {% endif %}
+      {% if cis_5_2_6_sudo_timestamp_timeout | default(true) %}Defaults timestamp_timeout={{ cis_sudo_timestamp_timeout | default(15) }}
+      {% endif %}
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
   tags:
     - level1-server
     - level1-workstation
     - remediation
     - cis_5.2.2
-    - NIST800-53R5_AC-6
-    - sudo
-
-- name: "CIS 5.2.3 | Remediation | Ensure sudo log file exists"
-  when: cis_5_2_3_sudo_logfile | default(true)
-  block:
-    - name: "CIS 5.2.3 | Remediation | Ensure sudo log file exists"
-      ansible.builtin.file:
-        path: "{{ cis_sudo_logfile | default('/var/log/sudo.log') }}"
-        state: touch
-        owner: root
-        group: root
-        mode: "0600"
-
-    - name: "CIS 5.2.3 | Remediation | Ensure sudo logfile is configured"
-      ansible.builtin.lineinfile:
-        path: "/etc/sudoers.d/99-sudo-logfile"
-        create: true
-        mode: "0440"
-        owner: root
-        group: root
-        line: 'Defaults logfile="{{ cis_sudo_logfile | default("/var/log/sudo.log") }}"'
-        validate: "/usr/sbin/visudo -cf %s"
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.2.3
-    - NIST800-53R5_AU-3
-    - sudo
-
-- name: "CIS 5.2.4 | Remediation | Ensure users must provide password for privilege escalation"
-  when: cis_5_2_4_sudo_no_password | default(false)
-  block:
-    - name: "CIS 5.2.4 | AUDIT | Find NOPASSWD entries in sudoers"
-      ansible.builtin.command: "grep -r '^[^#].*NOPASSWD' /etc/sudoers /etc/sudoers.d/"
-      register: _cis_nopasswd_audit
-      failed_when: false
-      changed_when: false
-
-    - name: "CIS 5.2.4 | REPORT | Display NOPASSWD entries requiring review"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 5.2.4 — NOPASSWD entries found (manual review required) ==="
-          - "{{ _cis_nopasswd_audit.stdout_lines }}"
-      when: _cis_nopasswd_audit.stdout | default('') | length > 0
-  tags:
-    - level1-server
-    - level1-workstation
-    - audit
-    - cis_5.2.4
-    - NIST800-53R5_AC-6
-    - sudo
-
-- name: "CIS 5.2.5 | Remediation | Ensure re-authentication for privilege escalation is not disabled globally"
-  when: cis_5_2_5_sudo_authenticate | default(true)
-  block:
-    - name: "CIS 5.2.5 | AUDIT | Find !authenticate entries in sudoers"
-      ansible.builtin.command: "grep -r '^[^#].*!authenticate' /etc/sudoers /etc/sudoers.d/"
-      register: _cis_authenticate_audit
-      failed_when: false
-      changed_when: false
-
-    - name: "CIS 5.2.5 | REPORT | Display !authenticate entries requiring review"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 5.2.5 — !authenticate entries found (manual review required) ==="
-          - "{{ _cis_authenticate_audit.stdout_lines }}"
-      when: _cis_authenticate_audit.stdout | default('') | length > 0
-  tags:
-    - level1-server
-    - level1-workstation
-    - audit
-    - cis_5.2.5
-    - NIST800-53R5_AC-6
-    - sudo
-
-- name: "CIS 5.2.6 | Remediation | Ensure sudo authentication timeout is configured correctly"
-  when: cis_5_2_6_sudo_timestamp_timeout | default(true)
-  block:
-    - name: "CIS 5.2.6 | Remediation | Set timestamp_timeout in sudoers"
-      ansible.builtin.lineinfile:
-        path: "/etc/sudoers.d/cis_timestamp_timeout"
-        line: "Defaults timestamp_timeout={{ cis_sudo_timestamp_timeout | default(15) }}"
-        create: true
-        owner: root
-        group: root
-        mode: '0440'
-        validate: '/usr/sbin/visudo -cf %s'
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.2.6
-    - NIST800-53R5_AC-6
     - sudo
 
-- name: "CIS 5.2.7 | Remediation | Ensure access to the su command is restricted"
+- name: "CIS 5.2.2, 5.2.3 and 5.2.6 | Verification | Validate complete sudoers policy"
+  ansible.builtin.command:
+    argv:
+      - /usr/sbin/visudo
+      - -cf
+      - /etc/sudoers
+  changed_when: false
+  check_mode: false
+  tags: [verification, cis_5.2.2, cis_5.2.3, cis_5.2.6, sudo]
+
+- name: "CIS 5.2.3 | Remediation | Protect the sudo log file"
+  when: cis_5_2_3_sudo_logfile | default(true)
+  ansible.builtin.file:
+    path: "{{ cis_sudo_logfile | default('/var/log/sudo.log') }}"
+    state: touch
+    access_time: preserve
+    modification_time: preserve
+    owner: root
+    group: root
+    mode: "0600"
+  tags: [level1-server, level1-workstation, remediation, cis_5.2.3, sudo]
+
+- name: "CIS 5.2.4 | Manual | Audit NOPASSWD entries"
+  when: cis_5_2_4_sudo_no_password | default(false)
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/grep
+      - -R
+      - -nE
+      - ^[^#].*NOPASSWD
+      - /etc/sudoers
+      - /etc/sudoers.d
+  register: _cis_nopasswd_audit
+  changed_when: false
+  check_mode: false
+  failed_when: _cis_nopasswd_audit.rc not in [0, 1]
+  tags: [level2-server, level2-workstation, audit, manual, cis_5.2.4, sudo]
+
+- name: "CIS 5.2.4 | Manual | Report NOPASSWD entries"
+  when:
+    - cis_5_2_4_sudo_no_password | default(false)
+    - _cis_nopasswd_audit.rc == 0
+  ansible.builtin.debug:
+    msg: "Manual review required; removing NOPASSWD can break unattended Ansible: {{ _cis_nopasswd_audit.stdout_lines }}"
+  tags: [level2-server, level2-workstation, audit, manual, cis_5.2.4, sudo]
+
+- name: "CIS 5.2.5 | Manual | Audit !authenticate entries"
+  when: cis_5_2_5_sudo_authenticate | default(true)
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/grep
+      - -R
+      - -nE
+      - ^[^#].*!authenticate
+      - /etc/sudoers
+      - /etc/sudoers.d
+  register: _cis_noauthenticate_audit
+  changed_when: false
+  check_mode: false
+  failed_when: _cis_noauthenticate_audit.rc not in [0, 1]
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.2.5, sudo]
+
+- name: "CIS 5.2.5 | Manual | Report !authenticate entries"
+  when:
+    - cis_5_2_5_sudo_authenticate | default(true)
+    - _cis_noauthenticate_audit.rc == 0
+  ansible.builtin.debug:
+    msg: "Manual review required before removing !authenticate: {{ _cis_noauthenticate_audit.stdout_lines }}"
+  tags: [level1-server, level1-workstation, audit, manual, cis_5.2.5, sudo]
+
+- name: "CIS 5.2.7 | Remediation | Restrict access to su"
   when: cis_5_2_7_su_command_restricted | default(true)
   block:
-    - name: "CIS 5.2.7 | Remediation | Create restricted group for su access"
+    - name: "CIS 5.2.7 | Remediation | Create the empty su group"
       ansible.builtin.group:
         name: "{{ cis_su_restricted_group | default('sugroup') }}"
         state: present
 
-    - name: "CIS 5.2.7 | Remediation | Configure pam_wheel.so in /etc/pam.d/su"
+    - name: "CIS 5.2.7 | Safety | Read su group membership"
+      ansible.builtin.getent:
+        database: group
+        key: "{{ cis_su_restricted_group | default('sugroup') }}"
+
+    - name: "CIS 5.2.7 | Safety | Require the su group to be empty"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_group[cis_su_restricted_group | default('sugroup')][2] | default('') | length == 0
+        fail_msg: "Refusing to restrict su: the configured group is not empty."
+
+    - name: "CIS 5.2.7 | Remediation | Configure pam_wheel for su"
       ansible.builtin.lineinfile:
         path: /etc/pam.d/su
-        regexp: '^#?\s*auth\s+required\s+pam_wheel\.so'
-        line: 'auth required pam_wheel.so use_uid group={{ cis_su_restricted_group | default("sugroup") }}'
+        regexp: '^\s*auth\s+(required|requisite)\s+pam_wheel\.so\b'
+        line: "auth required pam_wheel.so use_uid group={{ cis_su_restricted_group | default('sugroup') }}"
         state: present
         backup: true
-
-    - name: "CIS 5.2.7 | AUDIT | Verify restricted group is empty"
-      ansible.builtin.shell: "grep '^{{ cis_su_restricted_group | default('sugroup') }}:' /etc/group | cut -d: -f4"
-      register: _cis_sugroup_members
-      changed_when: false
-      failed_when: false
-
-    - name: "CIS 5.2.7 | REPORT | Warn if restricted group has members"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 5.2.7 — {{ cis_su_restricted_group | default('sugroup') }} group members ==="
-          - "Members: {{ _cis_sugroup_members.stdout | default('none') }}"
-          - "Note: Only authorized users should be added to this group for su access."
-      when: _cis_sugroup_members.stdout | default('') | length > 0
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.2.7
-    - NIST800-53R5_AC-3
-    - sudo
-    - pam
+  tags: [level1-server, level1-workstation, remediation, cis_5.2.7, sudo, pam]

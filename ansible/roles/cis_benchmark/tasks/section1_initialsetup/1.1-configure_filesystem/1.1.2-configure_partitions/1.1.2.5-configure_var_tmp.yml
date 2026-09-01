@@ -1,77 +1,39 @@
 ---
-# =================================================================
-# CIS 1.1.2.5 | Configure /var/tmp Partition
-# =================================================================
-
-- name: "CIS 1.1.2.5.1 | AUDIT | Check if /var/tmp is a separate partition"
-  ansible.builtin.shell: findmnt -kn /var/tmp
+- name: "CIS 1.1.2.5.1 | Audit | Determine whether /var/tmp is a separate mount"
+  ansible.builtin.command:
+    argv: [findmnt, --mountpoint, /var/tmp, --noheadings]
+  register: _cis_var_tmp_mount
   changed_when: false
-  failed_when: false
-  register: _cis_vartmp_mount
-  tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var_tmp']
+  check_mode: false
+  failed_when: _cis_var_tmp_mount.rc not in [0, 1]
+  tags: ['cis_sec1', 'cis_1.1.2.5.1']
 
-- name: "CIS 1.1.2.5.2 | Remediation | Ensure nodev option set on /var/tmp"
-  when:
-    - _cis_vartmp_mount.rc == 0
-    - _cis_vartmp_mount.stdout_lines | length > 0
-    - cis_1_1_2_var_tmp_nodev | default(true)
-  block:
-    - name: "CIS 1.1.2.5.2 | AUDIT | Re-read /var/tmp mount options"
-      ansible.builtin.shell: findmnt -kn /var/tmp -o OPTIONS
-      changed_when: false
-      register: _cis_vartmp_opts
-      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var_tmp']
+- name: "CIS 1.1.2.5.1 | Manual | Report missing /var/tmp partition"
+  ansible.builtin.debug:
+    msg: "MANUAL: /var/tmp is not a separate mount. Provision and migrate it offline after backup; no disk changes were made."
+  when: _cis_var_tmp_mount.rc == 1
+  tags: ['cis_sec1', 'cis_1.1.2.5.1']
 
-    - name: "CIS 1.1.2.5.2 | Remediation | Apply nodev to /var/tmp"
-      when: "'nodev' not in _cis_vartmp_opts.stdout"
-      ansible.posix.mount:
-        path: /var/tmp
-        src: "{{ _cis_vartmp_mount.stdout.split()[1] }}"
-        fstype: "{{ _cis_vartmp_mount.stdout.split()[2] }}"
-        opts: "{{ (_cis_vartmp_opts.stdout | trim).split(',') | union(['nodev']) | join(',') }}"
-        state: mounted
-      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var_tmp']
+- name: "CIS 1.1.2.5.2 | Remediation | Configure nodev on /var/tmp"
+  ansible.builtin.include_tasks:
+    file: _configure_mount_option.yml
+    apply: {tags: ['cis_sec1', 'cis_1.1.2.5.2']}
+  vars: {_cis_mount_control: 1.1.2.5.2, _cis_mount_path: /var/tmp, _cis_mount_option: nodev}
+  when: _cis_var_tmp_mount.rc == 0 and cis_1_1_2_var_tmp_nodev | default(true)
+  tags: ['cis_sec1', 'cis_1.1.2.5.2']
 
-- name: "CIS 1.1.2.5.3 | Remediation | Ensure nosuid option set on /var/tmp"
-  when:
-    - _cis_vartmp_mount.rc == 0
-    - _cis_vartmp_mount.stdout_lines | length > 0
-    - cis_1_1_2_var_tmp_nosuid | default(true)
-  block:
-    - name: "CIS 1.1.2.5.3 | AUDIT | Re-read /var/tmp mount options"
-      ansible.builtin.shell: findmnt -kn /var/tmp -o OPTIONS
-      changed_when: false
-      register: _cis_vartmp_opts
-      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var_tmp']
+- name: "CIS 1.1.2.5.3 | Remediation | Configure nosuid on /var/tmp"
+  ansible.builtin.include_tasks:
+    file: _configure_mount_option.yml
+    apply: {tags: ['cis_sec1', 'cis_1.1.2.5.3']}
+  vars: {_cis_mount_control: 1.1.2.5.3, _cis_mount_path: /var/tmp, _cis_mount_option: nosuid}
+  when: _cis_var_tmp_mount.rc == 0 and cis_1_1_2_var_tmp_nosuid | default(true)
+  tags: ['cis_sec1', 'cis_1.1.2.5.3']
 
-    - name: "CIS 1.1.2.5.3 | Remediation | Apply nosuid to /var/tmp"
-      when: "'nosuid' not in _cis_vartmp_opts.stdout"
-      ansible.posix.mount:
-        path: /var/tmp
-        src: "{{ _cis_vartmp_mount.stdout.split()[1] }}"
-        fstype: "{{ _cis_vartmp_mount.stdout.split()[2] }}"
-        opts: "{{ (_cis_vartmp_opts.stdout | trim).split(',') | union(['nosuid']) | join(',') }}"
-        state: mounted
-      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var_tmp']
-
-- name: "CIS 1.1.2.5.4 | Remediation | Ensure noexec option set on /var/tmp"
-  when:
-    - _cis_vartmp_mount.rc == 0
-    - _cis_vartmp_mount.stdout_lines | length > 0
-    - cis_1_1_2_var_tmp_noexec | default(true)
-  block:
-    - name: "CIS 1.1.2.5.4 | AUDIT | Re-read /var/tmp mount options"
-      ansible.builtin.shell: findmnt -kn /var/tmp -o OPTIONS
-      changed_when: false
-      register: _cis_vartmp_opts
-      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var_tmp']
-
-    - name: "CIS 1.1.2.5.4 | Remediation | Apply noexec to /var/tmp"
-      when: "'noexec' not in _cis_vartmp_opts.stdout"
-      ansible.posix.mount:
-        path: /var/tmp
-        src: "{{ _cis_vartmp_mount.stdout.split()[1] }}"
-        fstype: "{{ _cis_vartmp_mount.stdout.split()[2] }}"
-        opts: "{{ (_cis_vartmp_opts.stdout | trim).split(',') | union(['noexec']) | join(',') }}"
-        state: mounted
-      tags: ['section1', 'filesystem', 'cis_1.1.2', 'partitions', 'var_tmp']
+- name: "CIS 1.1.2.5.4 | Remediation | Configure noexec on /var/tmp"
+  ansible.builtin.include_tasks:
+    file: _configure_mount_option.yml
+    apply: {tags: ['cis_sec1', 'cis_1.1.2.5.4']}
+  vars: {_cis_mount_control: 1.1.2.5.4, _cis_mount_path: /var/tmp, _cis_mount_option: noexec}
+  when: _cis_var_tmp_mount.rc == 0 and cis_1_1_2_var_tmp_noexec | default(true)
+  tags: ['cis_sec1', 'cis_1.1.2.5.4']

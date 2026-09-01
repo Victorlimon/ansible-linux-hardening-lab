@@ -1,251 +1,41 @@
 ---
-- name: restart_ufw_service
-  community.general.ufw:
-    state: reloaded
-
-# Handlers Section 5 - Access Control
-- name: restart sshd
-  ansible.builtin.systemd:
-    name: sshd
-    state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-
-- name: restart systemd-logind
-  ansible.builtin.systemd:
-    name: systemd-logind
-    state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-
-# Handlers Section 3 - Network Configuration
 - name: Update grub
-  ansible.builtin.command: update-grub
-  ignore_errors: true
+  ansible.builtin.command:
+    argv: [update-grub]
   changed_when: true
-  # NOTE: Handler name is case-sensitive; tasks notify 'Update grub'
 
-# =================================================================
-# HANDLERS SECTION 1 - INITIAL SETUP
-# =================================================================
-
-- name: Reload sysctl
-  ansible.builtin.command: sysctl -p /etc/sysctl.conf
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "reload_sysctl"
-
-- name: Update grub
-  ansible.builtin.command: update-grub
-  ignore_errors: true
+- name: Update dconf databases
+  ansible.builtin.command:
+    argv: [dconf, update]
   changed_when: true
-  timeout: 60
-  listen: "Update grub"
 
-# =================================================================
-# HANDLERS SECTION 6 - LOGGING & AUDITING
-# =================================================================
-
-# --- Systemd/Journald Handlers ---
 - name: Reload systemd daemon
-  ansible.builtin.systemd:
+  ansible.builtin.systemd_service:
     daemon_reload: true
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-
-- name: Restart journald
-  ansible.builtin.systemd:
-    name: systemd-journald.service
-    state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "Restart journald"
-
-- name: Reload systemd-tmpfiles
-  ansible.builtin.command: systemd-tmpfiles --reload
-  ignore_errors: true
-  failed_when: false
-  changed_when: false
-  timeout: 30
-  listen: "Reload systemd-tmpfiles"
-
-- name: Restart journal-upload
-  ansible.builtin.systemd:
-    name: systemd-journal-upload.service
-    state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "Restart journal-upload"
-
-# --- Rsyslog Handlers ---
-- name: Restart rsyslog
-  ansible.builtin.systemd:
-    name: rsyslog.service
-    state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "Restart rsyslog"
-
-# --- Auditd Handlers (Resilient with Extended Timeouts) ---
-- name: Restart auditd
-  ansible.builtin.systemd:
-    name: auditd.service
-    state: restarted
-    daemon_reload: true
-  ignore_errors: true
-  failed_when: false
-  timeout: 60  # Extended timeout for VMs/Vagrant
-  listen: "Restart auditd"
-
-- name: Reload auditd config
-  ansible.builtin.command: auditctl -R /etc/audit/auditd.conf
-  timeout: 30
-  ignore_errors: true
-  failed_when: false
-  changed_when: true
-  listen: "Reload auditd config"
-
-- name: Load audit rules
-  block:
-    - name: Merge and load audit rules with augenrules
-      ansible.builtin.command: augenrules --load
-      register: augenrules_load
-      changed_when: true
-      ignore_errors: true
-      timeout: 30
-
-    - name: Check if reboot is required for audit rules
-      ansible.builtin.command: auditctl -s
-      register: auditctl_status
-      changed_when: false
-      failed_when: false
-      ignore_errors: true
-
-    - name: Warn if reboot required for immutable audit config
-      ansible.builtin.debug:
-        msg: "WARNING: Audit configuration is locked (enabled=2). A system reboot is required to apply new audit rules."
-      when: auditctl_status is defined and 'enabled 2' in (auditctl_status.stdout | default(''))
-  # Fixed: 'listen' is not valid on blocks; using 'name' for handler identification
-  # Tasks should notify: "Load audit rules"
-
-- name: Load audit rules and warn reboot
-  block:
-    - name: Load audit rules
-      ansible.builtin.command: augenrules --load
-      timeout: 30
-      ignore_errors: true
-      changed_when: true
-
-    - name: Warn about reboot requirement for immutable mode
-      ansible.builtin.debug:
-        msg: "⚠️  WARNING: Audit configuration is now immutable (-e 2). A system reboot is required for changes to take full effect."
-  # Fixed: 'listen' is not valid on blocks; using 'name' for handler identification
-  # Tasks should notify: "Load audit rules and warn reboot"
-
-# --- AIDE Handlers ---
-- name: Move AIDE database
-  ansible.builtin.command: mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
-  args:
-    creates: /var/lib/aide/aide.db
-  ignore_errors: true
-
-- name: Update AIDE database
-  ansible.builtin.command: aide --update
-  register: aide_update
-  changed_when: true
-  failed_when: false
-  ignore_errors: true
-
-# =================================================================
-# HANDLERS SECTION 2 - SERVICES
-# =================================================================
-
-- name: Restart chrony
-  ansible.builtin.systemd:
-    name: chrony.service
-    state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "Restart chrony"
-
-- name: Restart systemd-timesyncd
-  ansible.builtin.systemd:
-    name: systemd-timesyncd.service
-    state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "Restart systemd-timesyncd"
 
 - name: Restart postfix
-  ansible.builtin.systemd:
+  ansible.builtin.systemd_service:
     name: postfix.service
     state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "Restart postfix"
 
-- name: Restart exim4
-  ansible.builtin.systemd:
+- name: Rebuild exim4 configuration
+  ansible.builtin.command:
+    argv: [update-exim4.conf]
+  changed_when: true
+  listen: Restart exim4
+
+- name: Restart exim4 service
+  ansible.builtin.systemd_service:
     name: exim4.service
     state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "Restart exim4"
+  listen: Restart exim4
 
-- name: Restart cron
-  ansible.builtin.systemd:
-    name: cron.service
+- name: Restart systemd-timesyncd
+  ansible.builtin.systemd_service:
+    name: systemd-timesyncd.service
     state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "Restart cron"
 
-# =================================================================
-# HANDLERS SECTION 4 - FIREWALL
-# UFW: Ubuntu 24.04 default | nftables: Debian 12 default
-# =================================================================
-
-- name: restart_ufw_service
-  ansible.builtin.systemd:
-    name: ufw
+- name: Restart chrony
+  ansible.builtin.systemd_service:
+    name: chrony.service
     state: restarted
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "restart_ufw_service"
-
-- name: reload_nftables
-  # Recarga reglas nftables sin reiniciar el servicio (soporta inet/ip/ip6 families)
-  ansible.builtin.systemd:
-    name: nftables
-    state: reloaded
-  ignore_errors: true
-  failed_when: false
-  timeout: 30
-  listen: "reload_nftables"
-
-- name: save_iptables_rules
-  ansible.builtin.command: iptables-save > /etc/iptables/rules.v4
-  changed_when: true
-  ignore_errors: true
-  timeout: 30
-  listen: "save_iptables_rules"
-
-- name: save_ip6tables_rules
-  ansible.builtin.command: ip6tables-save > /etc/iptables/rules.v6
-  changed_when: true
-  ignore_errors: true
-  timeout: 30
-  listen: "save_ip6tables_rules"

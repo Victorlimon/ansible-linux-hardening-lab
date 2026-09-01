@@ -36,7 +36,8 @@
 
 - name: Include Section 1.7 - GDM Configuration (Workstation only)
   when:
-    - cis_section1_7_gdm | default(true)
+    - cis_section1_7_gdm | default(false)
+    - cis_system_profile | default('server') == 'workstation'
     - ansible_facts.distribution == "Ubuntu" and ansible_facts.distribution_version is version('24.04', '==')
   ansible.builtin.import_tasks: 1.7-configure_gdm.yml
   tags: ['cis_sec1', 'cis_1.7', 'gdm', 'gui', 'workstation']

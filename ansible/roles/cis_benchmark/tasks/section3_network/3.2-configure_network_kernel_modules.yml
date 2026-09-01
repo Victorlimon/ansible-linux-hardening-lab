@@ -1,323 +1,94 @@
 ---
-# =================================================================
-# CIS 3.2 | Configure Network Kernel Modules
-# Basado en CIS Benchmark Ubuntu 24.04 LTS v1.0.0
-# =================================================================
-# ⚠️ ADVERTENCIA: Deshabilitar módulos del kernel puede afectar funcionalidad
-# =================================================================
+# Persist the install override even when a module is not present in the running
+# kernel: a later installed kernel must not make the protocol loadable again.
 
-# =================================================================
-# CONTROL 3.2.1 | Ensure dccp kernel module is not available (Automated)
-# Level 2 - Server/Workstation
-# =================================================================
-- name: "3.2.1 | Ensure dccp kernel module is not available"
-  block:
-    - name: "3.2.1 | AUDIT | Check if dccp module exists"
-      ansible.builtin.shell: |
-        find /lib/modules/$(uname -r) -name 'dccp.ko*' 2>/dev/null | head -1
-      changed_when: false
-      failed_when: false
-      register: _dccp_module_path
-
-    - name: "3.2.1 | AUDIT | Check if dccp is loaded"
-      ansible.builtin.command: lsmod
-      changed_when: false
-      failed_when: false
-      register: _lsmod_output
-
-    - name: "3.2.1 | AUDIT | Check modprobe config for dccp"
-      ansible.builtin.shell: |
-        grep -r '^\s*\(install\|blacklist\)\s*dccp\b' /etc/modprobe.d/ 2>/dev/null || echo "not_configured"
-      changed_when: false
-      failed_when: false
-      register: _dccp_modprobe_config
-
-    - name: "3.2.1 | REPORT | DCCP module status"
-      ansible.builtin.debug:
-        msg: |
-          === CIS 3.2.1 — DCCP Module Status ===
-          Module file exists: {{ 'YES' if _dccp_module_path.stdout else 'NO' }}
-          Module loaded: {{ 'YES' if 'dccp' in _lsmod_output.stdout else 'NO' }}
-          Modprobe config: {{ _dccp_modprobe_config.stdout }}
-          
-          ⚠️ Para deshabilitar dccp, configure:
-          section3_network['3_2_network_modules'].disable_dccp: true
-      tags: [report]
-
-    - name: "3.2.1 | Remediation | Disable dccp module"
-      block:
-        - name: "3.2.1 | Create modprobe config for dccp"
-          ansible.builtin.copy:
-            dest: "/etc/modprobe.d/cis_dccp.conf"
-            content: |
-              # CIS 3.2.1 - Disable DCCP kernel module
-              install dccp /bin/false
-              blacklist dccp
-            mode: '0644'
-            owner: root
-            group: root
-          when: _dccp_module_path.stdout | length > 0
-
-        - name: "3.2.1 | Unload dccp if loaded"
-          ansible.builtin.command: modprobe -r dccp
-          when:
-            - _dccp_module_path.stdout | length > 0
-            - "'dccp' in _lsmod_output.stdout"
-          ignore_errors: true
-          changed_when: false
-
-      when:
-        - section3_network['3_2_network_modules'].disable_dccp | default(false) | bool
-        - _dccp_module_path.stdout | length > 0
-      tags: [remediation]
-
-  rescue:
-    - name: "3.2.1 | ERROR | DCCP remediation failed"
-      ansible.builtin.debug:
-        msg: "No se pudo deshabilitar módulo dccp. Verificar manualmente."
-
+- name: "3.2 | Read modules loaded by the running kernel"
+  ansible.builtin.slurp:
+    src: /proc/modules
+  register: _cis_loaded_network_modules
+  changed_when: false
   tags:
     - cis_3
     - cis_3_2
     - cis_3_2_1
-    - network
-    - kernel_modules
-    - dccp
-    - level_2
-
-# =================================================================
-# CONTROL 3.2.2 | Ensure tipc kernel module is not available (Automated)
-# Level 2 - Server/Workstation
-# =================================================================
-- name: "3.2.2 | Ensure tipc kernel module is not available"
-  block:
-    - name: "3.2.2 | AUDIT | Check if tipc module exists"
-      ansible.builtin.shell: |
-        find /lib/modules/$(uname -r) -name 'tipc.ko*' 2>/dev/null | head -1
-      changed_when: false
-      failed_when: false
-      register: _tipc_module_path
-
-    - name: "3.2.2 | AUDIT | Check if tipc is loaded"
-      ansible.builtin.command: lsmod
-      changed_when: false
-      failed_when: false
-      register: _lsmod_output
-
-    - name: "3.2.2 | AUDIT | Check modprobe config for tipc"
-      ansible.builtin.shell: |
-        grep -r '^\s*\(install\|blacklist\)\s*tipc\b' /etc/modprobe.d/ 2>/dev/null || echo "not_configured"
-      changed_when: false
-      failed_when: false
-      register: _tipc_modprobe_config
-
-    - name: "3.2.2 | REPORT | TIPC module status"
-      ansible.builtin.debug:
-        msg: |
-          === CIS 3.2.2 — TIPC Module Status ===
-          Module file exists: {{ 'YES' if _tipc_module_path.stdout else 'NO' }}
-          Module loaded: {{ 'YES' if 'tipc' in _lsmod_output.stdout else 'NO' }}
-          Modprobe config: {{ _tipc_modprobe_config.stdout }}
-          
-          ⚠️ Para deshabilitar tipc, configure:
-          section3_network['3_2_network_modules'].disable_tipc: true
-      tags: [report]
-
-    - name: "3.2.2 | Remediation | Disable tipc module"
-      block:
-        - name: "3.2.2 | Create modprobe config for tipc"
-          ansible.builtin.copy:
-            dest: "/etc/modprobe.d/cis_tipc.conf"
-            content: |
-              # CIS 3.2.2 - Disable TIPC kernel module
-              install tipc /bin/false
-              blacklist tipc
-            mode: '0644'
-            owner: root
-            group: root
-          when: _tipc_module_path.stdout | length > 0
-
-        - name: "3.2.2 | Unload tipc if loaded"
-          ansible.builtin.command: modprobe -r tipc
-          when:
-            - _tipc_module_path.stdout | length > 0
-            - "'tipc' in _lsmod_output.stdout"
-          ignore_errors: true
-          changed_when: false
-
-      when:
-        - section3_network['3_2_network_modules'].disable_tipc | default(false) | bool
-        - _tipc_module_path.stdout | length > 0
-      tags: [remediation]
-
-  rescue:
-    - name: "3.2.2 | ERROR | TIPC remediation failed"
-      ansible.builtin.debug:
-        msg: "No se pudo deshabilitar módulo tipc. Verificar manualmente."
-
-  tags:
-    - cis_3
-    - cis_3_2
     - cis_3_2_2
-    - network
-    - kernel_modules
-    - tipc
-    - level_2
-
-# =================================================================
-# CONTROL 3.2.3 | Ensure rds kernel module is not available (Automated)
-# Level 2 - Server/Workstation
-# =================================================================
-- name: "3.2.3 | Ensure rds kernel module is not available"
-  block:
-    - name: "3.2.3 | AUDIT | Check if rds module exists"
-      ansible.builtin.shell: |
-        find /lib/modules/$(uname -r) -name 'rds.ko*' 2>/dev/null | head -1
-      changed_when: false
-      failed_when: false
-      register: _rds_module_path
-
-    - name: "3.2.3 | AUDIT | Check if rds is loaded"
-      ansible.builtin.command: lsmod
-      changed_when: false
-      failed_when: false
-      register: _lsmod_output
-
-    - name: "3.2.3 | AUDIT | Check modprobe config for rds"
-      ansible.builtin.shell: |
-        grep -r '^\s*\(install\|blacklist\)\s*rds\b' /etc/modprobe.d/ 2>/dev/null || echo "not_configured"
-      changed_when: false
-      failed_when: false
-      register: _rds_modprobe_config
-
-    - name: "3.2.3 | REPORT | RDS module status"
-      ansible.builtin.debug:
-        msg: |
-          === CIS 3.2.3 — RDS Module Status ===
-          Module file exists: {{ 'YES' if _rds_module_path.stdout else 'NO' }}
-          Module loaded: {{ 'YES' if 'rds' in _lsmod_output.stdout else 'NO' }}
-          Modprobe config: {{ _rds_modprobe_config.stdout }}
-          
-          ⚠️ Para deshabilitar rds, configure:
-          section3_network['3_2_network_modules'].disable_rds: true
-      tags: [report]
-
-    - name: "3.2.3 | Remediation | Disable rds module"
-      block:
-        - name: "3.2.3 | Create modprobe config for rds"
-          ansible.builtin.copy:
-            dest: "/etc/modprobe.d/cis_rds.conf"
-            content: |
-              # CIS 3.2.3 - Disable RDS kernel module
-              install rds /bin/false
-              blacklist rds
-            mode: '0644'
-            owner: root
-            group: root
-          when: _rds_module_path.stdout | length > 0
-
-        - name: "3.2.3 | Unload rds if loaded"
-          ansible.builtin.command: modprobe -r rds
-          when:
-            - _rds_module_path.stdout | length > 0
-            - "'rds' in _lsmod_output.stdout"
-          ignore_errors: true
-          changed_when: false
-
-      when:
-        - section3_network['3_2_network_modules'].disable_rds | default(false) | bool
-        - _rds_module_path.stdout | length > 0
-      tags: [remediation]
-
-  rescue:
-    - name: "3.2.3 | ERROR | RDS remediation failed"
-      ansible.builtin.debug:
-        msg: "No se pudo deshabilitar módulo rds. Verificar manualmente."
-
-  tags:
-    - cis_3
-    - cis_3_2
     - cis_3_2_3
-    - network
-    - kernel_modules
-    - rds
-    - level_2
-
-# =================================================================
-# CONTROL 3.2.4 | Ensure sctp kernel module is not available (Automated)
-# Level 2 - Server/Workstation
-# =================================================================
-- name: "3.2.4 | Ensure sctp kernel module is not available"
-  block:
-    - name: "3.2.4 | AUDIT | Check if sctp module exists"
-      ansible.builtin.shell: |
-        find /lib/modules/$(uname -r) -name 'sctp.ko*' 2>/dev/null | head -1
-      changed_when: false
-      failed_when: false
-      register: _sctp_module_path
-
-    - name: "3.2.4 | AUDIT | Check if sctp is loaded"
-      ansible.builtin.command: lsmod
-      changed_when: false
-      failed_when: false
-      register: _lsmod_output
-
-    - name: "3.2.4 | AUDIT | Check modprobe config for sctp"
-      ansible.builtin.shell: |
-        grep -r '^\s*\(install\|blacklist\)\s*sctp\b' /etc/modprobe.d/ 2>/dev/null || echo "not_configured"
-      changed_when: false
-      failed_when: false
-      register: _sctp_modprobe_config
-
-    - name: "3.2.4 | REPORT | SCTP module status"
-      ansible.builtin.debug:
-        msg: |
-          === CIS 3.2.4 — SCTP Module Status ===
-          Module file exists: {{ 'YES' if _sctp_module_path.stdout else 'NO' }}
-          Module loaded: {{ 'YES' if 'sctp' in _lsmod_output.stdout else 'NO' }}
-          Modprobe config: {{ _sctp_modprobe_config.stdout }}
-          
-          ⚠️ Para deshabilitar sctp, configure:
-          section3_network['3_2_network_modules'].disable_sctp: true
-      tags: [report]
-
-    - name: "3.2.4 | Remediation | Disable sctp module"
-      block:
-        - name: "3.2.4 | Create modprobe config for sctp"
-          ansible.builtin.copy:
-            dest: "/etc/modprobe.d/cis_sctp.conf"
-            content: |
-              # CIS 3.2.4 - Disable SCTP kernel module
-              install sctp /bin/false
-              blacklist sctp
-            mode: '0644'
-            owner: root
-            group: root
-          when: _sctp_module_path.stdout | length > 0
-
-        - name: "3.2.4 | Unload sctp if loaded"
-          ansible.builtin.command: modprobe -r sctp
-          when:
-            - _sctp_module_path.stdout | length > 0
-            - "'sctp' in _lsmod_output.stdout"
-          ignore_errors: true
-          changed_when: false
-
-      when:
-        - section3_network['3_2_network_modules'].disable_sctp | default(false) | bool
-        - _sctp_module_path.stdout | length > 0
-      tags: [remediation]
-
-  rescue:
-    - name: "3.2.4 | ERROR | SCTP remediation failed"
-      ansible.builtin.debug:
-        msg: "No se pudo deshabilitar módulo sctp. Verificar manualmente."
-
-  tags:
-    - cis_3
-    - cis_3_2
     - cis_3_2_4
     - network
     - kernel_modules
-    - sctp
-    - level_2
+
+- name: "3.2.1 | Ensure dccp kernel module is not available"
+  when: section3_network['3_2_network_modules'].disable_dccp | default(true) | bool
+  block:
+    - name: "3.2.1 | Persistently disable dccp"
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/cis_dccp.conf
+        content: |
+          install dccp /bin/false
+          blacklist dccp
+        owner: root
+        group: root
+        mode: '0644'
+    - name: "3.2.1 | Unload dccp from the running kernel"
+      community.general.modprobe:
+        name: dccp
+        state: absent
+      when: (_cis_loaded_network_modules.content | b64decode) is regex('(?m)^dccp\\s')
+  tags: [cis_3, cis_3_2, cis_3_2_1, network, kernel_modules, dccp, level_2]
+
+- name: "3.2.2 | Ensure tipc kernel module is not available"
+  when: section3_network['3_2_network_modules'].disable_tipc | default(true) | bool
+  block:
+    - name: "3.2.2 | Persistently disable tipc"
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/cis_tipc.conf
+        content: |
+          install tipc /bin/false
+          blacklist tipc
+        owner: root
+        group: root
+        mode: '0644'
+    - name: "3.2.2 | Unload tipc from the running kernel"
+      community.general.modprobe:
+        name: tipc
+        state: absent
+      when: (_cis_loaded_network_modules.content | b64decode) is regex('(?m)^tipc\\s')
+  tags: [cis_3, cis_3_2, cis_3_2_2, network, kernel_modules, tipc, level_2]
+
+- name: "3.2.3 | Ensure rds kernel module is not available"
+  when: section3_network['3_2_network_modules'].disable_rds | default(true) | bool
+  block:
+    - name: "3.2.3 | Persistently disable rds"
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/cis_rds.conf
+        content: |
+          install rds /bin/false
+          blacklist rds
+        owner: root
+        group: root
+        mode: '0644'
+    - name: "3.2.3 | Unload rds from the running kernel"
+      community.general.modprobe:
+        name: rds
+        state: absent
+      when: (_cis_loaded_network_modules.content | b64decode) is regex('(?m)^rds\\s')
+  tags: [cis_3, cis_3_2, cis_3_2_3, network, kernel_modules, rds, level_2]
+
+- name: "3.2.4 | Ensure sctp kernel module is not available"
+  when: section3_network['3_2_network_modules'].disable_sctp | default(true) | bool
+  block:
+    - name: "3.2.4 | Persistently disable sctp"
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/cis_sctp.conf
+        content: |
+          install sctp /bin/false
+          blacklist sctp
+        owner: root
+        group: root
+        mode: '0644'
+    - name: "3.2.4 | Unload sctp from the running kernel"
+      community.general.modprobe:
+        name: sctp
+        state: absent
+      when: (_cis_loaded_network_modules.content | b64decode) is regex('(?m)^sctp\\s')
+  tags: [cis_3, cis_3_2, cis_3_2_4, network, kernel_modules, sctp, level_2]

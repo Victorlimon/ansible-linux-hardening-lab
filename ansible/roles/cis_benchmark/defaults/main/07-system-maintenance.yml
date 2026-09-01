@@ -1,0 +1,20 @@
+---
+# Full-filesystem scans and account/home changes are intentionally opt-in.
+cis_section7_system: false
+section7_system_7_1_system_file_permissions: false
+section7_system_7_2_local_user_group_settings: false
+
+# 7.1 - Never alter arbitrary ownership or world-write bits without an approved
+# object map or explicit remediation decision.
+cis_7_1_11_remove_world_writable_file_bits: false
+cis_7_1_12_reassign_orphans: false
+cis_7_1_12_orphan_ownership_map: []
+
+# 7.2 - Password conversion, account locking, group changes, and dot-file
+# deletion all remain explicit disruptive remediations.
+section7_system_7_2_local_user_group_settings_7_2_1_shadow_passwords: false
+section7_system_7_2_local_user_group_settings_7_2_2_lock_empty_passwords: false
+section7_system_7_2_local_user_group_settings_7_2_4_empty_shadow_group: false
+cis_7_2_4_reassign_shadow_primary_groups: false
+cis_7_2_4_shadow_primary_group_map: {}
+cis_7_2_10_remove_prohibited_dotfiles: false

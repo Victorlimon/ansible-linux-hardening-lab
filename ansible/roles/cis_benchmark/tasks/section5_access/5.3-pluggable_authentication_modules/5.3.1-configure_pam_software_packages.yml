@@ -4,13 +4,10 @@
 # =============================================================================
 
 - name: "CIS 5.3.1.1 | Remediation | Ensure pam-runtime is installed"
-  when:
-    - cis_5_3_1_1_pam_runtime | default(true)
-    - "'pam-runtime' not in ansible_facts.packages"
+  when: cis_5_3_1_1_pam_runtime | default(true)
   ansible.builtin.apt:
     name: libpam-runtime
     state: present
-    update_cache: yes
   tags:
     - level1-server
     - level1-workstation
@@ -20,13 +17,10 @@
     - pam
 
 - name: "CIS 5.3.1.2 | Remediation | Ensure libpam-modules is installed"
-  when:
-    - cis_5_3_1_2_libpam_modules | default(true)
-    - "'libpam-modules' not in ansible_facts.packages"
+  when: cis_5_3_1_2_libpam_modules | default(true)
   ansible.builtin.apt:
     name: libpam-modules
     state: present
-    update_cache: yes
   tags:
     - level1-server
     - level1-workstation
@@ -36,13 +30,10 @@
     - pam
 
 - name: "CIS 5.3.1.3 | Remediation | Ensure libpam-pwquality is installed"
-  when:
-    - cis_5_3_1_3_libpam_pwquality | default(true)
-    - "'libpam-pwquality' not in ansible_facts.packages"
+  when: cis_5_3_1_3_libpam_pwquality | default(true)
   ansible.builtin.apt:
     name: libpam-pwquality
     state: present
-    update_cache: yes
   tags:
     - level1-server
     - level1-workstation

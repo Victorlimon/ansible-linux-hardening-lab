@@ -1,0 +1,18 @@
+---
+# Registro interno de implementaciones. La política del sitio puede elegir qué
+# estados admite, pero no debe redefinir identidad, benchmark o arquitectura.
+_cis_platform_catalog:
+  ubuntu_2404:
+    distribution: Ubuntu
+    release: "24.04"
+    architecture: x86_64
+    benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark
+    implementation_role: cis_ubuntu_2404
+    release_status: released
+  debian_12:
+    distribution: Debian
+    release: "12"
+    architecture: x86_64
+    benchmark: CIS Debian Linux 12 Benchmark v1.1.0
+    implementation_role: cis_debian_12
+    release_status: canary

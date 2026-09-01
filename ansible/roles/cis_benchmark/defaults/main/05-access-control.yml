@@ -1,0 +1,133 @@
+---
+cis_section5_access_control: true
+
+# 5.1 - SSH policy is validated before reload. The allowlist remains opt-in to
+# prevent remote lockout until the Ansible user is explicitly authorized.
+cis_section5_1_ssh_server: true
+cis_ssh_remote_user: "{{ ansible_user | default('ansible') }}"
+cis_ssh_config:
+  config_files: true
+  host_keys: true
+  access_control: true
+  use_allow_list: false
+  access_control_type: AllowGroups
+  allowed_users_groups: sshusers
+  banner: true
+  ciphers: true
+  client_alive: true
+  disable_forwarding: true
+  gssapi_auth: true
+  hostbased_auth: true
+  ignore_rhosts: true
+  kex_algorithms: true
+  login_grace_time: true
+  log_level: true
+  macs: true
+  max_auth_tries: true
+  max_sessions: true
+  max_startups: true
+  permit_empty_passwords: true
+  permit_root_login: true
+  permit_user_environment: true
+  use_pam: true
+  Ciphers: "-3des-cbc,aes128-cbc,aes192-cbc,aes256-cbc,chacha20-poly1305@openssh.com"
+  ClientAliveInterval: 15
+  ClientAliveCountMax: 3
+  KexAlgorithms: "-diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1"
+  LoginGraceTime: 60
+  LogLevel: VERBOSE
+  MACs: "-hmac-md5,hmac-md5-96,hmac-ripemd160,hmac-sha1-96,umac-64@openssh.com,hmac-md5-etm@openssh.com,hmac-md5-96-etm@openssh.com,hmac-ripemd160-etm@openssh.com,hmac-sha1-96-etm@openssh.com,umac-64-etm@openssh.com,umac-128-etm@openssh.com"
+  MaxAuthTries: 4
+  MaxSessions: 10
+  MaxStartups: "10:30:60"
+  PermitEmptyPasswords: "no"
+  PermitRootLogin: "no"
+  PermitUserEnvironment: "no"
+  UsePAM: "yes"
+
+# 5.2 - Sudo hardening is enabled; restricting su to a newly empty group is a
+# potentially disruptive site-policy decision and remains opt-in.
+cis_section5_2_privilege_escalation: true
+cis_5_2_1_sudo_install: true
+cis_5_2_2_sudo_use_pty: true
+cis_5_2_3_sudo_logfile: true
+cis_5_2_4_sudo_no_password: false
+cis_5_2_5_sudo_authenticate: true
+cis_5_2_6_sudo_timestamp_timeout: true
+cis_5_2_7_su_command_restricted: false
+cis_sudo_logfile: /var/log/sudo.log
+cis_sudo_timestamp_timeout: 15
+cis_su_restricted_group: sugroup
+
+# 5.3 - Rebuilding PAM stacks can lock out every login path. The complete PAM
+# section is opt-in, while each control remains independently configurable.
+cis_section5_3_pam: false
+cis_5_3_1_pam_software: true
+cis_5_3_2_pam_auth_update: true
+cis_5_3_3_pam_arguments: true
+cis_5_3_1_1_pam_runtime: true
+cis_5_3_1_2_libpam_modules: true
+cis_5_3_1_3_libpam_pwquality: true
+cis_5_3_2_1_pam_unix: true
+cis_5_3_2_2_pam_faillock: true
+cis_5_3_2_3_pam_pwquality: true
+cis_5_3_2_4_pam_pwhistory: true
+cis_5_3_3_1_1_faillock_deny: true
+cis_5_3_3_1_2_faillock_unlock_time: true
+cis_5_3_3_1_3_faillock_root: false
+cis_pam_faillock_deny: 5
+cis_pam_faillock_unlock_time: 900
+cis_pam_faillock_root_unlock_time: 900
+cis_5_3_3_2_1_pwquality_difok: true
+cis_5_3_3_2_2_pwquality_minlen: true
+cis_5_3_3_2_3_pwquality_complexity_remediation: false
+cis_5_3_3_2_4_pwquality_maxrepeat: true
+cis_5_3_3_2_5_pwquality_maxsequence: true
+cis_5_3_3_2_6_pwquality_dictcheck: true
+cis_5_3_3_2_7_pwquality_enforcing: true
+cis_5_3_3_2_8_pwquality_enforce_for_root: true
+cis_pam_pwquality_retry: 3
+cis_pam_pwquality_difok: 2
+cis_pam_pwquality_minlen: 14
+cis_pam_pwquality_maxrepeat: 3
+cis_pam_pwquality_maxsequence: 3
+cis_pam_pwquality_minclass: 3
+cis_pam_pwquality_dcredit: -1
+cis_pam_pwquality_ucredit: -1
+cis_pam_pwquality_lcredit: -1
+cis_pam_pwquality_ocredit: 0
+cis_pam_pwhistory_remember: 24
+
+# 5.4 - Baseline defaults affect new accounts. Existing-account, service-shell,
+# and account-lock changes require explicit approval.
+cis_section5_4_user_accounts: true
+cis_5_4_1_shadow_password: true
+cis_5_4_2_root_system_accounts: true
+cis_5_4_3_user_default_environment: true
+cis_5_4_1_1_password_max_days: true
+cis_5_4_1_2_password_min_days: true
+cis_5_4_1_3_password_warn_days: true
+cis_5_4_1_4_password_hashing: true
+cis_5_4_1_5_password_inactive: true
+cis_5_4_1_apply_existing_users: false
+cis_password_max_days: 365
+cis_password_min_days: 1
+cis_password_warn_days: 7
+cis_password_encrypt_method: YESCRYPT
+cis_password_inactive_days: 30
+cis_5_4_2_1_root_uid_zero: true
+cis_5_4_2_2_root_gid_zero: true
+cis_5_4_2_3_root_group_gid_zero: true
+cis_5_4_2_4_root_access_controlled: true
+cis_5_4_2_5_root_path_integrity: true
+cis_5_4_2_6_root_umask: true
+cis_root_umask: "027"
+cis_5_4_2_7_system_account_shells: true
+cis_5_4_2_7_remediate_system_shells: false
+cis_5_4_2_8_lock_invalid_shell_accounts: true
+cis_5_4_2_8_lock_nologin_accounts: false
+cis_5_4_3_1_nologin_not_in_shells: true
+cis_5_4_3_2_default_shell_timeout: true
+cis_5_4_3_3_default_umask: true
+cis_default_shell_timeout: 900
+cis_default_umask: "027"

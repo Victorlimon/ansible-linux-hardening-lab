@@ -5,45 +5,54 @@
 # Idempotente, compatible con check_mode, con manejo robusto de errores
 # =============================================================================
 
-- name: "CIS 1.1.1 | AUDIT | Check if {{ _module }} exists on system"
+- name: "CIS 1.1.1 | Audit | Check if {{ _cis_kernel_module }} exists on system"
   ansible.builtin.shell: |
-    mod_name="{{ _module }}"
-    mod_slash="${mod_name//-//}"
-    found=0
-    for base in {{ _cis_module_paths.stdout_lines | to_json }}; do
-      base=$(echo "$base" | tr -d '"')
-      [ -d "$base/$mod_slash" ] && [ -n "$(ls -A "$base/$mod_slash" 2>/dev/null)" ] && found=1 && break
+    set -o pipefail
+    module_file="{{ _cis_kernel_module | replace('-', '_') }}.ko"
+    for base in /lib/modules/*/kernel/fs /lib/modules/*/kernel/drivers; do
+      [ -d "$base" ] || continue
+      find "$base" -type f -name "${module_file}*" -print -quit
     done
-    echo "$found"
+  args:
+    executable: /bin/bash
   changed_when: false
-  failed_when: false
-  check_mode: false
   register: _module_exists
+  check_mode: false
   tags: ['cis_sec1', 'cis_1.1.1', 'kernel_modules']
 
-- name: "CIS 1.1.1 | Remediation | Configure modprobe.d for {{ _module }}"
+- name: "CIS 1.1.1 | Remediation | Configure modprobe.d for {{ _cis_kernel_module }}"
   when:
-    - _module_exists.stdout | trim == '1'
-    - "cis_1_1_1_disable_{{ _module | replace('-', '_') }} | default(true)"
+    - _module_exists.stdout | length > 0
+    - lookup('ansible.builtin.vars', 'cis_1_1_1_disable_' ~ (_module | replace('-', '_')), default=true) | bool
   ansible.builtin.copy:
     dest: "/etc/modprobe.d/cis_{{ _module }}.conf"
     content: |
-      # CIS 1.1.1 - Disable {{ _module }} filesystem module
-      install {{ _module }} /bin/true
-      blacklist {{ _module }}
+      # CIS 1.1.1 - Disable {{ _cis_kernel_module }} filesystem module
+      install {{ _cis_kernel_module }} /bin/false
+      blacklist {{ _cis_kernel_module }}
     owner: root
     group: root
     mode: '0644'
-    backup: yes
+    backup: true
   tags: ['cis_sec1', 'cis_1.1.1', 'kernel_modules']
 
-- name: "CIS 1.1.1 | Remediation | Unload {{ _module }} from running kernel"
+- name: "CIS 1.1.1 | Audit | Check whether {{ _cis_kernel_module }} is loaded"
+  ansible.builtin.command:
+    argv: [lsmod]
+  register: _cis_loaded_modules
+  changed_when: false
+  check_mode: false
   when:
-    - _module_exists.stdout | trim == '1'
-    - "cis_1_1_1_disable_{{ _module | replace('-', '_') }} | default(true)"
+    - _module_exists.stdout | length > 0
+    - lookup('ansible.builtin.vars', 'cis_1_1_1_disable_' ~ (_module | replace('-', '_')), default=true) | bool
+  tags: ['cis_sec1', 'cis_1.1.1', 'kernel_modules']
+
+- name: "CIS 1.1.1 | Remediation | Unload {{ _cis_kernel_module }} from running kernel"
+  when:
+    - _module_exists.stdout | length > 0
+    - lookup('ansible.builtin.vars', 'cis_1_1_1_disable_' ~ (_module | replace('-', '_')), default=true) | bool
+    - _cis_loaded_modules.stdout_lines | select('match', '^' ~ (_cis_kernel_module | replace('-', '_')) ~ '\\s') | list | length > 0
   community.general.modprobe:
-    name: "{{ _module }}"
+    name: "{{ _cis_kernel_module }}"
     state: absent
-  ignore_errors: true
-  failed_when: false
   tags: ['cis_sec1', 'cis_1.1.1', 'kernel_modules']

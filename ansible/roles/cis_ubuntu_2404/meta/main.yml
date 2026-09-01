@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  role_name: cis_ubuntu_2404
+  author: project
+  description: Ubuntu 24.04 adapter for the project CIS hardening implementation
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+dependencies: []

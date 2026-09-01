@@ -1,0 +1,39 @@
+---
+# Copiar a ubuntu.yml únicamente después de sustituir y aprobar todos los
+# valores específicos del entorno. Este archivo no se carga automáticamente.
+
+# Gates operativos. No activar hasta disponer de evidencia real.
+cis_execution_environment: production
+cis_production_mode: true
+cis_production_change_id: ""  # REEMPLAZAR: ticket/cambio aprobado
+cis_production_backup_confirmed: false
+cis_production_oob_access_confirmed: false
+cis_production_min_root_free_mb: 2048
+cis_production_expected_architecture: x86_64
+
+# Firewall: permanece bloqueado hasta declarar y aprobar redes reales.
+cis_section4_firewall: false
+cis_firewall_engine: ufw
+cis_ufw_authoritative_reset_confirmed: false  # true solo en una ventana aprobada
+cis_ufw_ssh_port: 22
+cis_ufw_ssh_allowed_sources: []  # REEMPLAZAR por redes reales de administración
+cis_ufw_allowed_in_rules: []  # Declarar cada servicio publicado y su origen
+
+# Autenticación: habilitar PAM solo tras prueba de consola, SSH y sudo.
+cis_section5_3_pam: false
+# Si se sobrescribe cis_ssh_config, copiar el diccionario completo desde
+# defaults/main/05-access-control.yml; una sobrescritura parcial reemplaza el
+# diccionario y puede eliminar claves necesarias.
+
+# Logging/auditoría y mantenimiento global requieren capacidad y ventana.
+cis_section6_logging_audit: false
+cis_section7_system: false
+section7_system_7_1_system_file_permissions: false
+section7_system_7_2_local_user_group_settings: false
+
+# Las acciones halt/single y audit inmutable deben aprobarse expresamente.
+cis_audit_allow_disruptive_actions: false
+
+# La política local rsyslog es específica del sitio. Si se habilita, el rol
+# escribe solo /etc/rsyslog.d/70-cis-local.conf y no reemplaza 50-default.conf.
+# section6_logging debe copiarse completo desde defaults antes de modificarlo.

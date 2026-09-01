@@ -1,0 +1,28 @@
+---
+cis_section3_network: true
+
+# Wireless/Bluetooth removal and protocol-module unloading can interrupt live
+# connectivity or applications, so they require explicit opt-in.
+section3_network:
+  enabled: true
+  '3_1_network_devices':
+    ipv6_enabled: true
+    wireless_disabled: false
+    bluetooth_disabled: false
+  '3_2_network_modules':
+    disable_dccp: false
+    disable_tipc: false
+    disable_rds: false
+    disable_sctp: false
+  '3_3_network_kernel_parameters':
+    ip_forward_disabled: true
+    send_redirects_disabled: true
+    icmp_ignore_bogus: true
+    icmp_echo_ignore_broadcasts: true
+    accept_redirects_disabled: true
+    secure_redirects_disabled: true
+    # Strict reverse-path filtering can break asymmetric or multi-homed hosts.
+    rp_filter_enabled: false
+    accept_source_route_disabled: true
+    log_martians: true
+    tcp_syncookies: true

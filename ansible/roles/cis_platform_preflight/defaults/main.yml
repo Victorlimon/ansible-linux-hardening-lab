@@ -1,0 +1,12 @@
+---
+cis_execution_environment: unconfigured
+cis_production_mode: false
+cis_production_change_id: ""
+cis_production_backup_confirmed: false
+cis_production_oob_access_confirmed: false
+cis_production_min_root_free_mb: 2048
+
+# Estados de implementación admitidos por el entry point. Las remediaciones
+# generales aceptan solo released; los canarios deben declararlo explícitamente.
+cis_preflight_allowed_release_statuses:
+  - released

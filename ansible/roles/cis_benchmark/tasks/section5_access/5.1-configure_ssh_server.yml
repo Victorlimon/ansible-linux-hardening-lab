@@ -1,489 +1,297 @@
 ---
-
-- name: "CIS 5.1.1 | Remediation | Ensure permissions on /etc/ssh/sshd_config are configured"
+- name: "CIS 5.1.1 | Remediation | Protect SSH server configuration"
   when: cis_ssh_config.config_files | default(true)
   block:
-    - name: "CIS 5.1.1 | Remediation | Set permissions on /etc/ssh/sshd_config"
+    - name: "CIS 5.1.1 | Remediation | Protect sshd_config"
       ansible.builtin.file:
         path: /etc/ssh/sshd_config
+        state: file
         owner: root
         group: root
-        mode: 'u-x,og-rwx'
-        state: file
-    - name: "CIS 5.1.1 | Remediation | Set permissions on additional SSH config files in sshd_config.d"
+        mode: "0600"
+
+    - name: "CIS 5.1.1 | Audit | Find SSH drop-ins"
       ansible.builtin.find:
         paths: /etc/ssh/sshd_config.d
+        patterns: "*.conf"
         file_type: file
-      register: sshd_config_files
-      ignore_errors: yes   
-    - name: "CIS 5.1.1 | Remediation | Apply strict permissions to each SSH config file"
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        recurse: false
-        owner: root
-        group: root
-        mode: 'u-x,go-rwx'
-        state: file
-      loop: "{{ sshd_config_files.files | default([]) }}"
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.1.1
-    - cis
-    - NIST800-53R5_AC-3
-    - NIST800-53R5_MP-2
-    - sshd
+      register: _cis_sshd_dropins
 
-- name: "CIS 5.1.2 | Remediation | Ensure permissions on SSH private host key files are configured"
-  when: cis_ssh_config.host_keys | default(true)
-  block:
-    - name: "CIS 5.1.2 | Audit | Set permissions on SSH private host keys"
-      ansible.builtin.find:
-        paths: /etc/ssh
-        patterns: 'ssh_host_*_key'
-        file_type: file
-      register: ssh_private_keys
-    - name: "CIS 5.1.2 | Remediation | Apply strict permissions to SSH private host keys"
+    - name: "CIS 5.1.1 | Remediation | Protect SSH drop-ins"
       ansible.builtin.file:
         path: "{{ item.path }}"
+        state: file
         owner: root
         group: root
-        mode: 'u-x,go-rwx'
-        state: file
-      loop: "{{ ssh_private_keys.files | default([]) }}"
+        mode: "0600"
+      loop: "{{ _cis_sshd_dropins.files }}"
       loop_control:
         label: "{{ item.path }}"
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.1.2
-    - NIST800-53R5_AC-3
-    - NIST800-53R5_MP-2
-    - sshd
+  tags: [level1-server, level1-workstation, remediation, cis_5.1.1, sshd]
 
-- name: "CIS 5.1.3 | Remediation | Ensure permissions on SSH public host key files are configured"
+- name: "CIS 5.1.2 | Remediation | Protect SSH private host keys"
   when: cis_ssh_config.host_keys | default(true)
   block:
-    - name: "CIS 5.1.3 | Audit | Set permissions on SSH public host keys"
+    - name: "CIS 5.1.2 | Audit | Find SSH private host keys"
       ansible.builtin.find:
         paths: /etc/ssh
-        patterns: 'ssh_host_*_key.pub'
+        patterns: "ssh_host_*_key"
         file_type: file
-      register: ssh_public_keys
-    - name: "CIS 5.1.3 | Remediation | Apply strict permissions to SSH public host keys"
+      register: _cis_ssh_private_keys
+
+    - name: "CIS 5.1.2 | Remediation | Set SSH private host key permissions"
       ansible.builtin.file:
         path: "{{ item.path }}"
+        state: file
         owner: root
         group: root
-        mode: 'u-x,go-rwx'
-        state: file
-      loop: "{{ ssh_public_keys.files | default([]) }}"
+        mode: "0600"
+      loop: "{{ _cis_ssh_private_keys.files }}"
       loop_control:
         label: "{{ item.path }}"
+  tags: [level1-server, level1-workstation, remediation, cis_5.1.2, sshd]
+
+- name: "CIS 5.1.3 | Remediation | Protect SSH public host keys"
+  when: cis_ssh_config.host_keys | default(true)
+  block:
+    - name: "CIS 5.1.3 | Audit | Find SSH public host keys"
+      ansible.builtin.find:
+        paths: /etc/ssh
+        patterns: "ssh_host_*_key.pub"
+        file_type: file
+      register: _cis_ssh_public_keys
+
+    - name: "CIS 5.1.3 | Remediation | Set SSH public host key permissions"
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: file
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ _cis_ssh_public_keys.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+  tags: [level1-server, level1-workstation, remediation, cis_5.1.3, sshd]
+
+- name: "CIS 5.1.4 | Safety | Verify the SSH allowlist keeps the Ansible user"
+  when:
+    - cis_ssh_config.access_control | default(true)
+    - cis_ssh_config.use_allow_list | default(false)
+  block:
+    - name: "CIS 5.1.4 | Safety | Validate allowlist inputs"
+      ansible.builtin.assert:
+        that:
+          - (cis_ssh_config.access_control_type | default('AllowGroups')) in ['AllowUsers', 'AllowGroups']
+          - cis_ssh_config.allowed_users_groups | default('') | trim | length > 0
+        fail_msg: "SSH allowlist requires an explicit AllowUsers or AllowGroups list."
+
+    - name: "CIS 5.1.4 | Safety | Read remote Ansible user groups"
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/id
+          - -nG
+          - "{{ cis_ssh_remote_user | default(ansible_user | default('ansible')) }}"
+      register: _cis_ansible_user_groups
+      changed_when: false
+      when: (cis_ssh_config.access_control_type | default('AllowGroups')) == 'AllowGroups'
+
+    - name: "CIS 5.1.4 | Safety | Assert remote Ansible user is allowed"
+      ansible.builtin.assert:
+        that:
+          - >-
+            ((cis_ssh_config.access_control_type | default('AllowGroups')) == 'AllowUsers' and
+             ((cis_ssh_config.allowed_users_groups.split() |
+               select('equalto', cis_ssh_remote_user | default(ansible_user | default('ansible'))) |
+               list | length > 0) or
+              (cis_ssh_config.allowed_users_groups.split() |
+               select('match', '^' ~ (cis_ssh_remote_user | default(ansible_user | default('ansible'))) ~ '@') |
+               list | length > 0))) or
+            ((cis_ssh_config.access_control_type | default('AllowGroups')) == 'AllowGroups' and
+             (cis_ssh_config.allowed_users_groups.split() |
+              intersect(_cis_ansible_user_groups.stdout.split()) | length > 0))
+        fail_msg: >-
+          Refusing to enable the SSH allowlist: remote user
+          {{ cis_ssh_remote_user | default(ansible_user | default('ansible')) }} is not verified in it.
+  tags: [level1-server, level1-workstation, remediation, cis_5.1.4, sshd]
+
+- name: "CIS 5.1.5 | Remediation | Configure the SSH warning banner"
+  when: cis_ssh_config.banner | default(true)
+  ansible.builtin.copy:
+    dest: /etc/issue.net
+    content: "{{ cis_issue_net_text | default('Authorized users only. All activity may be monitored and reported.') }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+  tags: [level1-server, level1-workstation, remediation, cis_5.1.5, sshd]
+
+- name: "CIS 5.1.4-5.1.22 | Safety | Validate SSH policy values"
+  ansible.builtin.assert:
+    that:
+      - cis_ssh_config.ClientAliveInterval | int > 0
+      - cis_ssh_config.ClientAliveCountMax | int > 0
+      - cis_ssh_config.LoginGraceTime | int > 0
+      - cis_ssh_config.LoginGraceTime | int <= 60
+      - cis_ssh_config.MaxAuthTries | int > 0
+      - cis_ssh_config.MaxAuthTries | int <= 4
+      - cis_ssh_config.MaxSessions | int > 0
+      - cis_ssh_config.MaxSessions | int <= 10
+      - cis_ssh_config.PermitEmptyPasswords | lower == 'no'
+      - cis_ssh_config.PermitRootLogin | lower == 'no'
+      - cis_ssh_config.PermitUserEnvironment | lower == 'no'
+      - cis_ssh_config.UsePAM | lower == 'yes'
+    fail_msg: "One or more SSH values do not satisfy CIS section 5.1."
   tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - rule_5.1.3
-    - NIST800-53R5_AC-3
-    - NIST800-53R5_MP-2
+    - cis_5.1.4
+    - cis_5.1.5
+    - cis_5.1.6
+    - cis_5.1.7
+    - cis_5.1.8
+    - cis_5.1.9
+    - cis_5.1.10
+    - cis_5.1.11
+    - cis_5.1.12
+    - cis_5.1.13
+    - cis_5.1.14
+    - cis_5.1.15
+    - cis_5.1.16
+    - cis_5.1.17
+    - cis_5.1.18
+    - cis_5.1.19
+    - cis_5.1.20
+    - cis_5.1.21
+    - cis_5.1.22
     - sshd
 
-- name: "CIS 5.1.4 | Remediation | Ensure sshd access is configured"
-  when: cis_ssh_config.access_control | default(true)
-  block:
-    - name: "CIS 5.1.4 | Remediation | Configure AllowUsers or AllowGroups"
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^(AllowUsers|AllowGroups)'
-        line: "{{ cis_ssh_config.access_control_type | default('AllowGroups') }} {{ cis_ssh_config.allowed_users_groups | default('sshusers') }}"
-        insertafter: '^# Authentication'
-        validate: 'sshd -t -f %s'
-        state: present
-      notify: restart sshd
-      when: cis_ssh_config.use_allow_list | default(true)
-
-    - name: "CIS 5.1.4 | Remediation | Configure DenyUsers or DenyGroups (alternative)"
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^(DenyUsers|DenyGroups)'
-        line: "{{ cis_ssh_config.access_control_type | default('DenyUsers') }} {{ cis_ssh_config.denied_users_groups | default('') }}"
-        insertafter: '^# Authentication'
-        validate: 'sshd -t -f %s'
-        state: present
-      notify: restart sshd
-      when: not (cis_ssh_config.use_allow_list | default(true))
+- name: "CIS 5.1.4-5.1.22 | Remediation | Install validated SSH hardening drop-in"
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/00-cis-hardening.conf
+    owner: root
+    group: root
+    mode: "0600"
+    validate: /usr/sbin/sshd -t -f %s
+    content: |
+      # Managed by Ansible - CIS Ubuntu 24.04 section 5.1
+      {% if cis_ssh_config.access_control | default(true) and cis_ssh_config.use_allow_list | default(false) %}
+      {{ cis_ssh_config.access_control_type | default('AllowGroups') }} {{ cis_ssh_config.allowed_users_groups }}
+      {% endif %}
+      {% if cis_ssh_config.banner | default(true) %}Banner /etc/issue.net
+      {% endif %}
+      {% if cis_ssh_config.ciphers | default(true) %}Ciphers {{ cis_ssh_config.Ciphers }}
+      {% endif %}
+      {% if cis_ssh_config.client_alive | default(true) %}ClientAliveInterval {{ cis_ssh_config.ClientAliveInterval }}
+      ClientAliveCountMax {{ cis_ssh_config.ClientAliveCountMax }}
+      {% endif %}
+      {% if cis_ssh_config.disable_forwarding | default(true) %}DisableForwarding yes
+      {% endif %}
+      {% if cis_ssh_config.gssapi_auth | default(true) %}GSSAPIAuthentication no
+      {% endif %}
+      {% if cis_ssh_config.hostbased_auth | default(true) %}HostbasedAuthentication no
+      {% endif %}
+      {% if cis_ssh_config.ignore_rhosts | default(true) %}IgnoreRhosts yes
+      {% endif %}
+      {% if cis_ssh_config.kex_algorithms | default(true) %}KexAlgorithms {{ cis_ssh_config.KexAlgorithms }}
+      {% endif %}
+      {% if cis_ssh_config.login_grace_time | default(true) %}LoginGraceTime {{ cis_ssh_config.LoginGraceTime }}
+      {% endif %}
+      {% if cis_ssh_config.log_level | default(true) %}LogLevel {{ cis_ssh_config.LogLevel }}
+      {% endif %}
+      {% if cis_ssh_config.macs | default(true) %}MACs {{ cis_ssh_config.MACs }}
+      {% endif %}
+      {% if cis_ssh_config.max_auth_tries | default(true) %}MaxAuthTries {{ cis_ssh_config.MaxAuthTries }}
+      {% endif %}
+      {% if cis_ssh_config.max_sessions | default(true) %}MaxSessions {{ cis_ssh_config.MaxSessions }}
+      {% endif %}
+      {% if cis_ssh_config.max_startups | default(true) %}MaxStartups {{ cis_ssh_config.MaxStartups }}
+      {% endif %}
+      {% if cis_ssh_config.permit_empty_passwords | default(true) %}PermitEmptyPasswords {{ cis_ssh_config.PermitEmptyPasswords }}
+      {% endif %}
+      {% if cis_ssh_config.permit_root_login | default(true) %}PermitRootLogin {{ cis_ssh_config.PermitRootLogin }}
+      {% endif %}
+      {% if cis_ssh_config.permit_user_environment | default(true) %}PermitUserEnvironment {{ cis_ssh_config.PermitUserEnvironment }}
+      {% endif %}
+      {% if cis_ssh_config.use_pam | default(true) %}UsePAM {{ cis_ssh_config.UsePAM }}
+      {% endif %}
+  register: _cis_sshd_dropin
   tags:
     - level1-server
     - level1-workstation
     - remediation
     - cis_5.1.4
-    - NIST800-53R5_AC-3
-    - sshd
-
-- name: "CIS 5.1.5 - Configure SSH banner"
-  when: cis_ssh_config.banner | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^Banner'
-    line: "Banner /etc/issue.net"
-    state: present
-    insertafter: '^# no default banner path'
-    validate: 'sshd -t -f %s'
-  notify: restart sshd
-  tags: 
-    - level1-server
-    - level1-workstation
-    - patch
-    - rule_5.1.5
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
-    - sshd
-
-- name: "CIS 5.1.6 | Remediation | Ensure sshd Ciphers are configured"
-  when: cis_ssh_config.ciphers | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^Ciphers'
-    line: "Ciphers {{ cis_ssh_config.Ciphers }}"
-    insertafter: '^# Ciphers and keying'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - rule_5.1.6
-    - NIST800-53R5_SC-8
-    - sshd
-
-- name: "CIS 5.1.7 | Remediation | Ensure sshd ClientAlive settings are configured"
-  when: cis_ssh_config.client_alive | default(true)
-  block:
-    - name: "CIS 5.1.7 | Remediation | Configure SSH ClientAliveInterval"
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^ClientAliveInterval'
-        line: "ClientAliveInterval {{ cis_ssh_config.ClientAliveInterval }}"
-        state: present
-    - name: "CIS 5.1.7 | Remediation | Configure SSH ClientAliveCountMax"
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^ClientAliveCountMax'
-        line: "ClientAliveCountMax {{ cis_ssh_config.ClientAliveCountMax }}"
-        state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - rule_5.1.7
-    - NIST800-53R5_SC-8
-    - sshd
-
-- name: "CIS 5.1.8 | Remediation | Ensure sshd DisableForwarding is enabled"
-  when: cis_ssh_config.disable_forwarding | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*DisableForwarding
-    line: 'DisableForwarding yes'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - rule_5.1.8
-    - NIST800-53R5_CM-7
-    - sshd
-
-- name: "CIS 5.1.9 | Remediation | Ensure sshd GSSAPIAuthentication is disabled"
-  when: cis_ssh_config.gssapi_auth | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*GSSAPIAuthentication
-    line: 'GSSAPIAuthentication no'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level2-server
-    - level1-workstation
-    - patch
-    - rule_5.1.9
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
-    - sshd
-
-- name: "CIS 5.1.10 | Remediation | Ensure sshd HostbasedAuthentication is disabled"
-  when: cis_ssh_config.hostbased_auth | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*HostbasedAuthentication
-    line: 'HostbasedAuthentication no'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - rule_5.1.10
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
-    - sshd
-
-- name: "CIS 5.1.11 | Remediation | Ensure sshd IgnoreRhosts is enabled"
-  when: cis_ssh_config.ignore_rhosts | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*IgnoreRhosts
-    line: 'IgnoreRhosts yes'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - rule_5.1.11
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
-    - sshd
-
-- name: "CIS 5.1.12 | Remediation | Ensure sshd KexAlgorithms is configured "
-  when: cis_ssh_config.kex_algorithms | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*KexAlgorithms
-    line: "KexAlgorithms {{ cis_ssh_config.KexAlgorithms }}"
-    insertafter: '^# Ciphers and keying'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - patch
+    - cis_5.1.5
+    - cis_5.1.6
+    - cis_5.1.7
+    - cis_5.1.8
+    - cis_5.1.9
+    - cis_5.1.10
+    - cis_5.1.11
     - cis_5.1.12
-    - NIST800-53R5_SC-8
-    - sshd
-
-- name: "CIS 5.1.13 | Remediation | Ensure sshd LoginGraceTime is configured"
-  when: cis_ssh_config.login_grace_time | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*LoginGraceTime
-    line: "LoginGraceTime {{ cis_ssh_config.LoginGraceTime }}"
-    insertafter: '^# Authentication'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.1.13
-    - NIST800-53R5_CM-6
-    - sshd
-
-- name: "CIS 5.1.14 | Remediation | Ensure sshd LogLevel is configured"
-  when: cis_ssh_config.log_level | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*LogLevel
-    line: "LogLevel {{ cis_ssh_config.LogLevel }}"
-    insertafter: '^# Logging'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.1.14
-    - NIST800-53R5_AU-2
-    - NIST800-53R5_AU-12
-    - NIST800-53R5_SI-5
-    - sshd
-
-- name: "CIS 5.1.15 | Remediation | Ensure sshd MACs are configured"
-  when: cis_ssh_config.macs | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*MACs
-    line: "MACs {{ cis_ssh_config.MACs }}"
-    insertafter: '^# Ciphers and keying'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.1.15
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
-    - sshd
-
-- name: "CIS 5.1.16 | Remediation | Ensure sshd MaxAuthTries is configured"
-  when: cis_ssh_config.max_auth_tries | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*MaxAuthTries
-    line: "MaxAuthTries {{ cis_ssh_config.MaxAuthTries }}"
-    insertafter: '^# Authentication'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.1.16
-    - NIST800-53R5_AU-3
-    - sshd
-
-- name: "CIS 5.1.17 | Remediation | Ensure sshd MaxSessions is configured"
-  when: cis_ssh_config.max_sessions | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*MaxSessions
-    line: "MaxSessions {{ cis_ssh_config.MaxSessions }}"
-    insertafter: '^# Authentication'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.1.17
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
-    - sshd
-
-- name: "CIS 5.1.18 | Remediation | Ensure sshd MaxStartups is configured"
-  when: cis_ssh_config.max_startups | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*MaxStartups
-    line: "MaxStartups {{ cis_ssh_config.MaxStartups }}"
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.1.18
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
-    - sshd
-
-- name: "CIS 5.1.19 | Remediation | Ensure sshd PermitEmptyPasswords is disabled"
-  when: cis_ssh_config.permit_empty_passwords | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*PermitEmptyPasswords
-    line: 'PermitEmptyPasswords {{ cis_ssh_config.PermitEmptyPasswords }}'
-    insertafter: '# To disable tunneled clear text passwords, change to no here!'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.1.19
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
-    - sshd
-
-- name : "CIS 5.1.20 | Remediation | Ensure sshd PermitRootLogin is disabled"
-  when: cis_ssh_config.permit_root_login | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*PermitRootLogin
-    line: 'PermitRootLogin {{ cis_ssh_config.PermitRootLogin }}'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.1.20
-    - NIST800-53R5_AC-6
-    - sshd
-
-- name: "CIS 5.1.21 | Remediation | Ensure sshd PermitUserEnvironment is disabled"
-  when: cis_ssh_config.permit_user_environment | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*PermitUserEnvironment
-    line: 'PermitUserEnvironment {{ cis_ssh_config.PermitUserEnvironment }}'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
     - cis_5.1.21
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
+    - cis_5.1.22
     - sshd
 
-- name: "CIS 5.1.22 | Remediation | Ensure sshd UsePAM is enabled"
-  when: cis_ssh_config.use_pam | default(true)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: (?i)^(#?)\s*UsePAM
-    line: 'UsePAM {{ cis_ssh_config.UsePAM }}'
-    validate: 'sshd -t -f %s'
-    state: present
-  notify: restart sshd
-  tags:
-    - level1-server
-    - level1-workstation
-    - remediation
-    - cis_5.1.22
-    - NIST800-53R5_CM-1
-    - NIST800-53R5_CM-2
-    - NIST800-53R5_CM-6
-    - NIST800-53R5_CM-7
-    - NIST800-53R5_IA-5
-    - sshd
-    - pam
+- name: "CIS 5.1 | Verification | Read validated effective SSH configuration"
+  ansible.builtin.command: /usr/sbin/sshd -T
+  register: _cis_sshd_effective_global
+  changed_when: false
+  when: not ansible_check_mode
+  tags: [level1-server, level1-workstation, verification, sshd]
+
+- name: "CIS 5.1 | Verification | Assert effective SSH security settings"
+  ansible.builtin.assert:
+    that:
+      - not (cis_ssh_config.client_alive | default(true)) or ('clientaliveinterval ' ~ (cis_ssh_config.ClientAliveInterval | string)) in _cis_sshd_effective_global.stdout
+      - not (cis_ssh_config.client_alive | default(true)) or ('clientalivecountmax ' ~ (cis_ssh_config.ClientAliveCountMax | string)) in _cis_sshd_effective_global.stdout
+      - not (cis_ssh_config.login_grace_time | default(true)) or ('logingracetime ' ~ (cis_ssh_config.LoginGraceTime | string)) in _cis_sshd_effective_global.stdout
+      - not (cis_ssh_config.max_auth_tries | default(true)) or ('maxauthtries ' ~ (cis_ssh_config.MaxAuthTries | string)) in _cis_sshd_effective_global.stdout
+      - not (cis_ssh_config.max_sessions | default(true)) or ('maxsessions ' ~ (cis_ssh_config.MaxSessions | string)) in _cis_sshd_effective_global.stdout
+      - not (cis_ssh_config.max_startups | default(true)) or ('maxstartups ' ~ (cis_ssh_config.MaxStartups | string)) in _cis_sshd_effective_global.stdout
+      - not (cis_ssh_config.permit_empty_passwords | default(true)) or 'permitemptypasswords no' in _cis_sshd_effective_global.stdout
+      - not (cis_ssh_config.permit_root_login | default(true)) or 'permitrootlogin no' in _cis_sshd_effective_global.stdout
+      - not (cis_ssh_config.permit_user_environment | default(true)) or 'permituserenvironment no' in _cis_sshd_effective_global.stdout
+      - not (cis_ssh_config.use_pam | default(true)) or 'usepam yes' in _cis_sshd_effective_global.stdout
+    fail_msg: "The effective SSH policy is overridden; refusing to reload SSH."
+  when: not ansible_check_mode
+  tags: [level1-server, level1-workstation, verification, sshd]
+
+- name: "CIS 5.1.4 | Verification | Check effective access policy for remote user"
+  when:
+    - cis_ssh_config.use_allow_list | default(false)
+    - not ansible_check_mode
+  ansible.builtin.command:
+    argv:
+      - /usr/sbin/sshd
+      - -T
+      - -C
+      - "user={{ cis_ssh_remote_user | default(ansible_user | default('ansible')) }},host={{ ansible_facts.hostname }},addr={{ ansible_facts.default_ipv4.address | default('127.0.0.1') }}"
+  register: _cis_sshd_effective
+  changed_when: false
+  tags: [level1-server, level1-workstation, verification, cis_5.1.4, sshd]
+
+- name: "CIS 5.1.4 | Verification | Assert effective allowlist is present"
+  when:
+    - cis_ssh_config.use_allow_list | default(false)
+    - not ansible_check_mode
+  ansible.builtin.assert:
+    that:
+      - >-
+        (((cis_ssh_config.access_control_type | default('AllowGroups')) | lower) ~ ' ' ~
+         (cis_ssh_config.allowed_users_groups | lower)) in _cis_sshd_effective.stdout
+    fail_msg: "The effective SSH configuration does not contain the verified allowlist; refusing to reload SSH."
+  tags: [level1-server, level1-workstation, verification, cis_5.1.4, sshd]
+
+- name: "CIS 5.1 | Remediation | Reload SSH after successful validation"
+  when:
+    - _cis_sshd_dropin.changed
+    - not ansible_check_mode
+  ansible.builtin.systemd_service:
+    name: ssh.service
+    state: reloaded
+  tags: [level1-server, level1-workstation, remediation, sshd]

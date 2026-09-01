@@ -403,21 +403,46 @@
 # 2.1.18 | Ensure web server services are not in use
 - name: "CIS 2.1.18 | Remediation | Ensure web server services are not in use"
   block:
-    - name: "CIS 2.1.18 | Stop and mask web server services (dependency required)"
-      ansible.builtin.systemd:
+    - name: "CIS 2.1.18 | Stop and mask Apache services (dependency required)"
+      ansible.builtin.systemd_service:
         name: "{{ item }}"
         state: stopped
         enabled: false
         masked: true
-      loop: ['apache2.socket', 'apache2.service', 'nginx.service']
-      when: cis_2_1_required_services.apache2 | default(false) or cis_2_1_required_services.nginx | default(false)
+      loop: ['apache2.socket', 'apache2.service']
+      when:
+        - "'apache2' in ansible_facts.packages"
+        - cis_2_1_required_services.apache2 | default(false)
+        - item in ansible_facts.services
 
-    - name: "CIS 2.1.18 | Remove web server packages"
+    - name: "CIS 2.1.18 | Remove Apache package"
       ansible.builtin.apt:
-        name: ['apache2', 'nginx']
+        name: apache2
         state: absent
         purge: true
-      when: not (cis_2_1_required_services.apache2 | default(false) or cis_2_1_required_services.nginx | default(false))
+      when:
+        - "'apache2' in ansible_facts.packages"
+        - not (cis_2_1_required_services.apache2 | default(false))
+
+    - name: "CIS 2.1.18 | Stop and mask Nginx service (dependency required)"
+      ansible.builtin.systemd_service:
+        name: nginx.service
+        state: stopped
+        enabled: false
+        masked: true
+      when:
+        - "'nginx' in ansible_facts.packages"
+        - cis_2_1_required_services.nginx | default(false)
+        - "'nginx.service' in ansible_facts.services"
+
+    - name: "CIS 2.1.18 | Remove Nginx package"
+      ansible.builtin.apt:
+        name: nginx
+        state: absent
+        purge: true
+      when:
+        - "'nginx' in ansible_facts.packages"
+        - not (cis_2_1_required_services.nginx | default(false))
   when:
     - cis_section2_services | default(true)
     - cis_2_1_server_services['2_1_18_webserver'] | default(true)
@@ -484,3 +509,25 @@
     - cis_section2_services | default(true)
     - cis_2_1_server_services['2_1_21_mta_local_only'] | default(true)
   tags: ['cis_sec2', 'cis_2.1.21', 'level1-server', 'level1-workstation', 'NIST800-53R5_CM-7']
+
+# 2.1.22 | Ensure only approved services are listening on a network interface
+- name: "CIS 2.1.22 | Audit | List services listening on network interfaces"
+  ansible.builtin.command:
+    argv: [ss, -plntu]
+  register: _cis_listening_services
+  changed_when: false
+  check_mode: false
+  when:
+    - cis_section2_services | default(true)
+    - cis_2_1_server_services['2_1_22_listening_services'] | default(true)
+  tags: ['cis_sec2', 'cis_2.1.22']
+
+- name: "CIS 2.1.22 | Manual | Report listening services for approval"
+  ansible.builtin.debug:
+    msg:
+      - "MANUAL: Verify every listening service, port, and interface against local site policy."
+      - "{{ _cis_listening_services.stdout_lines }}"
+  when:
+    - cis_section2_services | default(true)
+    - cis_2_1_server_services['2_1_22_listening_services'] | default(true)
+  tags: ['cis_sec2', 'cis_2.1.22']

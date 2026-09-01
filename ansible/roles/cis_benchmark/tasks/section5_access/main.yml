@@ -15,24 +15,24 @@
 
 # --- 5.1 Configure SSH Server ---
 - name: Include 5.1 configure SSH server
-  when: cis_section5_1_ssh_server | default(true)
+  when: cis_section5_1_ssh_server | default(true) | bool
   ansible.builtin.import_tasks: 5.1-configure_ssh_server.yml
   tags: ['cis_sec5', 'cis_5.1', 'ssh', 'sshd']
 
 # --- 5.2 Configure Privilege Escalation ---
 - name: Include 5.2 configure privilege escalation
-  when: cis_section5_2_privilege_escalation | default(true)
+  when: cis_section5_2_privilege_escalation | default(true) | bool
   ansible.builtin.import_tasks: 5.2-configure_privilege_escalation.yml
   tags: ['cis_sec5', 'cis_5.2', 'sudo', 'privilege_escalation']
 
 # --- 5.3 Configure PAM ---
 - name: Include 5.3 configure pluggable authentication modules
-  when: cis_section5_3_pam | default(true)
+  when: cis_section5_3_pam | default(true) | bool
   ansible.builtin.import_tasks: 5.3-pluggable_authentication_modules/main.yml
   tags: ['cis_sec5', 'cis_5.3', 'pam', 'authentication']
 
 # --- 5.4 Configure User Accounts and Environment ---
 - name: Include 5.4 configure user accounts and environment
-  when: cis_section5_4_user_accounts | default(true)
+  when: cis_section5_4_user_accounts | default(true) | bool
   ansible.builtin.import_tasks: 5.4-user_accounts_and_environment/main.yml
   tags: ['cis_sec5', 'cis_5.4', 'users', 'accounts', 'environment']

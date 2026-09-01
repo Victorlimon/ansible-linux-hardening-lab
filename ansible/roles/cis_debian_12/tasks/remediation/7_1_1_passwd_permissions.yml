@@ -1,0 +1,25 @@
+---
+- name: "CIS 7.1.1 | Remediation | Secure /etc/passwd"
+  ansible.builtin.file:
+    path: /etc/passwd
+    state: file
+    owner: root
+    group: root
+    mode: 'u-x,go-wx'
+
+- name: "CIS 7.1.1 | Verification | Inspect /etc/passwd"
+  ansible.builtin.stat:
+    path: /etc/passwd
+  register: cis_debian_12_7_1_1_passwd
+
+- name: "CIS 7.1.1 | Verification | Validate /etc/passwd access"
+  ansible.builtin.assert:
+    that:
+      - cis_debian_12_7_1_1_passwd.stat.pw_name == 'root'
+      - cis_debian_12_7_1_1_passwd.stat.gr_name == 'root'
+      - cis_debian_12_7_1_1_passwd.stat.mode[1] in ['0', '2', '4', '6']
+      - cis_debian_12_7_1_1_passwd.stat.mode[2] in ['0', '4']
+      - cis_debian_12_7_1_1_passwd.stat.mode[3] in ['0', '4']
+    fail_msg: >-
+      /etc/passwd must be owned by root:root and have mode 0644 or more
+      restrictive without execute bits.

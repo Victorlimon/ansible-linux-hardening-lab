@@ -1,0 +1,14 @@
+---
+# Ubuntu 24.04 Server is the only validated profile. Platform identity is
+# provided by cis_platform_preflight and is not configurable as site policy.
+cis_system_profile: server
+cis_execution_environment: unconfigured
+
+# Production mode adds operational release gates; it does not imply CIS
+# certification. Inventory must explicitly confirm each prerequisite.
+cis_production_mode: false
+cis_production_change_id: ""
+cis_production_backup_confirmed: false
+cis_production_oob_access_confirmed: false
+cis_production_min_root_free_mb: 2048
+cis_production_expected_architecture: x86_64

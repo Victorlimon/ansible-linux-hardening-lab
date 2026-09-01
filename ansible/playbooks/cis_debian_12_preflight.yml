@@ -1,0 +1,10 @@
+---
+- name: Validate Debian 12 before releasing CIS remediation
+  hosts: debian_12
+  gather_facts: true
+  serial: 1
+  any_errors_fatal: true
+  become: false
+  roles:
+    - role: cis_platform_preflight
+      cis_preflight_allowed_release_statuses: [canary, released]

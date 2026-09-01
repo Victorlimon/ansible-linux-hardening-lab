@@ -1,0 +1,77 @@
+---
+- name: "Preflight | Derive the exact supported platform identifier"
+  ansible.builtin.set_fact:
+    cis_platform_id: >-
+      {{ 'ubuntu_2404'
+         if ansible_facts.distribution == 'Ubuntu' and
+            ansible_facts.distribution_version == '24.04'
+         else ('debian_12'
+               if ansible_facts.distribution == 'Debian' and
+                  ansible_facts.distribution_major_version == '12'
+               else 'unsupported') }}
+
+- name: "Preflight | Refuse unsupported distributions and releases"
+  ansible.builtin.assert:
+    that:
+      - cis_platform_id != 'unsupported'
+    fail_msg: >-
+      Supported targets are Ubuntu 24.04 and Debian 12; detected
+      {{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }}.
+
+- name: "Preflight | Load supported platform metadata"
+  ansible.builtin.set_fact:
+    cis_platform_metadata: "{{ _cis_platform_catalog[cis_platform_id] }}"
+
+- name: "Preflight | Validate architecture and implementation release status"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.architecture == cis_platform_metadata.architecture
+      - cis_platform_metadata.release_status in cis_preflight_allowed_release_statuses
+    fail_msg: >-
+      Platform {{ cis_platform_id }} is {{ cis_platform_metadata.release_status }}
+      for {{ ansible_facts.architecture }}, but this entry point allows only
+      {{ cis_preflight_allowed_release_statuses | join(', ') }}.
+
+- name: "Preflight | Require an explicit execution environment"
+  ansible.builtin.assert:
+    that:
+      - cis_execution_environment in ['lab', 'staging', 'production']
+      - cis_execution_environment != 'production' or cis_production_mode | bool
+    fail_msg: >-
+      Set cis_execution_environment in inventory. Production also requires
+      cis_production_mode=true and the approved release gates.
+
+- name: "Preflight | Derive available space on the root filesystem"
+  ansible.builtin.set_fact:
+    cis_root_available_mb: >-
+      {{ ((ansible_facts.mounts
+           | selectattr('mount', 'equalto', '/')
+           | map(attribute='size_available')
+           | first
+           | default(0, true)) | int / 1024 / 1024) | int }}
+  when: cis_production_mode | bool
+
+- name: "Preflight | Validate production release prerequisites"
+  ansible.builtin.assert:
+    that:
+      - cis_production_change_id | trim | length > 0
+      - cis_production_backup_confirmed | bool
+      - cis_production_oob_access_confirmed | bool
+      - cis_root_available_mb | int >= cis_production_min_root_free_mb | int
+      - ansible_user | default('') | length > 0
+      - ansible_user | default('root') != 'root'
+    fail_msg: >-
+      Production gates failed. Supply a change identifier, confirm a tested
+      backup and out-of-band recovery, use a non-root automation identity, and
+      verify root filesystem capacity before hardening.
+  when: cis_production_mode | bool
+
+- name: "Preflight | Report recognized platform without changing the target"
+  ansible.builtin.debug:
+    msg:
+      platform_id: "{{ cis_platform_id }}"
+      benchmark: "{{ cis_platform_metadata.benchmark }}"
+      release_status: "{{ cis_platform_metadata.release_status }}"
+      execution_release_accepted: true
+      remediation_available: >-
+        {{ cis_platform_metadata.release_status in ['canary', 'released'] }}

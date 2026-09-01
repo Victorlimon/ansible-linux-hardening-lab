@@ -1,395 +1,154 @@
 ---
-# =================================================================
-# CIS Benchmark Section 6.1.2: Configure journald
-# Ubuntu 24.04 LTS - Ansible Tasks
-# Basado en CIS Benchmark v1.0.0
-# NOTE: All systemd-dependent tasks check systemd_unresponsive fact first
-# =================================================================
-
-# =================================================================
-# 6.1.2.1 | CONFIGURE SYSTEMD-JOURNAL-REMOTE
-# =================================================================
-
-# -----------------------------------------------------------------
-# 6.1.2.1.1 | Ensure systemd-journal-remote is installed (Automated)
-# -----------------------------------------------------------------
-- name: "6.1.2.1.1 | AUDIT | Check if systemd-journal-remote is installed"
-  ansible.builtin.command: dpkg-query -s systemd-journal-remote
-  register: journal_remote_check
-  changed_when: false
-  failed_when: false
-  ignore_errors: true
-
-- name: "6.1.2.1.1 | REMEDIATE | Install systemd-journal-remote"
+- name: "6.1.2.1.1 | Install journal remote client support"
   ansible.builtin.apt:
     name: systemd-journal-remote
     state: present
     update_cache: true
     cache_valid_time: 3600
   when:
-    - section6_logging['6_1_2_1_1_journal_remote_installed'].enabled | default(false)
-    - (section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog')) == 'journald'
-    - journal_remote_check is defined
-    - (journal_remote_check.rc | default(1)) != 0
-    - not (systemd_unresponsive | default(false))
-  tags:
-    - cis_6
-    - cis_6_1
-    - cis_6_1_2
-    - cis_6_1_2_1
-    - cis_6_1_2_1_1
-    - journald
-    - remote
-    - install
-  ignore_errors: true
+    - (cis_logging_backend | default(section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog'))) == 'journald'
+    - section6_logging['6_1_2_1_1_journal_remote_installed'].enabled | default(false) | bool
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_1_1, journald, remote]
 
-- name: "6.1.2.1.1 | REPORT | systemd-journal-remote installation status"
-  ansible.builtin.debug:
-    msg: "6.1.2.1.1 | systemd-journal-remote: {{ 'installed' if (journal_remote_check is defined and (journal_remote_check.rc | default(1)) == 0) else 'not installed' }}"
-  when: not ansible_check_mode
+- name: "6.1.2.1.2 | Require complete journal upload TLS configuration"
+  ansible.builtin.assert:
+    that:
+      - section6_logging['6_1_2_1_2_journal_upload_auth'].URL | default('') | length > 0
+      - section6_logging['6_1_2_1_2_journal_upload_auth'].ServerKeyFile | default('') | length > 0
+      - section6_logging['6_1_2_1_2_journal_upload_auth'].ServerCertificateFile | default('') | length > 0
+      - section6_logging['6_1_2_1_2_journal_upload_auth'].TrustedCertificateFile | default('') | length > 0
+    fail_msg: "Journal upload requires URL and all three TLS file paths"
+  when: section6_logging['6_1_2_1_2_journal_upload_auth'].enabled | default(false) | bool
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_1_2, journald, remote]
 
+- name: "6.1.2.1.2 | Ensure journal upload drop-in directory exists"
+  ansible.builtin.file:
+    path: /etc/systemd/journal-upload.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: section6_logging['6_1_2_1_2_journal_upload_auth'].enabled | default(false) | bool
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_1_2, journald, remote]
 
-# -----------------------------------------------------------------
-# 6.1.2.1.2 | Ensure systemd-journal-upload authentication is configured (Manual)
-# -----------------------------------------------------------------
-- name: "6.1.2.1.2 | AUDIT | Check journal-upload.conf configuration"
-  ansible.builtin.command: systemd-analyze cat-config systemd/journal-upload.conf
-  register: journal_upload_config
-  changed_when: false
-  failed_when: false
-  ignore_errors: true
-  timeout: 5
-  when: section6_logging['6_1_2_1_2_journal_upload_auth'].enabled | default(false)
-
-- name: "6.1.2.1.2 | REMEDIATE | Configure journal-upload authentication"
-  block:
-    - name: "6.1.2.1.2 | Create journal-upload.conf.d directory"
-      ansible.builtin.file:
-        path: /etc/systemd/journal-upload.conf.d
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-      ignore_errors: true
-
-    - name: "6.1.2.1.2 | Configure journal-upload authentication parameters"
-      ansible.builtin.lineinfile:
-        path: /etc/systemd/journal-upload.conf.d/60-journald_upload.conf
-        line: "{{ item.key }}={{ item.value }}"
-        regexp: "^{{ item.key }}="
-        create: true
-        mode: '0644'
-        owner: root
-        group: root
-        backup: true
-      loop:
-        - { key: 'URL', value: "{{ section6_logging['6_1_2_1_2_journal_upload_auth'].URL | default('') }}" }
-        - { key: 'ServerKeyFile', value: "{{ section6_logging['6_1_2_1_2_journal_upload_auth'].ServerKeyFile | default('') }}" }
-        - { key: 'ServerCertificateFile', value: "{{ section6_logging['6_1_2_1_2_journal_upload_auth'].ServerCertificateFile | default('') }}" }
-        - { key: 'TrustedCertificateFile', value: "{{ section6_logging['6_1_2_1_2_journal_upload_auth'].TrustedCertificateFile | default('') }}" }
-      loop_control:
-        label: "{{ item.key }}"
-      when: (section6_logging['6_1_2_1_2_journal_upload_auth'].URL | default('')) != ''
-      notify: Restart journal-upload
-      ignore_errors: true
+- name: "6.1.2.1.2 | Configure authenticated journal upload"
+  ansible.builtin.copy:
+    dest: /etc/systemd/journal-upload.conf.d/60-cis-upload.conf
+    owner: root
+    group: root
+    mode: '0600'
+    content: |
+      [Upload]
+      URL={{ section6_logging['6_1_2_1_2_journal_upload_auth'].URL }}
+      ServerKeyFile={{ section6_logging['6_1_2_1_2_journal_upload_auth'].ServerKeyFile }}
+      ServerCertificateFile={{ section6_logging['6_1_2_1_2_journal_upload_auth'].ServerCertificateFile }}
+      TrustedCertificateFile={{ section6_logging['6_1_2_1_2_journal_upload_auth'].TrustedCertificateFile }}
+  register: cis_journal_upload_config
   when:
-    - section6_logging['6_1_2_1_2_journal_upload_auth'].enabled | default(false)
-    - (section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog')) == 'journald'
-    - not (systemd_unresponsive | default(false))
-  tags:
-    - cis_6
-    - cis_6_1
-    - cis_6_1_2
-    - cis_6_1_2_1
-    - cis_6_1_2_1_2
-    - journald
-    - auth
-    - upload
+    - (cis_logging_backend | default(section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog'))) == 'journald'
+    - section6_logging['6_1_2_1_2_journal_upload_auth'].enabled | default(false) | bool
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_1_2, journald, remote]
 
-- name: "6.1.2.1.2 | REPORT | journal-upload configuration status"
-  ansible.builtin.debug:
-    msg: "6.1.2.1.2 | journal-upload authentication configured: {{ (section6_logging['6_1_2_1_2_journal_upload_auth'].URL | default('')) != '' }}"
-  when: not ansible_check_mode
-
-
-# -----------------------------------------------------------------
-# 6.1.2.1.3 | Ensure systemd-journal-upload is enabled and active (Automated)
-# -----------------------------------------------------------------
-- name: "6.1.2.1.3 | AUDIT | Check systemd-journal-upload service status via command"
-  ansible.builtin.command: systemctl is-active systemd-journal-upload.service
-  register: journal_upload_audit
-  changed_when: false
-  failed_when: false
-  ignore_errors: true
-  timeout: 3
-  when: 
-    - section6_logging['6_1_2_1_3_journal_upload_enabled'].enabled | default(false)
-    - not (systemd_unresponsive | default(false))
-
-- name: "6.1.2.1.3 | REMEDIATE | Ensure systemd-journal-upload is enabled and active"
-  block:
-    - name: "6.1.2.1.3 | Enable and start via systemd module"
-      ansible.builtin.systemd:
-        name: systemd-journal-upload.service
-        state: started
-        enabled: true
-      register: journal_upload_result
-      ignore_errors: true
-      failed_when: false
-      timeout: 10
-
-    - name: "6.1.2.1.3 | FALLBACK | Start via command if module failed"
-      ansible.builtin.command: systemctl start systemd-journal-upload.service
-      when:
-        - journal_upload_result is defined
-        - journal_upload_result.failed | default(true)
-        - journal_upload_result.msg is defined
-        - "'timed out' in journal_upload_result.msg or 'D-Bus' in journal_upload_result.msg"
-      changed_when: true
-      ignore_errors: true
-      failed_when: false
-      timeout: 10
+- name: "6.1.2.1.3 | Enable authenticated journal upload"
+  ansible.builtin.systemd_service:
+    name: systemd-journal-upload.service
+    state: "{{ 'restarted' if cis_journal_upload_config.changed | default(false) else 'started' }}"
+    enabled: true
+    masked: false
   when:
-    - section6_logging['6_1_2_1_3_journal_upload_enabled'].enabled | default(false)
-    - not (systemd_unresponsive | default(false))
-    - journal_upload_audit is defined
-    - ((journal_upload_audit.rc | default(1)) != 0) or ((journal_upload_audit.stdout | default('')) != "active")
-  tags:
-    - cis_6
-    - cis_6_1
-    - cis_6_1_2
-    - cis_6_1_2_1
-    - cis_6_1_2_1_3
-    - journald
-    - upload
-    - service
+    - (cis_logging_backend | default(section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog'))) == 'journald'
+    - section6_logging['6_1_2_1_3_journal_upload_enabled'].enabled | default(false) | bool
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_1_3, journald, remote]
 
-- name: "6.1.2.1.3 | REPORT | systemd-journal-upload service status"
-  ansible.builtin.debug:
-    msg: "6.1.2.1.3 | systemd-journal-upload: Active={{ journal_upload_audit.stdout | default('unknown') }}, Enabled={{ 'yes' if (journal_upload_audit.rc | default(1)) == 0 else 'no' }}"
-  when: not ansible_check_mode
-
-
-# -----------------------------------------------------------------
-# 6.1.2.1.4 | Ensure systemd-journal-remote services are not in use (Automated)
-# -----------------------------------------------------------------
-- name: "6.1.2.1.4 | AUDIT | Check systemd-journal-remote services status via command"
-  block:
-    - name: "6.1.2.1.4 | Check systemd-journal-remote.socket"
-      ansible.builtin.command: systemctl is-active systemd-journal-remote.socket
-      register: journal_remote_socket_audit
-      changed_when: false
-      failed_when: false
-      ignore_errors: true
-      timeout: 3
-
-    - name: "6.1.2.1.4 | Check systemd-journal-remote.service"
-      ansible.builtin.command: systemctl is-active systemd-journal-remote.service
-      register: journal_remote_service_audit
-      changed_when: false
-      failed_when: false
-      ignore_errors: true
-      timeout: 3
-  when: not (systemd_unresponsive | default(false))
-
-- name: "6.1.2.1.4 | REMEDIATE | Disable and mask systemd-journal-remote services"
-  block:
-    - name: "6.1.2.1.4 | Disable via systemd module"
-      ansible.builtin.systemd:
-        name: "{{ item }}"
-        state: stopped
-        enabled: false
-        masked: true
-      register: journal_remote_disable_result
-      loop:
-        - systemd-journal-remote.socket
-        - systemd-journal-remote.service
-      ignore_errors: true
-      failed_when: false
-      timeout: 10
-
-    - name: "6.1.2.1.4 | FALLBACK | Disable via command if module failed"
-      ansible.builtin.command: "systemctl disable --now --mask {{ item }}"
-      loop:
-        - systemd-journal-remote.socket
-        - systemd-journal-remote.service
-      when:
-        - journal_remote_disable_result is defined
-        - journal_remote_disable_result.failed | default(true)
-        - journal_remote_disable_result.msg is defined
-        - "'timed out' in journal_remote_disable_result.msg or 'D-Bus' in journal_remote_disable_result.msg"
-      changed_when: true
-      ignore_errors: true
-      failed_when: false
-      timeout: 10
+- name: "6.1.2.1.4 | Inspect optional journal receiver units"
+  ansible.builtin.stat:
+    path: "/usr/lib/systemd/system/{{ item }}"
+  check_mode: false
+  loop:
+    - systemd-journal-remote.socket
+    - systemd-journal-remote.service
+  register: cis_journal_receiver_units
   when:
-    - section6_logging['6_1_2_1_4_journal_remote_disabled'].enabled | default(true)
-    - not (systemd_unresponsive | default(false))
-  tags:
-    - cis_6
-    - cis_6_1
-    - cis_6_1_2
-    - cis_6_1_2_1
-    - cis_6_1_2_1_4
-    - journald
-    - remote
-    - security
+    - (cis_logging_backend | default(section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog'))) == 'journald'
+    - section6_logging['6_1_2_1_4_journal_remote_disabled'].enabled | default(true) | bool
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_1_4, journald, remote]
 
-- name: "6.1.2.1.4 | REPORT | systemd-journal-remote services status"
-  ansible.builtin.debug:
-    msg: |
-      6.1.2.1.4 | systemd-journal-remote services:
-        - socket: {{ journal_remote_socket_audit.stdout | default('unknown') }}
-        - service: {{ journal_remote_service_audit.stdout | default('unknown') }}
-  when: not ansible_check_mode
-
-
-# =================================================================
-# 6.1.2.2 | Ensure journald is not configured to send logs to syslog (Automated)
-# =================================================================
-- name: "6.1.2.2 | AUDIT | Check ForwardToSyslog configuration"
-  ansible.builtin.command: grep -E "^ForwardToSyslog" /etc/systemd/journald.conf /etc/systemd/journald.conf.d/*.conf 2>/dev/null || true
-  register: forward_to_syslog_check
-  changed_when: false
-  failed_when: false
-  ignore_errors: true
-
-- name: "6.1.2.2 | REMEDIATE | Configure ForwardToSyslog based on preferred logging system"
-  block:
-    - name: "6.1.2.2 | Create journald.conf.d directory"
-      ansible.builtin.file:
-        path: /etc/systemd/journald.conf.d
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-      ignore_errors: true
-
-    - name: "6.1.2.2 | Set ForwardToSyslog parameter (idempotent)"
-      ansible.builtin.lineinfile:
-        path: /etc/systemd/journald.conf.d/61-logging.conf
-        line: "ForwardToSyslog={{ 'yes' if (section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog')) == 'rsyslog' else 'no' }}"
-        regexp: "^ForwardToSyslog="
-        create: true
-        mode: '0644'
-        owner: root
-        group: root
-        backup: true
-      notify: Restart journald
-      ignore_errors: true
+- name: "6.1.2.1.4 | Disable existing journal receiver units on clients"
+  ansible.builtin.systemd_service:
+    name: "{{ item.item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop: "{{ cis_journal_receiver_units.results | default([]) }}"
   when:
-    - section6_logging['6_1_2_2_forward_to_syslog'].enabled | default(true)
-    - not (systemd_unresponsive | default(false))
-  tags:
-    - cis_6
-    - cis_6_1
-    - cis_6_1_2
-    - cis_6_1_2_2
-    - journald
-    - syslog
-    - forward
+    - (cis_logging_backend | default(section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog'))) == 'journald'
+    - section6_logging['6_1_2_1_4_journal_remote_disabled'].enabled | default(true) | bool
+    - item.stat.exists
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_1_4, journald, remote]
 
+- name: "6.1.2.2 | Ensure journald drop-in directory exists"
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: (cis_logging_backend | default(section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog'))) == 'journald'
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_2, journald]
 
-# =================================================================
-# 6.1.2.3 | Ensure journald Compress is configured (Automated)
-# =================================================================
-- name: "6.1.2.3 | AUDIT | Check Compress configuration"
-  ansible.builtin.command: grep -E "^Compress" /etc/systemd/journald.conf /etc/systemd/journald.conf.d/*.conf 2>/dev/null || true
-  register: compress_check
-  changed_when: false
-  failed_when: false
-  ignore_errors: true
+- name: "6.1.2.2 | Ensure journald ForwardToSyslog is disabled"
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/90-cis-forwarding.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Journal]
+      ForwardToSyslog=no
+  register: cis_journald_forwarding
+  when: (cis_logging_backend | default(section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog'))) == 'journald'
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_2, journald]
 
-- name: "6.1.2.3 | REMEDIATE | Configure journald compression (idempotent)"
-  block:
-    - name: "6.1.2.3 | Create journald.conf.d directory"
-      ansible.builtin.file:
-        path: /etc/systemd/journald.conf.d
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-      ignore_errors: true
+- name: "6.1.2 | Remove obsolete combined role drop-in"
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d/90-cis-logging.conf
+    state: absent
+  register: cis_journald_obsolete_config
+  tags: [cis_6, cis_6_1, cis_6_1_2, journald]
 
-    - name: "6.1.2.3 | Set Compress parameter"
-      ansible.builtin.lineinfile:
-        path: /etc/systemd/journald.conf.d/62-compression.conf
-        line: "Compress={{ section6_logging['6_1_2_3_journald_compress'].value | default('yes') }}"
-        regexp: "^Compress="
-        create: true
-        mode: '0644'
-        owner: root
-        group: root
-        backup: true
-      notify: Restart journald
-      ignore_errors: true
-  when:
-    - section6_logging['6_1_2_3_journald_compress'].enabled | default(true)
-    - not (systemd_unresponsive | default(false))
-  tags:
-    - cis_6
-    - cis_6_1
-    - cis_6_1_2
-    - cis_6_1_2_3
-    - journald
-    - compress
+- name: "6.1.2.3 | Configure journald compression"
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/91-cis-compression.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Journal]
+      Compress={{ section6_logging['6_1_2_3_journald_compress'].value | default('yes') }}
+  register: cis_journald_compression
+  when: (cis_logging_backend | default(section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog'))) == 'journald'
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_3, journald]
 
+- name: "6.1.2.4 | Configure journald storage"
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/92-cis-storage.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Journal]
+      Storage={{ section6_logging['6_1_2_4_journald_storage'].value | default('persistent') }}
+  register: cis_journald_storage
+  when: (cis_logging_backend | default(section6_logging['6_1_1_4_single_logging_system'].preferred_system | default('rsyslog'))) == 'journald'
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_4, journald]
 
-# =================================================================
-# 6.1.2.4 | Ensure journald Storage is configured (Automated)
-# =================================================================
-- name: "6.1.2.4 | AUDIT | Check Storage configuration"
-  ansible.builtin.command: grep -E "^Storage" /etc/systemd/journald.conf /etc/systemd/journald.conf.d/*.conf 2>/dev/null || true
-  register: storage_check
-  changed_when: false
-  failed_when: false
-  ignore_errors: true
-
-- name: "6.1.2.4 | REMEDIATE | Configure journald persistent storage (idempotent)"
-  block:
-    - name: "6.1.2.4 | Create journald.conf.d directory"
-      ansible.builtin.file:
-        path: /etc/systemd/journald.conf.d
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-      ignore_errors: true
-
-    - name: "6.1.2.4 | Set Storage parameter"
-      ansible.builtin.lineinfile:
-        path: /etc/systemd/journald.conf.d/63-storage.conf
-        line: "Storage={{ section6_logging['6_1_2_4_journald_storage'].value | default('persistent') }}"
-        regexp: "^Storage="
-        create: true
-        mode: '0644'
-        owner: root
-        group: root
-        backup: true
-      notify: Restart journald
-      ignore_errors: true
-
-    - name: "6.1.2.4 | Ensure persistent journal directory exists with correct permissions"
-      ansible.builtin.file:
-        path: /var/log/journal
-        state: directory
-        mode: '2755'
-        owner: root
-        group: systemd-journal
-      when: (section6_logging['6_1_2_4_journald_storage'].value | default('persistent')) == 'persistent'
-      ignore_errors: true
-  when:
-    - section6_logging['6_1_2_4_journald_storage'].enabled | default(true)
-    - not (systemd_unresponsive | default(false))
-  tags:
-    - cis_6
-    - cis_6_1
-    - cis_6_1_2
-    - cis_6_1_2_4
-    - journald
-    - storage
-
-- name: "6.1.2.4 | REPORT | journald Storage configuration"
-  ansible.builtin.debug:
-    msg: "6.1.2.4 | journald Storage configured as: {{ section6_logging['6_1_2_4_journald_storage'].value | default('persistent') }}"
-  when: not ansible_check_mode
+- name: "6.1.2.2-4 | Restart journald after configuration changes"
+  ansible.builtin.systemd_service:
+    name: systemd-journald.service
+    state: restarted
+  when: >-
+    cis_journald_forwarding.changed | default(false)
+    or cis_journald_compression.changed | default(false)
+    or cis_journald_storage.changed | default(false)
+    or cis_journald_obsolete_config.changed | default(false)
+  tags: [cis_6, cis_6_1, cis_6_1_2, cis_6_1_2_2, cis_6_1_2_3, cis_6_1_2_4, journald]

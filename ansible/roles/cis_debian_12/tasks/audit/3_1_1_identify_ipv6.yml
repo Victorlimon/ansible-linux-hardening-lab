@@ -1,0 +1,77 @@
+---
+- name: "CIS 3.1.1 | Audit | Validate the declared IPv6 site policy"
+  ansible.builtin.assert:
+    that:
+      - cis_debian_12_ipv6_site_policy in ['enabled', 'disabled', 'undecided']
+    fail_msg: >-
+      cis_debian_12_ipv6_site_policy must be enabled, disabled or undecided.
+
+- name: "CIS 3.1.1 | Audit | Inspect the IPv6 kernel module parameter"
+  ansible.builtin.stat:
+    path: /sys/module/ipv6/parameters/disable
+  register: cis_debian_12_ipv6_module_parameter
+
+- name: "CIS 3.1.1 | Audit | Read the IPv6 kernel module parameter"
+  ansible.builtin.slurp:
+    src: /sys/module/ipv6/parameters/disable
+  register: cis_debian_12_ipv6_module_parameter_content
+  when: cis_debian_12_ipv6_module_parameter.stat.exists
+
+- name: "CIS 3.1.1 | Audit | Inspect the global IPv6 sysctl"
+  ansible.builtin.stat:
+    path: /proc/sys/net/ipv6/conf/all/disable_ipv6
+  register: cis_debian_12_ipv6_all_sysctl
+
+- name: "CIS 3.1.1 | Audit | Read the global IPv6 sysctl"
+  ansible.builtin.slurp:
+    src: /proc/sys/net/ipv6/conf/all/disable_ipv6
+  register: cis_debian_12_ipv6_all_sysctl_content
+  when: cis_debian_12_ipv6_all_sysctl.stat.exists
+
+- name: "CIS 3.1.1 | Audit | Inspect the default IPv6 sysctl"
+  ansible.builtin.stat:
+    path: /proc/sys/net/ipv6/conf/default/disable_ipv6
+  register: cis_debian_12_ipv6_default_sysctl
+
+- name: "CIS 3.1.1 | Audit | Read the default IPv6 sysctl"
+  ansible.builtin.slurp:
+    src: /proc/sys/net/ipv6/conf/default/disable_ipv6
+  register: cis_debian_12_ipv6_default_sysctl_content
+  when: cis_debian_12_ipv6_default_sysctl.stat.exists
+
+- name: "CIS 3.1.1 | Audit | Normalize the observed IPv6 values"
+  ansible.builtin.set_fact:
+    cis_debian_12_ipv6_module_disable: >-
+      {{ (cis_debian_12_ipv6_module_parameter_content.content | b64decode | trim)
+         if cis_debian_12_ipv6_module_parameter.stat.exists else 'unavailable' }}
+    cis_debian_12_ipv6_all_disable: >-
+      {{ (cis_debian_12_ipv6_all_sysctl_content.content | b64decode | trim)
+         if cis_debian_12_ipv6_all_sysctl.stat.exists else 'unavailable' }}
+    cis_debian_12_ipv6_default_disable: >-
+      {{ (cis_debian_12_ipv6_default_sysctl_content.content | b64decode | trim)
+         if cis_debian_12_ipv6_default_sysctl.stat.exists else 'unavailable' }}
+
+- name: "CIS 3.1.1 | Audit | Derive the benchmark IPv6 status"
+  ansible.builtin.set_fact:
+    cis_debian_12_ipv6_observed_status: >-
+      {{ 'disabled'
+         if cis_debian_12_ipv6_module_disable != '0' or
+            (cis_debian_12_ipv6_all_disable == '1' and
+             cis_debian_12_ipv6_default_disable == '1')
+         else 'enabled' }}
+
+- name: "CIS 3.1.1 | Audit | Report IPv6 status without remediation"
+  ansible.builtin.debug:
+    msg:
+      control: "3.1.1"
+      classification: MANUAL
+      observed_status: "{{ cis_debian_12_ipv6_observed_status }}"
+      site_policy: "{{ cis_debian_12_ipv6_site_policy }}"
+      policy_matches_observation: >-
+        {{ cis_debian_12_ipv6_site_policy == 'undecided' or
+           cis_debian_12_ipv6_site_policy == cis_debian_12_ipv6_observed_status }}
+      evidence:
+        module_disable: "{{ cis_debian_12_ipv6_module_disable }}"
+        all_disable_ipv6: "{{ cis_debian_12_ipv6_all_disable }}"
+        default_disable_ipv6: "{{ cis_debian_12_ipv6_default_disable }}"
+      changed_target: false

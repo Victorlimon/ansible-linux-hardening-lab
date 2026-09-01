@@ -1,0 +1,26 @@
+---
+# Política exclusiva del laboratorio Vagrant. En producción, sustituir estas
+# redes y servicios por allowlists aprobadas para cada entorno.
+cis_section4_firewall: true
+cis_firewall_engine: ufw
+# Confirmación exclusiva del laboratorio efímero para reconstruir la política.
+cis_ufw_authoritative_reset_confirmed: true
+cis_ufw_ssh_allowed_sources:
+  - 192.168.56.0/24
+  - 10.0.2.2/32
+cis_ufw_allowed_in_rules:
+  - from_ip: any
+    port: 80
+    proto: tcp
+    comment: HTTP service
+  - from_ip: any
+    port: 443
+    proto: tcp
+    comment: HTTPS service
+cis_ufw_allowed_out_ports:
+  - { port: 53, proto: udp, comment: DNS }
+  - { port: 53, proto: tcp, comment: DNS fallback }
+  - { port: 67, proto: udp, comment: DHCP renewal }
+  - { port: 80, proto: tcp, comment: HTTP repositories }
+  - { port: 443, proto: tcp, comment: HTTPS repositories }
+  - { port: 123, proto: udp, comment: NTP }

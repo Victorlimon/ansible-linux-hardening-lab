@@ -1,0 +1,45 @@
+---
+- name: Validate the Debian 12 adapter target
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == 'Debian'
+      - ansible_facts.distribution_major_version == '12'
+    fail_msg: >-
+      The cis_debian_12 adapter supports Debian 12 only; detected
+      {{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }}.
+  tags: [always, cis_debian_12, platform]
+
+- name: Validate the Debian 12 execution mode
+  ansible.builtin.assert:
+    that:
+      - cis_debian_12_execution_mode in ['audit', 'remediation']
+      - >-
+        not (cis_debian_12_remediation_enabled | bool) or
+        cis_debian_12_execution_mode == 'remediation'
+      - >-
+        not (cis_debian_12_remediation_enabled | bool) or
+        cis_debian_12_canary_confirmed | bool
+    fail_msg: >-
+      Debian remediation requires execution_mode=remediation,
+      cis_debian_12_remediation_enabled=true and
+      cis_debian_12_canary_confirmed=true.
+  tags: [always, cis_debian_12, safety]
+
+- name: Audit Debian 12 network applicability controls
+  ansible.builtin.import_tasks: audit/3_1_1_identify_ipv6.yml
+  when: cis_debian_12_3_1_1_ipv6_audit | bool
+  tags: [cis_debian_12, cis_debian_12_audit, cis_3_1_1, ipv6_audit]
+
+- name: Remediate Debian 12 CIS 7.1.1
+  ansible.builtin.import_tasks: remediation/7_1_1_passwd_permissions.yml
+  when:
+    - cis_debian_12_remediation_enabled | bool
+    - cis_debian_12_7_1_1_passwd_permissions | bool
+  tags: [cis_debian_12, cis_debian_12_remediation, cis_7_1_1, fixed_file_permissions]
+
+- name: Remediate Debian 12 CIS 7.1.5
+  ansible.builtin.import_tasks: remediation/7_1_5_shadow_permissions.yml
+  when:
+    - cis_debian_12_remediation_enabled | bool
+    - cis_debian_12_7_1_5_shadow_permissions | bool
+  tags: [cis_debian_12, cis_debian_12_remediation, cis_7_1_5, fixed_file_permissions]

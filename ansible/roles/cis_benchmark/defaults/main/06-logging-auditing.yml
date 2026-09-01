@@ -1,0 +1,170 @@
+---
+# Logging, audit rules, and AIDE can consume substantial disk/CPU and require a
+# reboot to fully apply. The section is opt-in for an existing server.
+cis_section6_logging_audit: false
+cis_logging_backend: rsyslog
+cis_audit_allow_disruptive_actions: false
+cis_audit_use_email_alerts: false
+
+section6_logging:
+  enabled: true
+
+  # 6.1.1 - Local logging baseline.
+  '6_1_1_journald_service':
+    enabled: true
+  '6_1_1_2_journald_logfile_perms':
+    enabled: true
+    dir_mode: '2750'
+  '6_1_1_3_journald_rotation':
+    enabled: true
+    SystemMaxUse: 1G
+    SystemKeepFree: 500M
+    RuntimeMaxUse: 100M
+    RuntimeKeepFree: 50M
+    MaxFileSec: 1month
+  '6_1_1_4_single_logging_system':
+    preferred_system: rsyslog
+
+  # 6.1.2 - Remote journal upload needs site TLS material and is opt-in.
+  '6_1_2_1_1_journal_remote_installed':
+    enabled: false
+  '6_1_2_1_2_journal_upload_auth':
+    enabled: false
+    URL: ""
+    ServerKeyFile: ""
+    ServerCertificateFile: ""
+    TrustedCertificateFile: ""
+  '6_1_2_1_3_journal_upload_enabled':
+    enabled: false
+  '6_1_2_1_4_journal_remote_disabled':
+    enabled: true
+  '6_1_2_3_journald_compress':
+    value: "yes"
+  '6_1_2_4_journald_storage':
+    value: persistent
+
+  # 6.1.3 - A local routing policy is site-specific and therefore opt-in. When
+  # enabled, the role owns only its drop-in and never replaces Ubuntu's file.
+  '6_1_3_1_rsyslog_installed':
+    enabled: true
+  '6_1_3_4_rsyslog_filemode':
+    value: '0640'
+  '6_1_3_5_rsyslog_local':
+    enabled: false
+    config_file: /etc/rsyslog.d/70-cis-local.conf
+    rules: |
+      auth,authpriv.* /var/log/auth.log
+      *.*;auth,authpriv.none -/var/log/syslog
+      kern.* -/var/log/kern.log
+      mail.* -/var/log/mail.log
+      mail.err /var/log/mail.err
+      *.emerg :omusrmsg:*
+  '6_1_3_6_rsyslog_remote':
+    enabled: false
+    remote_host: ""
+    protocol: "@@"
+    port: 514
+    config_file: /etc/rsyslog.d/60-cis-remote.conf
+  '6_1_3_7_rsyslog_no_server':
+    enabled: true
+  '6_1_3_8_logrotate':
+    enabled: true
+    config_file: /etc/logrotate.d/rsyslog
+    log_files:
+      - /var/log/syslog
+      - /var/log/auth.log
+      - /var/log/kern.log
+      - /var/log/mail.log
+      - /var/log/mail.err
+    frequency: daily
+    rotate: 7
+    options: [missingok, notifempty, compress, delaycompress, sharedscripts]
+    postrotate_command: /usr/lib/rsyslog/rsyslog-rotate
+  '6_1_4_1_logfile_permissions':
+    enabled: true
+    file_overrides: []
+
+  # 6.2.1 - auditd service and early-boot coverage.
+  '6_2_1_1_auditd_packages':
+    enabled: true
+    packages: [auditd, audispd-plugins]
+  '6_2_1_2_auditd_enabled':
+    enabled: true
+  '6_2_1_3_audit_boot_param':
+    enabled: true
+  '6_2_1_4_audit_backlog_limit':
+    enabled: true
+    value: 8192
+
+  # 6.2.2 - Never halt a server for audit storage without a second opt-in.
+  '6_2_2_1_max_log_file':
+    enabled: true
+    value: 100
+  '6_2_2_2_max_log_file_action':
+    enabled: true
+    value: keep_logs
+  '6_2_2_3_disk_actions':
+    enabled: true
+    disk_full_action: syslog
+    disk_error_action: syslog
+  '6_2_2_4_space_warnings':
+    enabled: true
+    space_left: 100
+    space_left_action: syslog
+    admin_space_left: 50
+    admin_space_left_action: syslog
+    action_mail_acct: root
+
+  # 6.2.3 - High-volume privileged discovery and immutable mode are opt-in.
+  '6_2_3_1_sudoers_scope': {enabled: true}
+  '6_2_3_2_user_emulation': {enabled: true}
+  '6_2_3_3_sudo_log': {enabled: true}
+  '6_2_3_4_time_change': {enabled: true}
+  '6_2_3_5_system_locale': {enabled: true}
+  '6_2_3_6_privileged_cmds': {enabled: false}
+  '6_2_3_7_access_failures': {enabled: true}
+  '6_2_3_8_identity': {enabled: true}
+  '6_2_3_9_perm_mod': {enabled: true}
+  '6_2_3_10_mounts': {enabled: true}
+  '6_2_3_11_session': {enabled: true}
+  '6_2_3_12_logins': {enabled: true}
+  '6_2_3_13_delete': {enabled: true}
+  '6_2_3_14_mac_policy': {enabled: true}
+  '6_2_3_15_18_priv_commands': {enabled: true}
+  '6_2_3_19_kernel_modules': {enabled: true}
+  '6_2_3_20_immutable': {enabled: false}
+
+  # 6.2.4 - adm is Ubuntu's standard audit log reader group.
+  '6_2_4_3_log_group':
+    value: adm
+
+  # 6.3 - AIDE initialization scans the full filesystem and is separately
+  # opt-in even after section 6 is enabled.
+  '6_3_1_aide_installed':
+    enabled: false
+    packages: [aide, aide-common]
+  '6_3_1_aide_init':
+    enabled: false
+    db_path: /var/lib/aide/aide.db
+    db_new_path: /var/lib/aide/aide.db.new
+  '6_3_2_aide_timer':
+    enabled: true
+    timer_name: dailyaidecheck.timer
+  '6_3_3_aide_audit_tools_integrity':
+    enabled: true
+    aide_conf: /etc/aide/aide.conf
+    audit_tool_attrs: p+i+n+u+g+s+b+acl+xattrs+sha512
+    audit_tools:
+      - /usr/sbin/auditctl
+      - /usr/sbin/auditd
+      - /usr/sbin/ausearch
+      - /usr/sbin/aureport
+      - /usr/sbin/autrace
+      - /usr/sbin/augenrules
+  '6_3_3_aide_config_validation':
+    enabled: true
+  # Updating an existing baseline scans and trusts current filesystem state.
+  # Generate and promote that candidate only in separately approved steps.
+  '6_3_3_aide_database_update':
+    enabled: false
+    promote_candidate: false

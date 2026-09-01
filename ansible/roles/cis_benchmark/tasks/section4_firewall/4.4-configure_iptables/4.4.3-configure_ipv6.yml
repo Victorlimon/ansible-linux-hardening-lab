@@ -1,129 +1,16 @@
 ---
-# =============================================================================
-# CIS Ubuntu 24.04 LTS Benchmark v1.0.0 - Section 4.4.3: Configure IPv6 ip6tables
-# =============================================================================
-
-- name: "CIS 4.4.3.1 | Remediation | Ensure ip6tables default deny firewall policy"
-  when: cis_4_4_3_1_ip6tables_default_deny | default(true)
-  block:
-    - name: "CIS 4.4.3.1 | Set INPUT policy to DROP"
-      ansible.builtin.iptables:
-        chain: INPUT
-        policy: DROP
-        ip_version: ipv6
-      tags: ['cis_sec4', 'cis_4.4.3.1', 'iptables', 'ipv6']
-
-    - name: "CIS 4.4.3.1 | Set OUTPUT policy to DROP"
-      ansible.builtin.iptables:
-        chain: OUTPUT
-        policy: DROP
-        ip_version: ipv6
-      tags: ['cis_sec4', 'cis_4.4.3.1', 'iptables', 'ipv6']
-
-    - name: "CIS 4.4.3.1 | Set FORWARD policy to DROP"
-      ansible.builtin.iptables:
-        chain: FORWARD
-        policy: DROP
-        ip_version: ipv6
-      tags: ['cis_sec4', 'cis_4.4.3.1', 'iptables', 'ipv6']
-  tags: ['cis_sec4', 'cis_4.4.3.1', 'iptables', 'ipv6', 'level1', 'NIST800-53R5_SC-7']
-
-- name: "CIS 4.4.3.2 | Remediation | Ensure ip6tables loopback traffic is configured"
-  when: cis_4_4_3_2_ip6tables_loopback | default(true)
-  block:
-    - name: "CIS 4.4.3.2 | Accept loopback interface traffic"
-      ansible.builtin.iptables:
-        chain: INPUT
-        in_interface: lo
-        jump: ACCEPT
-        ip_version: ipv6
-      tags: ['cis_sec4', 'cis_4.4.3.2', 'iptables', 'ipv6']
-
-    - name: "CIS 4.4.3.2 | Drop spoofed loopback traffic"
-      ansible.builtin.iptables:
-        chain: INPUT
-        source: "::1"
-        in_interface: "!lo"
-        jump: DROP
-        ip_version: ipv6
-      tags: ['cis_sec4', 'cis_4.4.3.2', 'iptables', 'ipv6']
-  tags: ['cis_sec4', 'cis_4.4.3.2', 'iptables', 'ipv6', 'level1', 'NIST800-53R5_SC-7']
-
-- name: "CIS 4.4.3.3 | Remediation | Ensure ip6tables outbound and established connections are configured"
-  when: cis_4_4_3_3_ip6tables_outbound | default(true)
-  block:
-    - name: "CIS 4.4.3.3 | Accept established TCP connections (input)"
-      ansible.builtin.iptables:
-        chain: INPUT
-        protocol: tcp
-        ctstate: ESTABLISHED,RELATED
-        jump: ACCEPT
-        ip_version: ipv6
-      tags: ['cis_sec4', 'cis_4.4.3.3', 'iptables', 'ipv6']
-
-    - name: "CIS 4.4.3.3 | Accept established UDP connections (input)"
-      ansible.builtin.iptables:
-        chain: INPUT
-        protocol: udp
-        ctstate: ESTABLISHED,RELATED
-        jump: ACCEPT
-        ip_version: ipv6
-      tags: ['cis_sec4', 'cis_4.4.3.3', 'iptables', 'ipv6']
-
-    - name: "CIS 4.4.3.3 | Accept new/established TCP connections (output)"
-      ansible.builtin.iptables:
-        chain: OUTPUT
-        protocol: tcp
-        ctstate: NEW,ESTABLISHED,RELATED
-        jump: ACCEPT
-        ip_version: ipv6
-      tags: ['cis_sec4', 'cis_4.4.3.3', 'iptables', 'ipv6']
-
-    - name: "CIS 4.4.3.3 | Accept new/established UDP connections (output)"
-      ansible.builtin.iptables:
-        chain: OUTPUT
-        protocol: udp
-        ctstate: NEW,ESTABLISHED,RELATED
-        jump: ACCEPT
-        ip_version: ipv6
-      tags: ['cis_sec4', 'cis_4.4.3.3', 'iptables', 'ipv6']
-  tags: ['cis_sec4', 'cis_4.4.3.3', 'iptables', 'ipv6', 'level1', 'NIST800-53R5_SC-7']
-
-- name: "CIS 4.4.3.4 | Remediation | Ensure ip6tables firewall rules exist for all open ports"
-  when: cis_4_4_3_4_ip6tables_rules_for_open_ports | default(true)
-  block:
-    - name: "CIS 4.4.3.4 | AUDIT | List open IPv6 ports (non-loopback)"
-      ansible.builtin.shell: |
-        ss -tuln6 | awk '($5!~/%lo:/ && $5!~/\[?::1\]?:/) {split($5, a, ":"); print a[2]}' | sort -u
-      changed_when: false
-      failed_when: false
-      check_mode: false
-      register: _cis_open_ports_ipv6
-
-    - name: "CIS 4.4.3.4 | AUDIT | List ports with ip6tables rules"
-      ansible.builtin.shell: ip6tables -L INPUT -n | grep -Po 'dpt:\K\d+' | sort -u
-      changed_when: false
-      failed_when: false
-      check_mode: false
-      register: _cis_ip6tables_ports
-
-    - name: "CIS 4.4.3.4 | REPORT | Display ports without rules"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 4.4.3.4 — IPv6 Ports without ip6tables rules ==="
-          - "Open ports: {{ _cis_open_ports_ipv6.stdout_lines }}"
-          - "ip6tables rules: {{ _cis_ip6tables_ports.stdout_lines }}"
-          - "Missing rules: {{ _cis_open_ports_ipv6.stdout_lines | difference(_cis_ip6tables_ports.stdout_lines) }}"
-      when: _cis_open_ports_ipv6.stdout_lines | difference(_cis_ip6tables_ports.stdout_lines) | length > 0
-
-    - name: "CIS 4.4.3.4 | Remediation | Add rules for missing ports (site policy)"
-      ansible.builtin.iptables:
-        chain: INPUT
-        protocol: tcp
-        destination_port: "{{ item }}"
-        jump: ACCEPT
-        ip_version: ipv6
-      loop: "{{ cis_iptables_allowed_ports | default(_cis_open_ports_ipv6.stdout_lines | difference(_cis_ip6tables_ports.stdout_lines)) }}"
-      when: item in (_cis_open_ports_ipv6.stdout_lines | difference(_cis_ip6tables_ports.stdout_lines))
-      notify: save_ip6tables_rules
-  tags: ['cis_sec4', 'cis_4.4.3.4', 'iptables', 'ipv6', 'level1', 'NIST800-53R5_SC-7']
+- name: "4.4.3 | Refuse direct use of incomplete IPv6 iptables tasks"
+  ansible.builtin.assert:
+    that:
+      - false
+    fail_msg: Direct iptables remediation is intentionally disabled; use UFW on Ubuntu 24.04.
+  tags:
+    - cis_sec4
+    - cis_4_4
+    - cis_4_4_3
+    - cis_4_4_3_1
+    - cis_4_4_3_2
+    - cis_4_4_3_3
+    - cis_4_4_3_4
+    - iptables
+    - ipv6

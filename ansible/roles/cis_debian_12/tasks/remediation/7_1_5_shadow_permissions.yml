@@ -1,0 +1,25 @@
+---
+- name: "CIS 7.1.5 | Remediation | Secure /etc/shadow"
+  ansible.builtin.file:
+    path: /etc/shadow
+    state: file
+    owner: root
+    group: shadow
+    mode: 'u-x,g-wx,o-rwx'
+
+- name: "CIS 7.1.5 | Verification | Inspect /etc/shadow"
+  ansible.builtin.stat:
+    path: /etc/shadow
+  register: cis_debian_12_7_1_5_shadow
+
+- name: "CIS 7.1.5 | Verification | Validate /etc/shadow access"
+  ansible.builtin.assert:
+    that:
+      - cis_debian_12_7_1_5_shadow.stat.pw_name == 'root'
+      - cis_debian_12_7_1_5_shadow.stat.gr_name in ['root', 'shadow']
+      - cis_debian_12_7_1_5_shadow.stat.mode[1] in ['0', '2', '4', '6']
+      - cis_debian_12_7_1_5_shadow.stat.mode[2] in ['0', '4']
+      - cis_debian_12_7_1_5_shadow.stat.mode[3] == '0'
+    fail_msg: >-
+      /etc/shadow must be owned by root, use group root or shadow, and have
+      mode 0640 or more restrictive without execute bits.

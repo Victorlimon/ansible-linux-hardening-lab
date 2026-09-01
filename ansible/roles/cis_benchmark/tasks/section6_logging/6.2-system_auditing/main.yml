@@ -1,77 +1,19 @@
 ---
-# =================================================================
-# CIS Benchmark 6.2: System Auditing (auditd)
-# Ubuntu 24.04 LTS - Tasks Entry Point (MODULAR & IDEMPOTENT)
-#
-# VM NOTES:
-# - Pre-flight check uses extended timeout (60s) for D-Bus compatibility in Vagrant
-# - All sub-sections (6.2.1-6.2.4) are included with proper tag inheritance
-# - Use --tags cis_6_2 to run entire section, or cis_6_2_X for sub-sections
-# - Reboot-required controls (6.2.1.3, 6.2.1.4, 6.2.3.20) are documented in respective files
-# =================================================================
-
-# Pre-flight: Check if auditd is available and responsive
-- name: "6.2 | PRE-FLIGHT | Verify auditd availability"
-  block:
-    - name: "Check if auditd package is installed"
-      ansible.builtin.command: dpkg -s auditd
-      register: auditd_installed
-      changed_when: false
-      failed_when: false
-
-    - name: "Check if auditd service is responsive"
-      ansible.builtin.command: systemctl is-active auditd.service
-      register: auditd_service_check
-      timeout: 60
-      changed_when: false
-      failed_when: false
-      ignore_errors: true
-      # NOTE: Extended timeout for Vagrant/VM environments where D-Bus may be slow
-
-    - name: "Set fact: auditd_unresponsive"
-      ansible.builtin.set_fact:
-        auditd_unresponsive: "{{ auditd_service_check.failed | default(false) or 'timed out' in (auditd_service_check.msg | default('')) }}"
-      when: auditd_service_check is defined
-
-  tags:
-    - cis_6
-    - cis_6_2
-    - auditd
-    - preflight
-
-# Include modular task files
-- name: "6.2.1 | Import auditd service configuration tasks"
+- name: "6.2.1 | Import auditd service controls"
   ansible.builtin.import_tasks: 6.2.1-configure_auditd_service.yml
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_1
-    - auditd
-    - service
+  tags: [cis_6, cis_6_2, cis_6_2_1, auditd]
 
-- name: "6.2.2 | Import data retention configuration tasks"
+- name: "6.2.2 | Import audit retention controls"
   ansible.builtin.import_tasks: 6.2.2-configure_data_retention.yml
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_2
-    - auditd
-    - retention
+  when: not ansible_check_mode or 'auditd' in ansible_facts.packages
+  tags: [cis_6, cis_6_2, cis_6_2_2, auditd]
 
-- name: "6.2.3 | Import auditd rules configuration tasks"
+- name: "6.2.3 | Import audit rule controls"
   ansible.builtin.import_tasks: 6.2.3-configure_auditd_rules.yml
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_3
-    - auditd
-    - rules
+  when: not ansible_check_mode or 'auditd' in ansible_facts.packages
+  tags: [cis_6, cis_6_2, cis_6_2_3, auditd]
 
-- name: "6.2.4 | Import audit file access configuration tasks"
+- name: "6.2.4 | Import audit file access controls"
   ansible.builtin.import_tasks: 6.2.4-configure_audit_file_access.yml
-  tags:
-    - cis_6
-    - cis_6_2
-    - cis_6_2_4
-    - auditd
-    - permissions
+  when: not ansible_check_mode or 'auditd' in ansible_facts.packages
+  tags: [cis_6, cis_6_2, cis_6_2_4, auditd]

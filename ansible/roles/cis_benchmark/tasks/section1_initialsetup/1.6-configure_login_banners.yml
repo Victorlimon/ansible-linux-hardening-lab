@@ -47,6 +47,16 @@
   tags: ['cis_sec1', 'cis_1.6.3', 'banners', 'issue_net']
 
 # 1.6.4 - Permissions on /etc/motd
+- name: "CIS 1.6.4 | Audit | Check whether /etc/motd exists"
+  ansible.builtin.stat:
+    path: /etc/motd
+    follow: true
+  register: cis_motd_file
+  when:
+    - cis_section1_6_banners | default(true)
+    - cis_1_6_4_motd_permissions | default(true)
+  tags: ['cis_sec1', 'cis_1.6.4', 'banners', 'permissions']
+
 - name: "CIS 1.6.4 | Remediation | Ensure permissions on /etc/motd"
   ansible.builtin.file:
     path: /etc/motd
@@ -56,9 +66,20 @@
   when:
     - cis_section1_6_banners | default(true)
     - cis_1_6_4_motd_permissions | default(true)
+    - cis_motd_file.stat.exists
   tags: ['cis_sec1', 'cis_1.6.4', 'banners', 'permissions']
 
 # 1.6.5 - Permissions on /etc/issue
+- name: "CIS 1.6.5 | Audit | Check whether /etc/issue exists"
+  ansible.builtin.stat:
+    path: /etc/issue
+    follow: true
+  register: cis_issue_file
+  when:
+    - cis_section1_6_banners | default(true)
+    - cis_1_6_5_issue_permissions | default(true)
+  tags: ['cis_sec1', 'cis_1.6.5', 'banners', 'permissions']
+
 - name: "CIS 1.6.5 | Remediation | Ensure permissions on /etc/issue"
   ansible.builtin.file:
     path: /etc/issue
@@ -68,9 +89,20 @@
   when:
     - cis_section1_6_banners | default(true)
     - cis_1_6_5_issue_permissions | default(true)
+    - cis_issue_file.stat.exists
   tags: ['cis_sec1', 'cis_1.6.5', 'banners', 'permissions']
 
 # 1.6.6 - Permissions on /etc/issue.net
+- name: "CIS 1.6.6 | Audit | Check whether /etc/issue.net exists"
+  ansible.builtin.stat:
+    path: /etc/issue.net
+    follow: true
+  register: cis_issue_net_file
+  when:
+    - cis_section1_6_banners | default(true)
+    - cis_1_6_6_issue_net_permissions | default(true)
+  tags: ['cis_sec1', 'cis_1.6.6', 'banners', 'permissions']
+
 - name: "CIS 1.6.6 | Remediation | Ensure permissions on /etc/issue.net"
   ansible.builtin.file:
     path: /etc/issue.net
@@ -80,4 +112,5 @@
   when:
     - cis_section1_6_banners | default(true)
     - cis_1_6_6_issue_net_permissions | default(true)
+    - cis_issue_net_file.stat.exists
   tags: ['cis_sec1', 'cis_1.6.6', 'banners', 'permissions']

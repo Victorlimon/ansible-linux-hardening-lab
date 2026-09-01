@@ -8,17 +8,35 @@
 # ------------------------------------------------------------------------------
 # 2.3.1.1 | Ensure a single time synchronization daemon is in use
 # ------------------------------------------------------------------------------
+- name: "CIS 2.3.1.1 | Validate | Check selected time synchronization daemon"
+  ansible.builtin.assert:
+    that: cis_time_sync_daemon in ['chrony', 'systemd-timesyncd']
+    fail_msg: "cis_time_sync_daemon must be 'chrony' or 'systemd-timesyncd'."
+  when:
+    - cis_section2_services | default(true)
+    - cis_2_3_time_sync['2_3_1_1_single_daemon'] | default(true)
+  tags: ['cis_sec2', 'cis_2.3.1.1']
+
+- name: "CIS 2.3.1.1 | Validate | Refuse to start a second time daemon"
+  ansible.builtin.assert:
+    that:
+      - >-
+        not (cis_time_sync_daemon == 'systemd-timesyncd' and
+             ansible_facts.services.get('chrony.service', {}).get('state', 'stopped') == 'running')
+      - >-
+        not (cis_time_sync_daemon == 'chrony' and
+             ansible_facts.services.get('systemd-timesyncd.service', {}).get('state', 'stopped') == 'running')
+    fail_msg: >-
+      Another time synchronization daemon is active. Select the active daemon
+      or explicitly enable 2.3.1.1 remediation before configuring time sync.
+  when:
+    - cis_section2_services | default(true)
+    - not (cis_2_3_time_sync['2_3_1_1_single_daemon'] | default(false) | bool)
+  tags: ['cis_sec2', 'cis_2.3.1.1']
+
 - name: "CIS 2.3.1.1 | Remediation | Ensure a single time synchronization daemon is in use"
   block:
     # ── Chrony seleccionado ──
-    - name: "CIS 2.3.1.1 | Install chrony package"
-      ansible.builtin.apt:
-        name: chrony
-        state: present
-      when:
-        - cis_time_sync_daemon == 'chrony'
-        - "'chrony' not in ansible_facts.packages"
-
     - name: "CIS 2.3.1.1 | Stop and mask systemd-timesyncd (chrony in use)"
       ansible.builtin.systemd:
         name: systemd-timesyncd.service
@@ -28,6 +46,14 @@
       when:
         - cis_time_sync_daemon == 'chrony'
         - "'systemd-timesyncd.service' in ansible_facts.services"
+
+    - name: "CIS 2.3.1.1 | Install chrony after quiescing timesyncd"
+      ansible.builtin.apt:
+        name: chrony
+        state: present
+      when:
+        - cis_time_sync_daemon == 'chrony'
+        - "'chrony' not in ansible_facts.packages"
 
     # ── systemd-timesyncd seleccionado ──
     - name: "CIS 2.3.1.1 | Remove chrony package (timesyncd in use)"
@@ -146,7 +172,7 @@
     - cis_section2_services | default(true)
     - cis_2_3_time_sync['2_3_3_2_chrony_user'] | default(true)
     - cis_time_sync_daemon == 'chrony'
-    - "'chrony' in ansible_facts.packages"
+  notify: Restart chrony
   tags: ['cis_sec2', 'cis_2.3.3.2', 'level1-server', 'level1-workstation', 'NIST800-53R5_AU-8']
 
 - name: "CIS 2.3.3.3 | Remediation | Ensure chrony is enabled and running"
@@ -159,5 +185,4 @@
     - cis_section2_services | default(true)
     - cis_2_3_time_sync['2_3_3_3_chrony_enabled'] | default(true)
     - cis_time_sync_daemon == 'chrony'
-    - "'chrony.service' in ansible_facts.services"
   tags: ['cis_sec2', 'cis_2.3.3.3', 'level1-server', 'level1-workstation', 'NIST800-53R5_AU-8']

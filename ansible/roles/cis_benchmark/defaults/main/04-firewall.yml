@@ -1,0 +1,28 @@
+---
+# Applying a host firewall can terminate remote management. Enable this section
+# only after defining the management source list and complete site allowlists.
+cis_section4_firewall: false
+cis_firewall_engine: ufw
+cis_4_1_single_utility: true
+
+cis_4_2_1_ufw_install: true
+cis_4_2_2_ufw_remove_legacy: true
+cis_4_2_3_ufw_enable_service: true
+cis_4_2_4_ufw_configure_loopback: true
+cis_4_2_5_ufw_configure_outbound: true
+cis_4_2_6_ufw_rules_for_open_ports: true
+cis_4_2_7_ufw_default_deny: true
+
+cis_ufw_ssh_port: 22
+# Deliberately invalid until the operator supplies trusted management CIDRs.
+cis_ufw_ssh_allowed_sources: []
+cis_ufw_allowed_in_rules: []
+cis_ufw_policy_marker: /var/lib/cis-hardening/ufw-policy.sha256
+# A policy reset removes every unmanaged rule and is deliberately opt-in.
+cis_ufw_authoritative_reset_confirmed: false
+cis_ufw_allowed_out_ports:
+  - {port: 53, proto: udp}
+  - {port: 53, proto: tcp}
+  - {port: 80, proto: tcp}
+  - {port: 443, proto: tcp}
+  - {port: 123, proto: udp}

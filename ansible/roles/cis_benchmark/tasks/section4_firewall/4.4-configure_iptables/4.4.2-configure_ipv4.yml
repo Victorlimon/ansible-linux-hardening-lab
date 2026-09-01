@@ -1,119 +1,16 @@
 ---
-# =============================================================================
-# CIS Ubuntu 24.04 LTS Benchmark v1.0.0 - Section 4.4.2: Configure IPv4 iptables
-# =============================================================================
-
-- name: "CIS 4.4.2.1 | Remediation | Ensure iptables default deny firewall policy"
-  when: cis_4_4_2_1_iptables_default_deny | default(true)
-  block:
-    - name: "CIS 4.4.2.1 | Set INPUT policy to DROP"
-      ansible.builtin.iptables:
-        chain: INPUT
-        policy: DROP
-      tags: ['cis_sec4', 'cis_4.4.2.1', 'iptables']
-
-    - name: "CIS 4.4.2.1 | Set OUTPUT policy to DROP"
-      ansible.builtin.iptables:
-        chain: OUTPUT
-        policy: DROP
-      tags: ['cis_sec4', 'cis_4.4.2.1', 'iptables']
-
-    - name: "CIS 4.4.2.1 | Set FORWARD policy to DROP"
-      ansible.builtin.iptables:
-        chain: FORWARD
-        policy: DROP
-      tags: ['cis_sec4', 'cis_4.4.2.1', 'iptables']
-  tags: ['cis_sec4', 'cis_4.4.2.1', 'iptables', 'level1', 'NIST800-53R5_SC-7']
-
-- name: "CIS 4.4.2.2 | Remediation | Ensure iptables loopback traffic is configured"
-  when: cis_4_4_2_2_iptables_loopback | default(true)
-  block:
-    - name: "CIS 4.4.2.2 | Accept loopback interface traffic"
-      ansible.builtin.iptables:
-        chain: INPUT
-        in_interface: lo
-        jump: ACCEPT
-      tags: ['cis_sec4', 'cis_4.4.2.2', 'iptables']
-
-    - name: "CIS 4.4.2.2 | Drop spoofed loopback traffic"
-      ansible.builtin.iptables:
-        chain: INPUT
-        source: 127.0.0.0/8
-        in_interface: "!lo"
-        jump: DROP
-      tags: ['cis_sec4', 'cis_4.4.2.2', 'iptables']
-  tags: ['cis_sec4', 'cis_4.4.2.2', 'iptables', 'level1', 'NIST800-53R5_SC-7']
-
-- name: "CIS 4.4.2.3 | Remediation | Ensure iptables outbound and established connections are configured"
-  when: cis_4_4_2_3_iptables_outbound | default(true)
-  block:
-    - name: "CIS 4.4.2.3 | Accept established TCP connections (input)"
-      ansible.builtin.iptables:
-        chain: INPUT
-        protocol: tcp
-        ctstate: ESTABLISHED,RELATED
-        jump: ACCEPT
-      tags: ['cis_sec4', 'cis_4.4.2.3', 'iptables']
-
-    - name: "CIS 4.4.2.3 | Accept established UDP connections (input)"
-      ansible.builtin.iptables:
-        chain: INPUT
-        protocol: udp
-        ctstate: ESTABLISHED,RELATED
-        jump: ACCEPT
-      tags: ['cis_sec4', 'cis_4.4.2.3', 'iptables']
-
-    - name: "CIS 4.4.2.3 | Accept new/established TCP connections (output)"
-      ansible.builtin.iptables:
-        chain: OUTPUT
-        protocol: tcp
-        ctstate: NEW,ESTABLISHED,RELATED
-        jump: ACCEPT
-      tags: ['cis_sec4', 'cis_4.4.2.3', 'iptables']
-
-    - name: "CIS 4.4.2.3 | Accept new/established UDP connections (output)"
-      ansible.builtin.iptables:
-        chain: OUTPUT
-        protocol: udp
-        ctstate: NEW,ESTABLISHED,RELATED
-        jump: ACCEPT
-      tags: ['cis_sec4', 'cis_4.4.2.3', 'iptables']
-  tags: ['cis_sec4', 'cis_4.4.2.3', 'iptables', 'level1', 'NIST800-53R5_SC-7']
-
-- name: "CIS 4.4.2.4 | Remediation | Ensure iptables firewall rules exist for all open ports"
-  when: cis_4_4_2_4_iptables_rules_for_open_ports | default(true)
-  block:
-    - name: "CIS 4.4.2.4 | AUDIT | List open ports (non-loopback)"
-      ansible.builtin.shell: |
-        ss -tuln | awk '($5!~/%lo:/ && $5!~/127.0.0.1:/ && $5!~/\[?::1\]?:/) {split($5, a, ":"); print a[2]}' | sort -u
-      changed_when: false
-      failed_when: false
-      check_mode: false
-      register: _cis_open_ports_ipv4
-
-    - name: "CIS 4.4.2.4 | AUDIT | List ports with iptables rules"
-      ansible.builtin.shell: iptables -L INPUT -n | grep -Po 'dpt:\K\d+' | sort -u
-      changed_when: false
-      failed_when: false
-      check_mode: false
-      register: _cis_iptables_ports
-
-    - name: "CIS 4.4.2.4 | REPORT | Display ports without rules"
-      ansible.builtin.debug:
-        msg:
-          - "=== CIS 4.4.2.4 — Ports without iptables rules ==="
-          - "Open ports: {{ _cis_open_ports_ipv4.stdout_lines }}"
-          - "iptables rules: {{ _cis_iptables_ports.stdout_lines }}"
-          - "Missing rules: {{ _cis_open_ports_ipv4.stdout_lines | difference(_cis_iptables_ports.stdout_lines) }}"
-      when: _cis_open_ports_ipv4.stdout_lines | difference(_cis_iptables_ports.stdout_lines) | length > 0
-
-    - name: "CIS 4.4.2.4 | Remediation | Add rules for missing ports (site policy)"
-      ansible.builtin.iptables:
-        chain: INPUT
-        protocol: tcp
-        destination_port: "{{ item }}"
-        jump: ACCEPT
-      loop: "{{ cis_iptables_allowed_ports | default(_cis_open_ports_ipv4.stdout_lines | difference(_cis_iptables_ports.stdout_lines)) }}"
-      when: item in (_cis_open_ports_ipv4.stdout_lines | difference(_cis_iptables_ports.stdout_lines))
-      notify: save_iptables_rules
-  tags: ['cis_sec4', 'cis_4.4.2.4', 'iptables', 'level1', 'NIST800-53R5_SC-7']
+- name: "4.4.2 | Refuse direct use of incomplete IPv4 iptables tasks"
+  ansible.builtin.assert:
+    that:
+      - false
+    fail_msg: Direct iptables remediation is intentionally disabled; use UFW on Ubuntu 24.04.
+  tags:
+    - cis_sec4
+    - cis_4_4
+    - cis_4_4_2
+    - cis_4_4_2_1
+    - cis_4_4_2_2
+    - cis_4_4_2_3
+    - cis_4_4_2_4
+    - iptables
+    - ipv4

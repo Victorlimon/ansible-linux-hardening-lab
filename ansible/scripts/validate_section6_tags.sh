@@ -1,89 +1,36 @@
-#!/bin/bash
-# =============================================================================
-# validate_section6_tags.sh
-# Script para validar que todos los archivos de Section 6 tienen tags jerárquicos
-# =============================================================================
+#!/usr/bin/env bash
+# Read-only Section 6 validation. Run only from ansible-control.
+set -euo pipefail
 
-set -e
+if [[ "$(hostname -s)" != "ansible-control" ]]; then
+  echo "ERROR: run this script only inside ansible-control." >&2
+  exit 1
+fi
 
-PROJECT_ROOT="C:/Users/Victor/Desktop/ansible_prod_ia/ansible"
-SECTION6_PATH="${PROJECT_ROOT}/roles/cis_benchmark/tasks/section6_logging"
-
-echo "🔍 Validando tags en Section 6: Logging & Auditing..."
-echo ""
-
-# Función para verificar tags en un archivo
-check_tags() {
-    local file="$1"
-    local expected_parent="$2"
-    
-    # Buscar líneas con "tags:" y verificar que contengan el tag padre
-    if grep -q "tags:" "$file"; then
-        if grep -A 10 "tags:" "$file" | grep -q "${expected_parent}"; then
-            echo "✅ $(basename "$file"): Contiene tag '${expected_parent}'"
-            return 0
-        else
-            echo "❌ $(basename "$file"): FALTA tag '${expected_parent}'"
-            return 1
-        fi
-    else
-        echo "⚠️  $(basename "$file"): No tiene sección de tags"
-        return 2
-    fi
-}
-
-# Validar main.yml de section6_logging
-echo "📁 Validando: section6_logging/main.yml"
-check_tags "${SECTION6_PATH}/main.yml" "cis_6" || true
-echo ""
-
-# Validar 6.1-system_logging
-echo "📁 Validando: 6.1-system_logging/"
-check_tags "${SECTION6_PATH}/6.1-system_logging/main.yml" "cis_6_1" || true
-for file in "${SECTION6_PATH}/6.1-system_logging"/*.yml; do
-    if [[ "$file" != *"main.yml" ]]; then
-        base=$(basename "$file")
-        case "$base" in
-            *6.1.1*) check_tags "$file" "cis_6_1_1" || true ;;
-            *6.1.2*) check_tags "$file" "cis_6_1_2" || true ;;
-            *6.1.3*) check_tags "$file" "cis_6_1_3" || true ;;
-            *6.1.4*) check_tags "$file" "cis_6_1_4" || true ;;
-        esac
-    fi
-done
-echo ""
-
-# Validar 6.2-system_auditing
-echo "📁 Validando: 6.2-system_auditing/"
-check_tags "${SECTION6_PATH}/6.2-system_auditing/main.yml" "cis_6_2" || true
-for file in "${SECTION6_PATH}/6.2-system_auditing"/*.yml; do
-    if [[ "$file" != *"main.yml" ]]; then
-        base=$(basename "$file")
-        case "$base" in
-            *6.2.1*) check_tags "$file" "cis_6_2_1" || true ;;
-            *6.2.2*) check_tags "$file" "cis_6_2_2" || true ;;
-            *6.2.3*) check_tags "$file" "cis_6_2_3" || true ;;
-            *6.2.4*) check_tags "$file" "cis_6_2_4" || true ;;
-        esac
-    fi
-done
-echo ""
-
-# Validar 6.3
-echo "📁 Validando: 6.3-configure_integrity_checking.yml"
-check_tags "${SECTION6_PATH}/6.3-configure_integrity_checking.yml" "cis_6_3" || true
-echo ""
-
-# Validación con ansible-playbook
-echo "🧪 Validación con Ansible CLI..."
-echo ""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+INVENTORY="$PROJECT_ROOT/inventories/local/hosts.yml"
+PLAYBOOK="$PROJECT_ROOT/playbooks/cis_ubuntu_2404_hardening.yml"
+TARGET="ubuntu24"
 
 cd "$PROJECT_ROOT"
 
-echo "📋 Listando tags disponibles para Section 6:"
-ansible-playbook playbooks/cis_hardening.yml --list-tags 2>/dev/null | grep -E "cis_6" | head -20 || echo "⚠️  No se pudo ejecutar ansible-playbook (verificar instalación)"
+echo "[1/3] Syntax"
+ansible-playbook -i "$INVENTORY" "$PLAYBOOK" --limit "$TARGET" --syntax-check
 
-echo ""
-echo "✅ Validación completada."
-echo ""
-echo "📚 Para más información, consulta: docs/section6_tags_reference.md"
+echo "[2/3] Section tag discovery"
+TAG_OUTPUT="$(mktemp)"
+trap 'rm -f "$TAG_OUTPUT"' EXIT
+ansible-playbook -i "$INVENTORY" "$PLAYBOOK" \
+  --limit "$TARGET" --tags cis_sec6 --list-tasks >"$TAG_OUTPUT"
+if ! grep -q 'SECTION 6' "$TAG_OUTPUT"; then
+    echo "ERROR: cis_sec6 did not select the Section 6 entry point." >&2
+    exit 1
+fi
+
+echo "[3/3] Check mode"
+ansible-playbook -i "$INVENTORY" "$PLAYBOOK" \
+  --limit "$TARGET" --tags cis_sec6 \
+  -e cis_section6_logging_audit=true --check --diff
+
+echo "Section 6 read-only validation passed."

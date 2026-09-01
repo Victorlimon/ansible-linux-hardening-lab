@@ -1,0 +1,15 @@
+---
+# Control manual y de solo lectura. No habilita ni deshabilita IPv6.
+cis_debian_12_3_1_1_ipv6_audit: true
+
+# Decisión local documentable: enabled, disabled o undecided.
+cis_debian_12_ipv6_site_policy: undecided
+
+# Las remediaciones canario requieren los tres gates: entry point remediation,
+# habilitación global y confirmación explícita del operador.
+cis_debian_12_execution_mode: audit
+cis_debian_12_remediation_enabled: false
+cis_debian_12_canary_confirmed: false
+
+cis_debian_12_7_1_1_passwd_permissions: true
+cis_debian_12_7_1_5_shadow_permissions: true

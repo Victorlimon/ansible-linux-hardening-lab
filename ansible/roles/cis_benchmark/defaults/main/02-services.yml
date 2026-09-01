@@ -1,0 +1,97 @@
+---
+cis_section2_services: true
+
+# 2.1 - Package removal can interrupt an application role. Each server-service
+# removal is opt-in; required_services selects masking instead of removal.
+cis_2_1_server_services:
+  '2_1_1_autofs': false
+  '2_1_2_avahi': false
+  '2_1_3_dhcp': false
+  '2_1_4_dns': false
+  '2_1_5_dnsmasq': false
+  '2_1_6_ftp': false
+  '2_1_7_ldap': false
+  '2_1_8_mail_access': false
+  '2_1_9_nfs': false
+  '2_1_10_nis': false
+  '2_1_11_print': false
+  '2_1_12_rpcbind': false
+  '2_1_13_rsync': false
+  '2_1_14_samba': false
+  '2_1_15_snmp': false
+  '2_1_16_tftp': false
+  '2_1_17_proxy': false
+  '2_1_18_webserver': false
+  '2_1_19_xinetd': false
+  '2_1_20_xwindow': false
+  '2_1_21_mta_local_only': false
+  '2_1_22_listening_services': true
+
+cis_2_1_required_services:
+  autofs: false
+  avahi_daemon: false
+  isc_dhcp_server: false
+  bind9: false
+  dnsmasq: false
+  vsftpd: false
+  slapd: false
+  dovecot: false
+  nfs_kernel_server: false
+  ypserv: false
+  cups: false
+  rpcbind: false
+  rsync: false
+  samba: false
+  snmpd: false
+  tftpd_hpa: false
+  squid: false
+  apache2: false
+  nginx: false
+  xinetd: false
+  xserver_common: false
+
+# 2.2 - Client package removals are also opt-in to avoid breaking dependencies.
+cis_2_2_client_services:
+  '2_2_1_nis_client': false
+  '2_2_2_rsh_client': false
+  '2_2_3_talk_client': false
+  '2_2_4_telnet_client': false
+  '2_2_5_ldap_client': false
+  '2_2_6_ftp_client': false
+cis_2_2_required_packages:
+  nis: false
+  rsh_client: false
+  talk: false
+  telnet: false
+  inetutils_telnet: false
+  ldap_utils: false
+  ftp: false
+  tnftp: false
+
+# 2.3 - The systemd client is available in the Ubuntu base system. Replacing the
+# active daemon is opt-in, while hardening the selected daemon remains enabled.
+cis_2_3_time_sync:
+  '2_3_1_1_single_daemon': false
+  '2_3_2_1_timesyncd_config': true
+  '2_3_2_2_timesyncd_enabled': true
+  '2_3_3_1_chrony_config': true
+  '2_3_3_2_chrony_user': true
+  '2_3_3_3_chrony_enabled': true
+cis_time_sync_daemon: systemd-timesyncd
+cis_chrony_servers:
+  - "pool ntp.ubuntu.com iburst maxsources 4"
+cis_timesyncd_servers: "ntp.ubuntu.com"
+cis_timesyncd_fallback: "ntp.ubuntu.com"
+
+# 2.4 - Empty allow files can deny user cron/at access, so those controls are
+# opt-in. Daemon and filesystem permissions are safe server defaults.
+cis_2_4_job_schedulers:
+  '2_4_1_1_cron_enabled': true
+  '2_4_1_2_crontab_perms': true
+  '2_4_1_3_cron_hourly_perms': true
+  '2_4_1_4_cron_daily_perms': true
+  '2_4_1_5_cron_weekly_perms': true
+  '2_4_1_6_cron_monthly_perms': true
+  '2_4_1_7_cron_d_perms': true
+  '2_4_1_8_cron_allow': false
+  '2_4_2_1_at_allow': false
