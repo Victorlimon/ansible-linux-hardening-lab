@@ -1,0 +1,23 @@
+---
+- name: CIS 7.1.5 | Inspect | Read sanitized /etc/shadow metadata
+  ansible.builtin.stat:
+    path: /etc/shadow
+    get_attributes: false
+    get_checksum: false
+    get_mime: false
+  register: cis_debian_12_7_1_5_shadow
+
+- name: CIS 7.1.5 | Inspect | Classify /etc/shadow metadata
+  ansible.builtin.set_fact:
+    cis_debian_12_7_1_5_shadow_compliant: >-
+      {{
+        cis_debian_12_7_1_5_shadow.stat.exists | default(false)
+        and cis_debian_12_7_1_5_shadow.stat.isreg | default(false)
+        and cis_debian_12_7_1_5_shadow.stat.pw_name | default('') == 'root'
+        and cis_debian_12_7_1_5_shadow.stat.gr_name | default('') in ['root', 'shadow']
+        and (cis_debian_12_7_1_5_shadow.stat.mode | default('9999'))[1]
+            in ['0', '2', '4', '6']
+        and (cis_debian_12_7_1_5_shadow.stat.mode | default('9999'))[2]
+            in ['0', '4']
+        and (cis_debian_12_7_1_5_shadow.stat.mode | default('9999'))[3] == '0'
+      }}

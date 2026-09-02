@@ -1,0 +1,3 @@
+---
+- name: Compatibility | Delegate Debian CIS 7.1.5 verification to section entry
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/verification.yml

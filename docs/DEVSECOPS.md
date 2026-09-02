@@ -35,6 +35,7 @@ bash ./scripts/test_p4_banners.sh
 bash ./scripts/test_p4_cron.sh
 bash ./scripts/test_p4_network.sh
 bash ./scripts/test_p4_sysctl.sh
+bash ./scripts/test_p4_shadow.sh
 ```
 
 `check_control.sh` valida inventario y sintaxis de todos los entry points. Si se
@@ -75,6 +76,13 @@ gate también rechaza valores distintos de `enabled`, `disabled` o `undecided`.
 persistente efectiva de Ubuntu 24.04 y Debian 12. Incluye la ruta sysctl
 seleccionada por UFW, ejecuta verification independiente, exige `changed=0` y
 comprueba conectividad. Es un gate read-only posterior a la convergencia.
+
+`test_p4_shadow.sh` valida las interfaces independientes de Debian CIS 7.1.5.
+Exige evidencia audit sanitizada y `changed=0`, comprueba que la remediation
+deshabilitada no cambie nada y que falte la confirmación canary produzca rechazo;
+después ejecuta check mode, dos convergencias con gates explícitos, verification
+independiente e inspección de conectividad. Nunca lee contenido ni checksum de
+`/etc/shadow`.
 
 ### Integración en laboratorio
 

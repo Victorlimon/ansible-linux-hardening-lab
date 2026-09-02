@@ -24,7 +24,7 @@ explícita.
 | A5 | Reubicar mecanismos bajo `tasks/mechanisms/` con wrappers compatibles | Medio; cambia rutas internas | `COMPLETED` |
 | A6 | Dividir adaptador Ubuntu por secciones, sin alterar orden histórico | Medio | `COMPLETED` |
 | A7 | Dividir adaptador Debian por secciones, sin alterar gates canary | Medio | `COMPLETED` |
-| A8 | Completar interfaces independientes de Debian CIS 7.1.5 | Alto; cambio funcional | `PLANNED` |
+| A8 | Completar interfaces independientes de Debian CIS 7.1.5 | Alto; cambio funcional | `COMPLETED` |
 
 ## Definition of Done por sesión
 
@@ -133,3 +133,19 @@ explícita.
 - Pasaron piloto P3, banners, los cuatro gates comunes, contratos, syntax-check,
   inventario, ansible-lint y yamllint. Ansible-lint mantuvo 0 fallos y 575
   warnings históricos; el baseline estático no remedió targets.
+
+## Evidencia A8
+
+- Debian CIS 7.1.5 dispone ahora de audit, remediation y verification
+  independientes bajo su entrada de Sección 07, además de wrappers mode-first.
+- Audit y verification comparten una inspección de metadatos que deshabilita
+  checksum, MIME y atributos extendidos; la evidencia no lee ni expone contenido
+  de `/etc/shadow` y acepta los grupos válidos `root` o `shadow`.
+- Remediation conserva exclusivamente el estado histórico `root:shadow` y
+  `u-x,g-wx,o-rwx`; sus gates canary no se relajaron.
+- El gate nuevo comprobó audit `PASS` y `changed=0`, remediation deshabilitada,
+  rechazo sin confirmación canary, check mode con ambos gates, dos convergencias
+  reales con la segunda en `changed=0`, verification independiente y ping final.
+- Pasaron además todos los gates P3/P4, contratos, syntax-check, inventario,
+  ansible-lint y yamllint. Ansible-lint mantuvo 0 fallos y 575 warnings
+  históricos.

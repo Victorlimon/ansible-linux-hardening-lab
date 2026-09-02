@@ -550,3 +550,21 @@ permitir remediación.
   `test_contracts.sh`, los syntax-check, inventario, ansible-lint y yamllint.
   Ansible-lint conservó 0 fallos y 575 warnings históricos; ningún target fue
   remediado por el baseline estático.
+
+## 2026-09-02 — Sesión de arquitectura A8
+
+- Se separaron audit, remediation y verification de Debian CIS 7.1.5 bajo
+  `sections/section_07_maintenance/7_1_5_shadow_permissions/` y se añadieron
+  wrappers compatibles para las dos interfaces nuevas.
+- La inspección compartida usa `ansible.builtin.stat` sin checksum, MIME ni
+  atributos extendidos. Audit emite solo existencia, tipo, owner, group y mode;
+  no se lee ni registra contenido de `/etc/shadow`.
+- Verification ya no depende de registros creados durante remediation y acepta
+  ambos grupos permitidos por el benchmark, `root` o `shadow`. Remediation sigue
+  declarando `root:shadow` y `u-x,g-wx,o-rwx`.
+- `test_p4_shadow.sh` probó audit `PASS` y `changed=0`, gates deshabilitados,
+  rechazo sin confirmación canary, check mode, dos convergencias reales con la
+  segunda en `changed=0`, verification independiente y conectividad final.
+- Pasaron también `test_contracts.sh`, todos los gates P3/P4, los syntax-check,
+  inventario, ansible-lint y yamllint. Ansible-lint conservó 0 fallos y 575
+  warnings históricos.

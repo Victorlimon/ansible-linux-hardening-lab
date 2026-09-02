@@ -1,0 +1,23 @@
+---
+- name: CIS 7.1.5 | Verification | Inspect /etc/shadow
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/inspect.yml
+
+- name: CIS 7.1.5 | Verification | Validate /etc/shadow access
+  ansible.builtin.assert:
+    that:
+      - cis_debian_12_7_1_5_shadow.stat.exists | default(false)
+      - cis_debian_12_7_1_5_shadow.stat.isreg | default(false)
+      - cis_debian_12_7_1_5_shadow.stat.pw_name | default('') == 'root'
+      - cis_debian_12_7_1_5_shadow.stat.gr_name | default('') in ['root', 'shadow']
+      - >-
+        (cis_debian_12_7_1_5_shadow.stat.mode | default('9999'))[1]
+        in ['0', '2', '4', '6']
+      - >-
+        (cis_debian_12_7_1_5_shadow.stat.mode | default('9999'))[2]
+        in ['0', '4']
+      - (cis_debian_12_7_1_5_shadow.stat.mode | default('9999'))[3] == '0'
+      - cis_debian_12_7_1_5_shadow_compliant
+    fail_msg: >-
+      /etc/shadow must be a regular file owned by root, use group root or
+      shadow, and have mode 0640 or more restrictive without execute bits.
+    success_msg: CIS 7.1.5 verification passed using sanitized metadata only.

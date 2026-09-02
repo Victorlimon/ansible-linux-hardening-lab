@@ -200,6 +200,13 @@
     - cis_7_1_1
     - fixed_file_permissions
 
+- name: Audit Debian 12 CIS 7.1.5
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/audit.yml
+  when:
+    - cis_debian_12_execution_mode == 'audit'
+    - cis_debian_12_7_1_5_shadow_permissions | bool
+  tags: [cis_debian_12, cis_debian_12_audit, cis_7_1_5, fixed_file_permissions]
+
 - name: Remediate Debian 12 CIS 7.1.5
   ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/remediation.yml
   when:
@@ -207,3 +214,10 @@
     - cis_debian_12_remediation_enabled | bool
     - cis_debian_12_7_1_5_shadow_permissions | bool
   tags: [cis_debian_12, cis_debian_12_remediation, cis_7_1_5, fixed_file_permissions]
+
+- name: Verify Debian 12 CIS 7.1.5
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/verification.yml
+  when:
+    - cis_debian_12_execution_mode == 'verification'
+    - cis_debian_12_7_1_5_shadow_permissions | bool
+  tags: [cis_debian_12, cis_debian_12_verification, cis_7_1_5, fixed_file_permissions]
