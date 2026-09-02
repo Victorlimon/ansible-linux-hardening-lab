@@ -16,6 +16,11 @@ hardening completo.
 tasks/
 ├── main.yml
 ├── sections/                         # API semántica por benchmark/control
+│   ├── section_02_services/
+│   │   └── 2_4_1_2_crontab_permissions/
+│   │       ├── audit.yml
+│   │       ├── remediation.yml
+│   │       └── verification.yml
 │   ├── section_03_network/
 │   │   └── 3_1_1_ipv6_status/
 │   │       ├── audit.yml

@@ -161,7 +161,7 @@
 - name: Audit Ubuntu 24.04 CIS 2.4.1.2 with the common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: installed_package_fixed_file/audit.yml
+    tasks_from: sections/section_02_services/2_4_1_2_crontab_permissions/audit.yml
   vars: &ubuntu_crontab_contract
     cis_linux_common_control_id: "2.4.1.2"
     cis_linux_common_platform: ubuntu_2404
@@ -194,7 +194,7 @@
 - name: Remediate Ubuntu 24.04 CIS 2.4.1.2 with the common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: installed_package_fixed_file/remediation.yml
+    tasks_from: sections/section_02_services/2_4_1_2_crontab_permissions/remediation.yml
   vars: *ubuntu_crontab_contract
   when:
     - cis_ubuntu_2404_execution_mode == 'remediation'
@@ -216,7 +216,7 @@
 - name: Verify Ubuntu 24.04 CIS 2.4.1.2 with the common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: installed_package_fixed_file/verification.yml
+    tasks_from: sections/section_02_services/2_4_1_2_crontab_permissions/verification.yml
   vars: *ubuntu_crontab_contract
   when:
     - cis_ubuntu_2404_execution_mode == 'verification'

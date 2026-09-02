@@ -2,7 +2,7 @@
 - name: CIS 2.4.1.2 | Verification | Run the common applicable-file mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: installed_package_fixed_file/verification.yml
+    tasks_from: sections/section_02_services/2_4_1_2_crontab_permissions/verification.yml
   vars:
     cis_linux_common_control_id: "2.4.1.2"
     cis_linux_common_platform: debian_12

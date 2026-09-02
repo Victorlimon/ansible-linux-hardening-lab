@@ -19,7 +19,7 @@ explícita.
 |---|---|---|---|
 | A1 | Definir arquitectura semántica y migrar CIS 3.1.1 a `sections/section_03_network` | Bajo; control read-only | `COMPLETED` |
 | A2 | Migrar CIS 7.1.1 a `sections/section_07_maintenance` | Bajo; solo cambia la ruta de composición | `COMPLETED` |
-| A3 | Migrar CIS 2.4.1.2 a `sections/section_02_services` | Bajo; conservar rama `NOT_APPLICABLE` | `PLANNED` |
+| A3 | Migrar CIS 2.4.1.2 a `sections/section_02_services` | Bajo; conservar rama `NOT_APPLICABLE` | `COMPLETED` |
 | A4 | Migrar CIS 3.3.10 a `sections/section_03_network` | Medio; preservar runtime, persistencia y gates | `PLANNED` |
 | A5 | Reubicar mecanismos bajo `tasks/mechanisms/` con wrappers compatibles | Medio; cambia rutas internas | `PLANNED` |
 | A6 | Dividir adaptador Ubuntu por secciones, sin alterar orden histórico | Medio | `PLANNED` |
@@ -58,3 +58,17 @@ explícita.
 - Los seis entry points afectados pasaron syntax-check. También pasaron
   contratos, inventario, ansible-lint y yamllint sin deuda nueva; ansible-lint
   mantuvo 0 fallos y 575 warnings históricos.
+
+## Evidencia A3
+
+- CIS 2.4.1.2 dispone de entradas semánticas separadas para audit, remediation
+  y verification bajo `section_02_services/2_4_1_2_crontab_permissions`.
+- Los adaptadores Ubuntu 24.04 y Debian 12 consumen la nueva ruta sin cambiar el
+  contrato ni el mecanismo `installed_package_fixed_file`.
+- El baseline previo y el gate posterior clasificaron `PASS` con
+  `/etc/crontab` en `root:root` y modo `0600`, `changed=0` y ping correcto.
+- La prueba con paquete deliberadamente ausente mantuvo `NOT_APPLICABLE` y
+  `changed=0`; no instaló `cron` ni creó archivos.
+- Los seis entry points pasaron syntax-check. También pasaron contratos,
+  inventario, ansible-lint y yamllint; ansible-lint mantuvo 0 fallos y 575
+  warnings históricos.

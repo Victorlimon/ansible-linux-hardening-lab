@@ -469,3 +469,20 @@ permitir remediación.
   `test_p4_common.sh`, `test_contracts.sh`, inventario, ansible-lint y yamllint.
   El gate posterior mantuvo `PASS`, `changed=0` y ping; ansible-lint conservó
   0 fallos y 575 warnings históricos.
+
+## 2026-09-02 — Sesión de arquitectura A3
+
+- Se capturó el baseline de CIS 2.4.1.2 antes del cambio: `/etc/crontab` estaba
+  en `root:root` con modo `0600`; audit y verification pasaron con `changed=0`
+  y conectividad correcta en Ubuntu 24.04 y Debian 12.
+- Se añadieron entradas audit, remediation y verification bajo
+  `sections/section_02_services/2_4_1_2_crontab_permissions/`. Estas delegan
+  mediante imports estáticos al mecanismo `installed_package_fixed_file`.
+- Los adaptadores usan ahora la ruta semántica sin cambiar contratos, gates,
+  tags, valores ni orden. Las rutas técnicas anteriores siguen compatibles.
+- El gate posterior mantuvo `PASS` en ambas plataformas y `NOT_APPLICABLE` con
+  `changed=0` para un paquete deliberadamente ausente; no instaló `cron` ni
+  creó archivos.
+- Pasaron syntax-check de los seis entry points, `test_p4_cron.sh`,
+  `test_contracts.sh`, inventario, ansible-lint y yamllint. Ansible-lint
+  conservó 0 fallos y 575 warnings históricos.
