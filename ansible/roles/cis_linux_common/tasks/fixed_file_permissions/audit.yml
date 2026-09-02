@@ -37,7 +37,7 @@
         path: "{{ cis_linux_common_fixed_file_path }}"
         owner: "{{ cis_linux_common_fixed_file_owner }}"
         group: "{{ cis_linux_common_fixed_file_group }}"
-        mode: 0644 or more restrictive without execute bits
+        mode: "{{ cis_linux_common_fixed_file_expected_mode_description }}"
       observed:
         exists: "{{ cis_linux_common_fixed_file_audit.stat.exists | default(false) }}"
         is_regular: "{{ cis_linux_common_fixed_file_audit.stat.isreg | default(false) }}"

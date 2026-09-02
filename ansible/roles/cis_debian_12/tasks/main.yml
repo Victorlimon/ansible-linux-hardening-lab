@@ -32,6 +32,43 @@
     - cis_debian_12_3_1_1_ipv6_audit | bool
   tags: [cis_debian_12, cis_debian_12_audit, cis_3_1_1, ipv6_audit]
 
+- name: Audit Debian 12 CIS 2.4.1.2
+  ansible.builtin.import_tasks: audit/2_4_1_2_crontab_permissions.yml
+  when:
+    - cis_debian_12_execution_mode == 'audit'
+    - cis_debian_12_2_4_1_2_crontab_permissions | bool
+  tags:
+    - cis_debian_12
+    - cis_debian_12_audit
+    - cis_2_4_1_2
+    - cron
+    - fixed_file_permissions
+
+- name: Remediate Debian 12 CIS 2.4.1.2
+  ansible.builtin.import_tasks: remediation/2_4_1_2_crontab_permissions.yml
+  when:
+    - cis_debian_12_execution_mode == 'remediation'
+    - cis_debian_12_remediation_enabled | bool
+    - cis_debian_12_2_4_1_2_crontab_permissions | bool
+  tags:
+    - cis_debian_12
+    - cis_debian_12_remediation
+    - cis_2_4_1_2
+    - cron
+    - fixed_file_permissions
+
+- name: Verify Debian 12 CIS 2.4.1.2
+  ansible.builtin.import_tasks: verification/2_4_1_2_crontab_permissions.yml
+  when:
+    - cis_debian_12_execution_mode == 'verification'
+    - cis_debian_12_2_4_1_2_crontab_permissions | bool
+  tags:
+    - cis_debian_12
+    - cis_debian_12_verification
+    - cis_2_4_1_2
+    - cron
+    - fixed_file_permissions
+
 - name: Audit Debian 12 CIS 1.6.2
   ansible.builtin.import_tasks: audit/1_6_2_issue_banner.yml
   when:

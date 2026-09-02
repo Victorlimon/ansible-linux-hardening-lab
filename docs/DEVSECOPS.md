@@ -32,6 +32,7 @@ bash ./scripts/test_contracts.sh
 bash ./scripts/test_p3_pilot.sh
 bash ./scripts/test_p4_common.sh
 bash ./scripts/test_p4_banners.sh
+bash ./scripts/test_p4_cron.sh
 ```
 
 `check_control.sh` valida inventario y sintaxis de todos los entry points. Si se
@@ -53,6 +54,13 @@ redactado y `changed=0`, que remediation deshabilitada no predice cambios, que
 remediation habilitada no acepta texto vacío sin aprobación, que verification
 no puede declarar `PASS` en ese estado y que la conectividad permanece
 disponible.
+
+`test_p4_cron.sh` exige auditoría `PASS` con `changed=0`, verificación
+independiente y ping para CIS 2.4.1.2 en Ubuntu 24.04 y Debian 12. La
+aplicabilidad se obtiene con package facts; el mecanismo no instala `cron` ni
+crea `/etc/crontab` cuando el paquete no está instalado. El gate también prueba
+la clasificación `NOT_APPLICABLE` mediante un nombre de paquete deliberadamente
+ausente.
 
 ### Integración en laboratorio
 

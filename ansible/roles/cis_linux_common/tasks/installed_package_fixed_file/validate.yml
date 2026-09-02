@@ -1,0 +1,9 @@
+---
+- name: Common installed-package file | Validate the applicability contract
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_control_id | length > 0
+      - cis_linux_common_platform | length > 0
+      - cis_linux_common_benchmark | length > 0
+      - cis_linux_common_package_name | length > 0
+    fail_msg: The platform adapter supplied an invalid package applicability contract.

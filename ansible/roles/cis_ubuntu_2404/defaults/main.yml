@@ -1,5 +1,7 @@
 ---
-# Audit and verification remain available independently. Remediation keeps the
-# historical section 7 opt-in gates in addition to this control selector.
+# Audit and verification remain available independently. Remediation preserves
+# the historical section and control gates in addition to these selectors.
 cis_ubuntu_2404_execution_mode: remediation
 cis_ubuntu_2404_7_1_1_passwd_permissions: true
+# Does not install cron or create /etc/crontab when the subsection is not applicable.
+cis_ubuntu_2404_2_4_1_2_crontab_permissions: true

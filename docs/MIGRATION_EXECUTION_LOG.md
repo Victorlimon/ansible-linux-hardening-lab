@@ -357,3 +357,29 @@ permitir remediación.
 - No se extrajo esta vertical a `cis_linux_common`: falta la referencia exacta
   Ubuntu 24.04 y la política legal aprobada. El gate automatizado es
   `scripts/test_p4_banners.sh`.
+
+## 2026-09-02 — P4 vertical común CIS 2.4.1.2
+
+- Se compararon CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0 y CIS Debian Linux
+  12 Benchmark v1.1.0. Ambos requieren `/etc/crontab` propiedad de `root:root`,
+  sin permisos para grupo u otros, y consideran la subsección no aplicable si
+  `cron` no está instalado.
+- `cis_linux_common` ahora compone package facts con el mecanismo existente de
+  permisos fijos. No instala `cron`, no crea `/etc/crontab` cuando el paquete no
+  existe y reporta `NOT_APPLICABLE` en ese caso.
+- Se retiró la tarea Ubuntu duplicada de CIS 2.4.1.2 y ambos adaptadores exponen
+  caminos separados de audit, remediation y verification.
+- Estado inicial: `0644 root:root` en Ubuntu 24.04 y Debian 12. Las auditorías
+  clasificaron `FAIL` con `changed=0`.
+- `--check --diff` predijo exclusivamente `0644 -> 0600` en cada VM. La primera
+  convergencia cambió solo el modo; la segunda terminó con `changed=0`.
+- Verification independiente pasó en ambas plataformas y los pings finales
+  devolvieron `pong`.
+- La recuperación no requiere restaurar contenido: se registró el modo previo
+  `0644`; si una aplicación demuestra incompatibilidad, el mismo mecanismo
+  declarativo puede restaurar temporalmente esa metadata tras aprobar la
+  excepción y deshabilitar el selector del control.
+- La rama de paquete ausente se probó con un contrato deliberadamente no
+  aplicable: audit y remediation en check mode reportaron `NOT_APPLICABLE` con
+  `changed=0`, sin ejecutar el mecanismo de archivo.
+- El gate read-only posterior a la convergencia es `scripts/test_p4_cron.sh`.
