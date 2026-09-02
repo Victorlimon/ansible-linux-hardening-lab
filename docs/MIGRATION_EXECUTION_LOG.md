@@ -486,3 +486,20 @@ permitir remediación.
 - Pasaron syntax-check de los seis entry points, `test_p4_cron.sh`,
   `test_contracts.sh`, inventario, ansible-lint y yamllint. Ansible-lint
   conservó 0 fallos y 575 warnings históricos.
+
+## 2026-09-02 — Sesión de arquitectura A4
+
+- Se capturó el baseline de CIS 3.3.10 antes del cambio: runtime y persistencia
+  de `net.ipv4.tcp_syncookies` tenían valor `1` en ambas VMs; audit y
+  verification pasaron con `changed=0` y conectividad correcta.
+- Se añadieron entradas audit, remediation y verification bajo
+  `sections/section_03_network/3_3_10_tcp_syncookies/`. Estas delegan mediante
+  imports estáticos al mecanismo `sysctl_parameter`.
+- Los adaptadores usan ahora la ruta semántica sin cambiar contratos, gates,
+  tags, valores ni orden. Las rutas técnicas anteriores siguen compatibles.
+- El gate posterior conservó runtime y persistencia `1`. La inspección mantuvo
+  la consideración de `/etc/ufw/sysctl.conf` en Ubuntu y reportó UFW no
+  configurado en Debian. Esta sesión no modificó configuración sysctl.
+- Pasaron syntax-check de los seis entry points, `test_p4_sysctl.sh`,
+  `test_contracts.sh`, inventario, ansible-lint y yamllint. Ansible-lint
+  conservó 0 fallos y 575 warnings históricos.

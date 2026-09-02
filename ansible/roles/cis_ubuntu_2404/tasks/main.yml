@@ -62,7 +62,7 @@
 - name: Audit Ubuntu 24.04 CIS 3.3.10 with the common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: sysctl_parameter/audit.yml
+    tasks_from: sections/section_03_network/3_3_10_tcp_syncookies/audit.yml
   vars: &ubuntu_tcp_syncookies_contract
     cis_linux_common_control_id: "3.3.10"
     cis_linux_common_platform: ubuntu_2404
@@ -89,7 +89,7 @@
 - name: Remediate Ubuntu 24.04 CIS 3.3.10 with the common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: sysctl_parameter/remediation.yml
+    tasks_from: sections/section_03_network/3_3_10_tcp_syncookies/remediation.yml
   vars: *ubuntu_tcp_syncookies_contract
   when:
     - cis_ubuntu_2404_execution_mode == 'remediation'
@@ -112,7 +112,7 @@
 - name: Verify Ubuntu 24.04 CIS 3.3.10 with the common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: sysctl_parameter/verification.yml
+    tasks_from: sections/section_03_network/3_3_10_tcp_syncookies/verification.yml
   vars: *ubuntu_tcp_syncookies_contract
   when:
     - cis_ubuntu_2404_execution_mode == 'verification'

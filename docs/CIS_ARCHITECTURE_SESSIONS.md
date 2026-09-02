@@ -20,7 +20,7 @@ explícita.
 | A1 | Definir arquitectura semántica y migrar CIS 3.1.1 a `sections/section_03_network` | Bajo; control read-only | `COMPLETED` |
 | A2 | Migrar CIS 7.1.1 a `sections/section_07_maintenance` | Bajo; solo cambia la ruta de composición | `COMPLETED` |
 | A3 | Migrar CIS 2.4.1.2 a `sections/section_02_services` | Bajo; conservar rama `NOT_APPLICABLE` | `COMPLETED` |
-| A4 | Migrar CIS 3.3.10 a `sections/section_03_network` | Medio; preservar runtime, persistencia y gates | `PLANNED` |
+| A4 | Migrar CIS 3.3.10 a `sections/section_03_network` | Medio; preservar runtime, persistencia y gates | `COMPLETED` |
 | A5 | Reubicar mecanismos bajo `tasks/mechanisms/` con wrappers compatibles | Medio; cambia rutas internas | `PLANNED` |
 | A6 | Dividir adaptador Ubuntu por secciones, sin alterar orden histórico | Medio | `PLANNED` |
 | A7 | Dividir adaptador Debian por secciones, sin alterar gates canary | Medio | `PLANNED` |
@@ -69,6 +69,20 @@ explícita.
   `/etc/crontab` en `root:root` y modo `0600`, `changed=0` y ping correcto.
 - La prueba con paquete deliberadamente ausente mantuvo `NOT_APPLICABLE` y
   `changed=0`; no instaló `cron` ni creó archivos.
+- Los seis entry points pasaron syntax-check. También pasaron contratos,
+  inventario, ansible-lint y yamllint; ansible-lint mantuvo 0 fallos y 575
+  warnings históricos.
+
+## Evidencia A4
+
+- CIS 3.3.10 dispone de entradas semánticas separadas para audit, remediation
+  y verification bajo `section_03_network/3_3_10_tcp_syncookies`.
+- Los adaptadores Ubuntu 24.04 y Debian 12 consumen la nueva ruta sin cambiar el
+  contrato ni el mecanismo `sysctl_parameter`.
+- El baseline previo y el gate posterior observaron runtime y persistencia con
+  valor `1`, clasificación `PASS`, `changed=0` y ping correcto en ambas VMs.
+- Ubuntu continuó considerando `/etc/ufw/sysctl.conf`; Debian mantuvo UFW como
+  no configurado. No se modificó `/etc/sysctl.d/99-cis-network.conf`.
 - Los seis entry points pasaron syntax-check. También pasaron contratos,
   inventario, ansible-lint y yamllint; ansible-lint mantuvo 0 fallos y 575
   warnings históricos.

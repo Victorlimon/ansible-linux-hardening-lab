@@ -22,8 +22,12 @@ tasks/
 │   │       ├── remediation.yml
 │   │       └── verification.yml
 │   ├── section_03_network/
-│   │   └── 3_1_1_ipv6_status/
+│   │   ├── 3_1_1_ipv6_status/
+│   │   │   ├── audit.yml
+│   │   │   └── verification.yml
+│   │   └── 3_3_10_tcp_syncookies/
 │   │       ├── audit.yml
+│   │       ├── remediation.yml
 │   │       └── verification.yml
 │   └── section_07_maintenance/
 │       └── 7_1_1_passwd_permissions/
