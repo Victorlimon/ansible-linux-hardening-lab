@@ -23,7 +23,7 @@ explícita.
 | A4 | Migrar CIS 3.3.10 a `sections/section_03_network` | Medio; preservar runtime, persistencia y gates | `COMPLETED` |
 | A5 | Reubicar mecanismos bajo `tasks/mechanisms/` con wrappers compatibles | Medio; cambia rutas internas | `COMPLETED` |
 | A6 | Dividir adaptador Ubuntu por secciones, sin alterar orden histórico | Medio | `COMPLETED` |
-| A7 | Dividir adaptador Debian por secciones, sin alterar gates canary | Medio | `PLANNED` |
+| A7 | Dividir adaptador Debian por secciones, sin alterar gates canary | Medio | `COMPLETED` |
 | A8 | Completar interfaces independientes de Debian CIS 7.1.5 | Alto; cambio funcional | `PLANNED` |
 
 ## Definition of Done por sesión
@@ -117,3 +117,19 @@ explícita.
 - Pasaron los cuatro gates comunes, contratos, syntax-check, inventario,
   ansible-lint y yamllint. Ansible-lint mantuvo 0 fallos y 575 warnings
   históricos; el baseline estático no remedió targets.
+
+## Evidencia A7
+
+- Las quince hojas del adaptador Debian se reubicaron bajo `tasks/sections/`
+  por sección, control y modo; `tasks/main.yml` conserva exactamente el orden,
+  las condiciones, los selectores y los tags.
+- Las quince rutas mode-first anteriores permanecen como wrappers estáticos y
+  fueron parseadas mediante un fixture temporal retirado tras el syntax-check.
+- Los gates globales `cis_debian_12_remediation_enabled` y
+  `cis_debian_12_canary_confirmed`, además del gate legal de banners, no se
+  relajaron. CIS 7.1.5 conserva en A7 su comportamiento previo para aislar A8.
+- Las listas de tareas y tags de audit, hardening y verification fueron
+  idénticas al baseline previo.
+- Pasaron piloto P3, banners, los cuatro gates comunes, contratos, syntax-check,
+  inventario, ansible-lint y yamllint. Ansible-lint mantuvo 0 fallos y 575
+  warnings históricos; el baseline estático no remedió targets.

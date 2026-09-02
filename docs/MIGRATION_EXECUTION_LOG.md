@@ -535,3 +535,18 @@ permitir remediación.
   `test_p4_cron.sh`, `test_p4_common.sh`, los syntax-check, inventario,
   ansible-lint y yamllint. Ansible-lint conservó 0 fallos y 575 warnings
   históricos; ningún target fue remediado por el baseline estático.
+
+## 2026-09-02 — Sesión de arquitectura A7
+
+- Las quince hojas del adaptador Debian se movieron a entradas semánticas bajo
+  `cis_debian_12/tasks/sections/`, manteniendo una hoja por control y modo.
+- `tasks/main.yml` usa las rutas canónicas sin modificar orden, condiciones,
+  selectores, tags ni gates canary y legales.
+- Las quince rutas mode-first anteriores continúan disponibles mediante
+  wrappers estáticos. Un fixture temporal confirmó su parseo y fue eliminado.
+- Las listas de tareas y tags de audit, hardening y verification resultaron
+  idénticas al baseline. CIS 7.1.5 no cambió funcionalmente en esta sesión.
+- Pasaron `test_p3_pilot.sh`, `test_p4_banners.sh`, los cuatro gates comunes,
+  `test_contracts.sh`, los syntax-check, inventario, ansible-lint y yamllint.
+  Ansible-lint conservó 0 fallos y 575 warnings históricos; ningún target fue
+  remediado por el baseline estático.

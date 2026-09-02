@@ -26,7 +26,7 @@
   tags: [always, cis_debian_12, safety]
 
 - name: Audit Debian 12 network applicability controls
-  ansible.builtin.import_tasks: audit/3_1_1_identify_ipv6.yml
+  ansible.builtin.import_tasks: sections/section_03_network/3_1_1_identify_ipv6/audit.yml
   when:
     - cis_debian_12_execution_mode == 'audit'
     - cis_debian_12_3_1_1_ipv6_audit | bool
@@ -42,7 +42,7 @@
     - level_1
 
 - name: Verify Debian 12 CIS 3.1.1
-  ansible.builtin.import_tasks: verification/3_1_1_identify_ipv6.yml
+  ansible.builtin.import_tasks: sections/section_03_network/3_1_1_identify_ipv6/verification.yml
   when:
     - cis_debian_12_execution_mode == 'verification'
     - cis_debian_12_3_1_1_ipv6_audit | bool
@@ -58,7 +58,7 @@
     - level_1
 
 - name: Audit Debian 12 CIS 3.3.10
-  ansible.builtin.import_tasks: audit/3_3_10_tcp_syncookies.yml
+  ansible.builtin.import_tasks: sections/section_03_network/3_3_10_tcp_syncookies/audit.yml
   when:
     - cis_debian_12_execution_mode == 'audit'
     - cis_debian_12_3_3_10_tcp_syncookies | bool
@@ -74,7 +74,7 @@
     - level_1
 
 - name: Remediate Debian 12 CIS 3.3.10
-  ansible.builtin.import_tasks: remediation/3_3_10_tcp_syncookies.yml
+  ansible.builtin.import_tasks: sections/section_03_network/3_3_10_tcp_syncookies/remediation.yml
   when:
     - cis_debian_12_execution_mode == 'remediation'
     - cis_debian_12_remediation_enabled | bool
@@ -91,7 +91,7 @@
     - level_1
 
 - name: Verify Debian 12 CIS 3.3.10
-  ansible.builtin.import_tasks: verification/3_3_10_tcp_syncookies.yml
+  ansible.builtin.import_tasks: sections/section_03_network/3_3_10_tcp_syncookies/verification.yml
   when:
     - cis_debian_12_execution_mode == 'verification'
     - cis_debian_12_3_3_10_tcp_syncookies | bool
@@ -107,7 +107,7 @@
     - level_1
 
 - name: Audit Debian 12 CIS 2.4.1.2
-  ansible.builtin.import_tasks: audit/2_4_1_2_crontab_permissions.yml
+  ansible.builtin.import_tasks: sections/section_02_services/2_4_1_2_crontab_permissions/audit.yml
   when:
     - cis_debian_12_execution_mode == 'audit'
     - cis_debian_12_2_4_1_2_crontab_permissions | bool
@@ -119,7 +119,7 @@
     - fixed_file_permissions
 
 - name: Remediate Debian 12 CIS 2.4.1.2
-  ansible.builtin.import_tasks: remediation/2_4_1_2_crontab_permissions.yml
+  ansible.builtin.import_tasks: sections/section_02_services/2_4_1_2_crontab_permissions/remediation.yml
   when:
     - cis_debian_12_execution_mode == 'remediation'
     - cis_debian_12_remediation_enabled | bool
@@ -132,7 +132,7 @@
     - fixed_file_permissions
 
 - name: Verify Debian 12 CIS 2.4.1.2
-  ansible.builtin.import_tasks: verification/2_4_1_2_crontab_permissions.yml
+  ansible.builtin.import_tasks: sections/section_02_services/2_4_1_2_crontab_permissions/verification.yml
   when:
     - cis_debian_12_execution_mode == 'verification'
     - cis_debian_12_2_4_1_2_crontab_permissions | bool
@@ -144,14 +144,14 @@
     - fixed_file_permissions
 
 - name: Audit Debian 12 CIS 1.6.2
-  ansible.builtin.import_tasks: audit/1_6_2_issue_banner.yml
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_6_2_issue_banner/audit.yml
   when:
     - cis_debian_12_execution_mode == 'audit'
     - cis_debian_12_1_6_2_issue_banner | bool
   tags: [cis_debian_12, cis_debian_12_audit, cis_1_6_2, banners, issue]
 
 - name: Remediate Debian 12 CIS 1.6.2
-  ansible.builtin.import_tasks: remediation/1_6_2_issue_banner.yml
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_6_2_issue_banner/remediation.yml
   when:
     - cis_debian_12_execution_mode == 'remediation'
     - cis_debian_12_remediation_enabled | bool
@@ -160,14 +160,14 @@
   tags: [cis_debian_12, cis_debian_12_remediation, cis_1_6_2, banners, issue]
 
 - name: Verify Debian 12 CIS 1.6.2
-  ansible.builtin.import_tasks: verification/1_6_2_issue_banner.yml
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_6_2_issue_banner/verification.yml
   when:
     - cis_debian_12_execution_mode == 'verification'
     - cis_debian_12_1_6_2_issue_banner | bool
   tags: [cis_debian_12, cis_debian_12_verification, cis_1_6_2, banners, issue]
 
 - name: Audit Debian 12 CIS 7.1.1
-  ansible.builtin.import_tasks: audit/7_1_1_passwd_permissions.yml
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_1_passwd_permissions/audit.yml
   when:
     - cis_debian_12_execution_mode == 'audit'
     - cis_debian_12_7_1_1_passwd_permissions | bool
@@ -178,7 +178,7 @@
     - fixed_file_permissions
 
 - name: Remediate Debian 12 CIS 7.1.1
-  ansible.builtin.import_tasks: remediation/7_1_1_passwd_permissions.yml
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_1_passwd_permissions/remediation.yml
   when:
     - cis_debian_12_execution_mode == 'remediation'
     - cis_debian_12_remediation_enabled | bool
@@ -190,7 +190,7 @@
     - fixed_file_permissions
 
 - name: Verify Debian 12 CIS 7.1.1
-  ansible.builtin.import_tasks: verification/7_1_1_passwd_permissions.yml
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_1_passwd_permissions/verification.yml
   when:
     - cis_debian_12_execution_mode == 'verification'
     - cis_debian_12_7_1_1_passwd_permissions | bool
@@ -201,7 +201,7 @@
     - fixed_file_permissions
 
 - name: Remediate Debian 12 CIS 7.1.5
-  ansible.builtin.import_tasks: remediation/7_1_5_shadow_permissions.yml
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/remediation.yml
   when:
     - cis_debian_12_execution_mode == 'remediation'
     - cis_debian_12_remediation_enabled | bool

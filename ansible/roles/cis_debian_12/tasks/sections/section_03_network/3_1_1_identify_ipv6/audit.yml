@@ -1,0 +1,10 @@
+---
+- name: CIS 3.1.1 | Audit | Run the common IPv6 observation mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_03_network/3_1_1_ipv6_status/audit.yml
+  vars:
+    cis_linux_common_control_id: "3.1.1"
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0
+    cis_linux_common_ipv6_site_policy: "{{ cis_debian_12_ipv6_site_policy }}"
