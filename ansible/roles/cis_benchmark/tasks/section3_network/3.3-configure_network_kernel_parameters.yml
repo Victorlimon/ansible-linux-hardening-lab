@@ -131,14 +131,3 @@
     - net.ipv4.conf.all.log_martians
     - net.ipv4.conf.default.log_martians
   tags: [cis_3, cis_3_3, cis_3_3_9, network, sysctl, level_1]
-
-- name: "3.3.10 | Ensure TCP SYN cookies are enabled"
-  when: section3_network['3_3_network_kernel_parameters'].tcp_syncookies | default(true) | bool
-  ansible.posix.sysctl:
-    name: net.ipv4.tcp_syncookies
-    value: '1'
-    state: present
-    sysctl_file: /etc/sysctl.d/99-cis-network.conf
-    sysctl_set: true
-    reload: true
-  tags: [cis_3, cis_3_3, cis_3_3_10, network, sysctl, level_1]

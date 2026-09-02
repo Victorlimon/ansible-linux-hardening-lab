@@ -6,5 +6,7 @@ cis_ubuntu_2404_7_1_1_passwd_permissions: true
 # Manual, read-only control. No IPv6 state is changed by this selector.
 cis_ubuntu_2404_3_1_1_ipv6_audit: true
 cis_ubuntu_2404_ipv6_site_policy: enabled
+# Low-risk SYN-flood protection; remediation preserves historical section gates.
+cis_ubuntu_2404_3_3_10_tcp_syncookies: true
 # Does not install cron or create /etc/crontab when the subsection is not applicable.
 cis_ubuntu_2404_2_4_1_2_crontab_permissions: true

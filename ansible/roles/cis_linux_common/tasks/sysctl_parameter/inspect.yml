@@ -1,0 +1,113 @@
+---
+- name: Common sysctl parameter | Load the observation contract
+  ansible.builtin.import_tasks: sysctl_parameter/validate.yml
+
+- name: Common sysctl parameter | Inspect the running parameter path
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_sysctl_runtime_path }}"
+  register: cis_linux_common_sysctl_runtime_stat
+
+- name: Common sysctl parameter | Read the running parameter
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_sysctl_runtime_path }}"
+  register: cis_linux_common_sysctl_runtime_slurp
+  when: cis_linux_common_sysctl_runtime_stat.stat.exists | default(false)
+
+- name: Common sysctl parameter | Read effective systemd sysctl configuration
+  ansible.builtin.command:
+    argv:
+      - /usr/lib/systemd/systemd-sysctl
+      - --cat-config
+  register: cis_linux_common_sysctl_systemd_config
+  changed_when: false
+  failed_when: cis_linux_common_sysctl_systemd_config.rc != 0
+
+- name: Common sysctl parameter | Inspect UFW sysctl selector
+  ansible.builtin.stat:
+    path: /etc/default/ufw
+  register: cis_linux_common_sysctl_ufw_defaults_stat
+
+- name: Common sysctl parameter | Read UFW sysctl selector
+  ansible.builtin.slurp:
+    src: /etc/default/ufw
+  register: cis_linux_common_sysctl_ufw_defaults_slurp
+  when: cis_linux_common_sysctl_ufw_defaults_stat.stat.exists | default(false)
+
+- name: Common sysctl parameter | Derive persistent configuration candidates
+  ansible.builtin.set_fact:
+    cis_linux_common_sysctl_runtime_value: >-
+      {{
+        (cis_linux_common_sysctl_runtime_slurp.content | b64decode | trim)
+        if cis_linux_common_sysctl_runtime_stat.stat.exists | default(false)
+        else 'unavailable'
+      }}
+    cis_linux_common_sysctl_systemd_values: >-
+      {{
+        cis_linux_common_sysctl_systemd_config.stdout |
+        regex_findall(
+          '(?m)^[ \t]*' ~
+          (cis_linux_common_sysctl_parameter | regex_escape) ~
+          '[ \t]*=[ \t]*([^ \t#]+)'
+        )
+      }}
+    cis_linux_common_sysctl_ufw_paths: >-
+      {{
+        (
+          cis_linux_common_sysctl_ufw_defaults_slurp.content |
+          b64decode |
+          regex_findall(
+            '(?m)^[ \t]*IPT_SYSCTL[ \t]*=[ \t]*"?([^" \t#]+)'
+          )
+        )
+        if cis_linux_common_sysctl_ufw_defaults_stat.stat.exists | default(false)
+        else []
+      }}
+
+- name: Common sysctl parameter | Select the UFW sysctl path
+  ansible.builtin.set_fact:
+    cis_linux_common_sysctl_ufw_path: >-
+      {{ cis_linux_common_sysctl_ufw_paths | first | default('') | trim }}
+
+- name: Common sysctl parameter | Inspect the selected UFW sysctl file
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_sysctl_ufw_path }}"
+  register: cis_linux_common_sysctl_ufw_file_stat
+  when: cis_linux_common_sysctl_ufw_path | length > 0
+
+- name: Common sysctl parameter | Read the selected UFW sysctl file
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_sysctl_ufw_path }}"
+  register: cis_linux_common_sysctl_ufw_file_slurp
+  when:
+    - cis_linux_common_sysctl_ufw_path | length > 0
+    - cis_linux_common_sysctl_ufw_file_stat.stat.exists | default(false)
+
+- name: Common sysctl parameter | Derive UFW override values
+  ansible.builtin.set_fact:
+    cis_linux_common_sysctl_ufw_values: >-
+      {{
+        (
+          cis_linux_common_sysctl_ufw_file_slurp.content |
+          b64decode |
+          regex_findall(
+            '(?m)^[ \t]*' ~
+            (cis_linux_common_sysctl_parameter | regex_escape) ~
+            '[ \t]*=[ \t]*([^ \t#]+)'
+          )
+        )
+        if cis_linux_common_sysctl_ufw_file_stat.stat.exists | default(false)
+        else []
+      }}
+
+- name: Common sysctl parameter | Select the effective persistent value
+  ansible.builtin.set_fact:
+    cis_linux_common_sysctl_persistent_value: >-
+      {{
+        (cis_linux_common_sysctl_ufw_values | last | trim)
+        if cis_linux_common_sysctl_ufw_values | length > 0
+        else (
+          (cis_linux_common_sysctl_systemd_values | last | trim)
+          if cis_linux_common_sysctl_systemd_values | length > 0
+          else 'unavailable'
+        )
+      }}

@@ -34,6 +34,7 @@ bash ./scripts/test_p4_common.sh
 bash ./scripts/test_p4_banners.sh
 bash ./scripts/test_p4_cron.sh
 bash ./scripts/test_p4_network.sh
+bash ./scripts/test_p4_sysctl.sh
 ```
 
 `check_control.sh` valida inventario y sintaxis de todos los entry points. Si se
@@ -68,6 +69,12 @@ dos plataformas. Exige clasificación manual, evidencia del parámetro del
 módulo y de ambos sysctl, `changed=0` y ping posterior. Esta vertical no ofrece
 remediation: la política IPv6 se decide fuera del mecanismo de observación. El
 gate también rechaza valores distintos de `enabled`, `disabled` o `undecided`.
+
+`test_p4_sysctl.sh` exige que CIS 3.3.10 observe
+`net.ipv4.tcp_syncookies=1` tanto en runtime como en la configuración
+persistente efectiva de Ubuntu 24.04 y Debian 12. Incluye la ruta sysctl
+seleccionada por UFW, ejecuta verification independiente, exige `changed=0` y
+comprueba conectividad. Es un gate read-only posterior a la convergencia.
 
 ### Integración en laboratorio
 

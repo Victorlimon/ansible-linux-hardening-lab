@@ -1,0 +1,17 @@
+---
+- name: Common sysctl parameter | Inspect runtime and persistence for verification
+  ansible.builtin.import_tasks: sysctl_parameter/inspect.yml
+
+- name: Common sysctl parameter | Assert runtime and persistent value
+  ansible.builtin.assert:
+    that:
+      - >-
+        cis_linux_common_sysctl_runtime_value ==
+        (cis_linux_common_sysctl_value | string)
+      - >-
+        cis_linux_common_sysctl_persistent_value ==
+        (cis_linux_common_sysctl_value | string)
+    fail_msg: >-
+      The running or effective persistent sysctl value does not satisfy the
+      platform adapter contract.
+    success_msg: The sysctl verification passed for runtime and persistence.

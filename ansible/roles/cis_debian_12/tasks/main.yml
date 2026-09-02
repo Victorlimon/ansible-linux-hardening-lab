@@ -57,6 +57,55 @@
     - ipv6_audit
     - level_1
 
+- name: Audit Debian 12 CIS 3.3.10
+  ansible.builtin.import_tasks: audit/3_3_10_tcp_syncookies.yml
+  when:
+    - cis_debian_12_execution_mode == 'audit'
+    - cis_debian_12_3_3_10_tcp_syncookies | bool
+  tags:
+    - cis_debian_12
+    - cis_debian_12_audit
+    - cis_3
+    - cis_3_3
+    - cis_3_3_10
+    - network
+    - sysctl
+    - tcp_syncookies
+    - level_1
+
+- name: Remediate Debian 12 CIS 3.3.10
+  ansible.builtin.import_tasks: remediation/3_3_10_tcp_syncookies.yml
+  when:
+    - cis_debian_12_execution_mode == 'remediation'
+    - cis_debian_12_remediation_enabled | bool
+    - cis_debian_12_3_3_10_tcp_syncookies | bool
+  tags:
+    - cis_debian_12
+    - cis_debian_12_remediation
+    - cis_3
+    - cis_3_3
+    - cis_3_3_10
+    - network
+    - sysctl
+    - tcp_syncookies
+    - level_1
+
+- name: Verify Debian 12 CIS 3.3.10
+  ansible.builtin.import_tasks: verification/3_3_10_tcp_syncookies.yml
+  when:
+    - cis_debian_12_execution_mode == 'verification'
+    - cis_debian_12_3_3_10_tcp_syncookies | bool
+  tags:
+    - cis_debian_12
+    - cis_debian_12_verification
+    - cis_3
+    - cis_3_3
+    - cis_3_3_10
+    - network
+    - sysctl
+    - tcp_syncookies
+    - level_1
+
 - name: Audit Debian 12 CIS 2.4.1.2
   ansible.builtin.import_tasks: audit/2_4_1_2_crontab_permissions.yml
   when:

@@ -13,6 +13,8 @@ cis_debian_12_canary_confirmed: false
 
 cis_debian_12_7_1_1_passwd_permissions: true
 cis_debian_12_7_1_5_shadow_permissions: true
+# Low-risk SYN-flood protection; Debian remediation still requires canary gates.
+cis_debian_12_3_3_10_tcp_syncookies: true
 # Does not install cron or create /etc/crontab when the subsection is not applicable.
 cis_debian_12_2_4_1_2_crontab_permissions: true
 

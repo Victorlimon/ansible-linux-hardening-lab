@@ -404,3 +404,34 @@ permitir remediación.
   interpretar la evidencia.
 - No se requiere rollback porque no se escribió configuración ni se alteró la
   conectividad. El gate automatizado es `scripts/test_p4_network.sh`.
+
+## 2026-09-02 — P4 vertical común sysctl CIS 3.3.10
+
+- Se eligió `net.ipv4.tcp_syncookies=1` como primer sysctl común por su
+  equivalencia entre Ubuntu 24.04 v1.0.0 y Debian 12 v1.1.0 y su bajo impacto
+  operativo. CIS 3.3.1 quedó diferido porque desactivar forwarding requiere
+  confirmar que el host no actúa como router, NAT, proxy o nodo CSP.
+- `cis_linux_common` expone caminos separados de audit, remediation y
+  verification. La observación lee `/proc`, obtiene la precedencia persistente
+  con `systemd-sysctl --cat-config` y considera el archivo sysctl seleccionado
+  por UFW. El único `command` es read-only, declara `changed_when: false` y
+  falla explícitamente si no puede leer la configuración efectiva.
+- Se consultó `ansible-doc` para `ansible.posix.sysctl`, `command`, `slurp` y
+  `stat` bajo Ansible Core 2.21.2. La tarea Ubuntu histórica duplicada se retiró
+  y ambos adaptadores conservan sus gates de política.
+- El estado inicial fue runtime `1` sin definición persistente en ambas VMs.
+  Audit clasificó `FAIL` con `changed=0`; `--check --diff` predijo una única
+  alta en `/etc/sysctl.d/99-cis-network.conf` por plataforma.
+- Tras confirmar `make status`, conectividad y check mode, la primera
+  convergencia terminó con `changed=1` en cada VM. Verification pasó y la
+  segunda convergencia terminó con `changed=0` en ambas.
+- El gate `scripts/test_p4_sysctl.sh` confirmó audit `PASS`, runtime y
+  persistencia `1`, verification independiente, `changed=0` y ping posterior
+  en Ubuntu 24.04 y Debian 12.
+- El baseline estricto de control pasó inventario, syntax-check, ansible-lint y
+  yamllint. Ansible-lint mantuvo 0 fallos y 575 warnings históricos. También
+  pasaron contratos, el piloto P3 y todos los gates P4 existentes.
+- `scripts/check_host.sh` no pudo completar Gitleaks porque usa el subcomando
+  no disponible `gitleaks git` con la versión instalada 8.16.0. El escaneo
+  equivalente `gitleaks detect` se ejecutó por separado y no encontró
+  filtraciones; ShellCheck pasó para el gate sysctl nuevo.

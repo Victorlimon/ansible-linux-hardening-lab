@@ -6,6 +6,7 @@ del proyecto; no representa una certificación de cumplimiento.
 | Control | Perfil | Tipo | Estado | Implementación y riesgo |
 |---|---|---|---|---|
 | 3.1.1 Identificar estado IPv6 | L1 Server/Workstation | Manual | `P4_COMMON_READ_ONLY` | Mecanismo común de audit y verification para Ubuntu 24.04 y Debian 12. Observa parámetro del módulo y sysctl global/default, clasifica `MANUAL` y compara con política local sin modificar red. Ambas VMs observaron IPv6 habilitado con `changed=0`; check mode de hardening tampoco predijo cambios y los pings pasaron. |
+| 3.3.10 Habilitar TCP SYN cookies | L1 Server/Workstation | Automated | `P4_COMMON_TESTED` | Mecanismo sysctl común con audit, remediation y verification. Comprueba runtime, precedencia persistente de `systemd-sysctl` y el archivo seleccionado por UFW. En ambas plataformas audit detectó runtime `1` sin persistencia, check mode predijo el alta, la primera convergencia creó `99-cis-network.conf`, la segunda terminó con `changed=0` y verification pasó. |
 | 1.6.2 Banner local | L1 Server/Workstation | Automated | `AUDIT_IMPLEMENTED_BLOCKED` | Auditoría sanitizada detecta metadata y exposición del SO con `changed=0`. Verification y remediation rechazan operar sin texto no vacío y aprobación legal explícita. Falta demostrar equivalencia contra el benchmark Ubuntu exacto antes de extraer un mecanismo común. |
 | 7.1.1 Permisos `/etc/passwd` | L1 Server/Workstation | Automated | `P4_COMMON_TESTED` | Mecanismo común probado en Debian 12 y Ubuntu 24.04 con evidencia separada. La auditoría detectó deriva con `changed=0`; check mode predijo el cambio, la primera convergencia corrigió solo el modo, la segunda terminó con `changed=0` y la verificación posterior pasó. |
 | 7.1.5 Permisos `/etc/shadow` | L1 Server/Workstation | Automated | `TESTED_CONVERGED` | Canario opt-in; Debian permite grupo `root` o `shadow`; se usa `shadow`. Dos ejecuciones reales y verificación posterior finalizaron con `changed=0`. |
@@ -26,7 +27,8 @@ cambian el objetivo salvo que se confirmen explícitamente los gates
 
 Tags canónicos: `cis_debian_12`, `cis_debian_12_audit`,
 `cis_debian_12_remediation`, `cis_debian_12_verification`, `cis_3_1_1`,
-`cis_7_1_1`, `cis_7_1_5`, `ipv6_audit` y `fixed_file_permissions`.
+`cis_3_3_10`, `cis_7_1_1`, `cis_7_1_5`, `ipv6_audit`, `sysctl` y
+`fixed_file_permissions`.
 
 ## Ejecución canaria en laboratorio
 

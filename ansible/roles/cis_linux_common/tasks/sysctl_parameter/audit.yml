@@ -1,0 +1,26 @@
+---
+- name: Common sysctl parameter | Inspect runtime and persistence for audit
+  ansible.builtin.import_tasks: sysctl_parameter/inspect.yml
+
+- name: Common sysctl parameter | Report observed state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      benchmark: "{{ cis_linux_common_benchmark }}"
+      classification: >-
+        {{
+          'PASS'
+          if cis_linux_common_sysctl_runtime_value ==
+             (cis_linux_common_sysctl_value | string) and
+             cis_linux_common_sysctl_persistent_value ==
+             (cis_linux_common_sysctl_value | string)
+          else 'FAIL'
+        }}
+      parameter: "{{ cis_linux_common_sysctl_parameter }}"
+      expected_value: "{{ cis_linux_common_sysctl_value }}"
+      running_value: "{{ cis_linux_common_sysctl_runtime_value }}"
+      persistent_value: "{{ cis_linux_common_sysctl_persistent_value }}"
+      ufw_sysctl_path: >-
+        {{ cis_linux_common_sysctl_ufw_path | default('not configured', true) }}
+      changed_target: false
