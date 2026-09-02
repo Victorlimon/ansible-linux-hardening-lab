@@ -13,7 +13,8 @@ ansible/
 ├── requirements.yml
 ├── playbooks/
 │   ├── cis_hardening.yml                 # compatibilidad Ubuntu
-│   ├── cis_ubuntu_2404_hardening.yml     # canónico Ubuntu
+│   ├── cis_ubuntu_2404_hardening.yml     # wrapper Ubuntu
+│   ├── {audit,hardening,verify}/cis_ubuntu_2404.yml
 │   ├── cis_debian_12_preflight.yml
 │   ├── cis_debian_12_{audit,hardening,verify}.yml  # wrappers
 │   ├── audit/cis_debian_12.yml
@@ -27,6 +28,7 @@ ansible/
 │   └── production/hosts.yml    # vacío
 └── roles/
     ├── cis_platform_preflight/
+    ├── cis_linux_common/                 # mecanismos equivalentes probados
     ├── cis_ubuntu_2404/
     ├── cis_debian_12/
     └── cis_benchmark/                    # implementación Ubuntu histórica
@@ -37,6 +39,10 @@ ansible/
 interfaces canónicas separadas para auditoría, remediación y verificación; los
 playbooks raíz son wrappers compatibles. El catálogo interno del preflight es la
 única fuente de identidad, arquitectura y estado de plataforma.
+
+El primer mecanismo extraído a `cis_linux_common` es el control 7.1.1 sobre
+`/etc/passwd`. Los adaptadores conservan IDs, benchmark, habilitación y gates;
+el rol común solo recibe el contrato técnico parametrizado.
 
 ## Inventario y usuarios
 

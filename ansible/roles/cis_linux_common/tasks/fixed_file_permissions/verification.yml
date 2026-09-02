@@ -1,0 +1,31 @@
+---
+- name: Common fixed file permissions | Load verification contract
+  ansible.builtin.import_tasks: fixed_file_permissions/validate.yml
+
+- name: Common fixed file permissions | Inspect metadata for verification
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_fixed_file_path }}"
+  register: cis_linux_common_fixed_file_verification
+
+- name: Common fixed file permissions | Assert declared metadata
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_fixed_file_verification.stat.exists | default(false)
+      - cis_linux_common_fixed_file_verification.stat.isreg | default(false)
+      - >-
+        cis_linux_common_fixed_file_verification.stat.pw_name | default('') ==
+        cis_linux_common_fixed_file_owner
+      - >-
+        cis_linux_common_fixed_file_verification.stat.gr_name | default('') ==
+        cis_linux_common_fixed_file_group
+      - >-
+        (cis_linux_common_fixed_file_verification.stat.mode | default('9999'))[1]
+        in cis_linux_common_fixed_file_allowed_owner_digits
+      - >-
+        (cis_linux_common_fixed_file_verification.stat.mode | default('9999'))[2]
+        in cis_linux_common_fixed_file_allowed_group_digits
+      - >-
+        (cis_linux_common_fixed_file_verification.stat.mode | default('9999'))[3]
+        in cis_linux_common_fixed_file_allowed_other_digits
+    fail_msg: The fixed file does not satisfy the platform adapter contract.
+    success_msg: The fixed-file verification passed.

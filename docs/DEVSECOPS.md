@@ -30,6 +30,7 @@ cd /home/vagrant/ansible/ansible
 bash ./scripts/check_control.sh
 bash ./scripts/test_contracts.sh
 bash ./scripts/test_p3_pilot.sh
+bash ./scripts/test_p4_common.sh
 ```
 
 `check_control.sh` valida inventario y sintaxis de todos los entry points. Si se
@@ -40,6 +41,11 @@ seleccionen mutuamente.
 `test_p3_pilot.sh` ejecuta únicamente la auditoría y verificación independientes
 de Debian 12 CIS 7.1.1. Exige `changed=0` en el recap de auditoría y comprueba la
 conectividad final; no induce deriva ni remedia el objetivo.
+
+`test_p4_common.sh` exige auditoría `PASS` con `changed=0`, verificación
+independiente y ping para CIS 7.1.1 en Ubuntu 24.04 y Debian 12. Es un gate
+read-only; la inducción de deriva y las convergencias permanecen como prueba de
+integración explícita.
 
 ### Integración en laboratorio
 

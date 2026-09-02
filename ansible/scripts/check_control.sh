@@ -29,6 +29,9 @@ ansible-inventory -i inventories/local/hosts.yml --graph
 playbooks=(
   playbooks/cis_hardening.yml
   playbooks/cis_ubuntu_2404_hardening.yml
+  playbooks/audit/cis_ubuntu_2404.yml
+  playbooks/hardening/cis_ubuntu_2404.yml
+  playbooks/verify/cis_ubuntu_2404.yml
   playbooks/cis_debian_12_preflight.yml
   playbooks/cis_debian_12_audit.yml
   playbooks/cis_debian_12_hardening.yml

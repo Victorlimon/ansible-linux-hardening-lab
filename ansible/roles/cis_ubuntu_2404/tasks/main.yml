@@ -1,6 +1,79 @@
 ---
+- name: Validate the Ubuntu 24.04 adapter target and execution mode
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == 'Ubuntu'
+      - ansible_facts.distribution_version is version('24.04', '>=')
+      - cis_ubuntu_2404_execution_mode in ['audit', 'remediation', 'verification']
+    fail_msg: The cis_ubuntu_2404 adapter requires Ubuntu 24.04 and a valid mode.
+  tags: [always, cis_ubuntu_2404, platform, safety]
+
 # Adaptador estable de Ubuntu. Mantiene el rol histórico aislado mientras los
 # controles compartidos se extraen únicamente después de probar equivalencia.
 - name: Run the validated Ubuntu 24.04 benchmark implementation
   ansible.builtin.import_role:
     name: cis_benchmark
+  when: cis_ubuntu_2404_execution_mode == 'remediation'
+
+- name: Audit Ubuntu 24.04 CIS 7.1.1 with the common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: fixed_file_permissions/audit.yml
+  vars: &ubuntu_passwd_contract
+    cis_linux_common_control_id: "7.1.1"
+    cis_linux_common_platform: ubuntu_2404
+    cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark
+    cis_linux_common_fixed_file_path: /etc/passwd
+    cis_linux_common_fixed_file_owner: root
+    cis_linux_common_fixed_file_group: root
+    cis_linux_common_fixed_file_remediation_mode: 'u-x,go-wx'
+    cis_linux_common_fixed_file_allowed_owner_digits: ['0', '2', '4', '6']
+    cis_linux_common_fixed_file_allowed_group_digits: ['0', '4']
+    cis_linux_common_fixed_file_allowed_other_digits: ['0', '4']
+  when:
+    - cis_ubuntu_2404_execution_mode == 'audit'
+    - cis_ubuntu_2404_7_1_1_passwd_permissions | bool
+  tags: &ubuntu_passwd_tags
+    - cis_ubuntu_2404
+    - cis_ubuntu_2404_audit
+    - cis_7
+    - cis_sec7
+    - cis_7_1
+    - cis_7_1_1
+    - fixed_file_permissions
+
+- name: Remediate Ubuntu 24.04 CIS 7.1.1 with the common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: fixed_file_permissions/remediation.yml
+  vars: *ubuntu_passwd_contract
+  when:
+    - cis_ubuntu_2404_execution_mode == 'remediation'
+    - cis_ubuntu_2404_7_1_1_passwd_permissions | bool
+    - cis_section7_system | bool
+    - section7_system_7_1_system_file_permissions | bool
+  tags:
+    - cis_ubuntu_2404
+    - cis_ubuntu_2404_remediation
+    - cis_7
+    - cis_sec7
+    - cis_7_1
+    - cis_7_1_1
+    - fixed_file_permissions
+
+- name: Verify Ubuntu 24.04 CIS 7.1.1 with the common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: fixed_file_permissions/verification.yml
+  vars: *ubuntu_passwd_contract
+  when:
+    - cis_ubuntu_2404_execution_mode == 'verification'
+    - cis_ubuntu_2404_7_1_1_passwd_permissions | bool
+  tags:
+    - cis_ubuntu_2404
+    - cis_ubuntu_2404_verification
+    - cis_7
+    - cis_sec7
+    - cis_7_1
+    - cis_7_1_1
+    - fixed_file_permissions

@@ -1,0 +1,15 @@
+---
+- name: Common fixed file permissions | Validate the mechanism contract
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_control_id | length > 0
+      - cis_linux_common_platform | length > 0
+      - cis_linux_common_benchmark | length > 0
+      - cis_linux_common_fixed_file_path is ansible.builtin.abs
+      - cis_linux_common_fixed_file_owner | length > 0
+      - cis_linux_common_fixed_file_group | length > 0
+      - cis_linux_common_fixed_file_remediation_mode | length > 0
+      - cis_linux_common_fixed_file_allowed_owner_digits | length > 0
+      - cis_linux_common_fixed_file_allowed_group_digits | length > 0
+      - cis_linux_common_fixed_file_allowed_other_digits | length > 0
+    fail_msg: The platform adapter supplied an invalid fixed-file contract.

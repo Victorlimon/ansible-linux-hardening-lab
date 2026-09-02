@@ -1,0 +1,11 @@
+---
+- name: Apply CIS hardening to Ubuntu 24.04
+  hosts: ubuntu
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  vars:
+    cis_ubuntu_2404_execution_mode: remediation
+  roles:
+    - role: cis_ubuntu_2404

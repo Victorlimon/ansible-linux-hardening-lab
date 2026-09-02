@@ -6,15 +6,6 @@
   register: cis_account_backup_files
   tags: [cis_7, cis_7_1, cis_7_1_2, cis_7_1_4, cis_7_1_6, cis_7_1_8]
 
-- name: "7.1.1 | Secure /etc/passwd"
-  ansible.builtin.file:
-    path: /etc/passwd
-    state: file
-    owner: root
-    group: root
-    mode: 'u-x,go-wx'
-  tags: [cis_7, cis_7_1, cis_7_1_1]
-
 - name: "7.1.2 | Secure /etc/passwd- when present"
   ansible.builtin.file:
     path: /etc/passwd-

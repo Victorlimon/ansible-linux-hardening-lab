@@ -44,6 +44,22 @@ ubuntu_wrong_limit="$(ansible-playbook -i inventories/local/hosts.yml \
   playbooks/cis_ubuntu_2404_hardening.yml --limit debian12 --list-hosts 2>&1)"
 assert_contains "$ubuntu_wrong_limit" "hosts (0)" "Ubuntu entry point accepted Debian limit"
 
+for ubuntu_interface in audit verify; do
+  ubuntu_interface_hosts="$(ansible-playbook -i inventories/local/hosts.yml \
+    "playbooks/$ubuntu_interface/cis_ubuntu_2404.yml" \
+    --limit ubuntu24 --list-hosts)"
+  assert_contains "$ubuntu_interface_hosts" "ubuntu24" \
+    "Ubuntu $ubuntu_interface entry point did not select ubuntu24"
+  assert_not_contains "$ubuntu_interface_hosts" "debian12" \
+    "Ubuntu $ubuntu_interface entry point selected Debian"
+
+  ubuntu_interface_wrong_limit="$(ansible-playbook -i inventories/local/hosts.yml \
+    "playbooks/$ubuntu_interface/cis_ubuntu_2404.yml" \
+    --limit debian12 --list-hosts 2>&1)"
+  assert_contains "$ubuntu_interface_wrong_limit" "hosts (0)" \
+    "Ubuntu $ubuntu_interface entry point accepted Debian limit"
+done
+
 debian_hosts="$(ansible-playbook -i inventories/local/hosts.yml \
   playbooks/cis_debian_12_hardening.yml --limit debian12 --list-hosts)"
 assert_contains "$debian_hosts" "debian12" "Debian entry point did not select debian12"

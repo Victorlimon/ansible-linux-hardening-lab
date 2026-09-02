@@ -1,0 +1,11 @@
+---
+- name: Common fixed file permissions | Load remediation contract
+  ansible.builtin.import_tasks: fixed_file_permissions/validate.yml
+
+- name: Common fixed file permissions | Apply declared metadata
+  ansible.builtin.file:
+    path: "{{ cis_linux_common_fixed_file_path }}"
+    state: file
+    owner: "{{ cis_linux_common_fixed_file_owner }}"
+    group: "{{ cis_linux_common_fixed_file_group }}"
+    mode: "{{ cis_linux_common_fixed_file_remediation_mode }}"

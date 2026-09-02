@@ -305,3 +305,35 @@ Después de los commits, `git status --short` quedó vacío y
 | P7 Producción | PLANNED | Gates, staging y runbooks |
 | P8 Compatibilidad anterior | PLANNED | Servidores principales released |
 | P9 Docker | DEFERRED | Proyecto de servidores concluido |
+
+## 2026-09-01 — P4 vertical común CIS 7.1.1
+
+### Extracción a `cis_linux_common` — COMPLETED
+
+- Se creó un mecanismo parametrizado de permisos de archivo fijo con caminos
+  separados de audit, remediation y verification. El rol común no decide IDs,
+  benchmarks, habilitación ni autorización de cambios.
+- Debian 12 conserva sus gates canario. Ubuntu 24.04 conserva los gates
+  históricos `cis_section7_system` y
+  `section7_system_7_1_system_file_permissions` para remediación.
+- La tarea histórica Ubuntu 7.1.1 fue retirada para evitar doble ejecución.
+- Se añadieron interfaces canónicas Ubuntu audit/hardening/verify y el wrapper
+  histórico de hardening conserva su ruta.
+
+### Integración cruzada — COMPLETED
+
+- En ambas VMs, audit inicial clasificó `PASS` con `changed=0` y verify pasó.
+- Se indujo deriva controlada `0644 -> 0744` en ambos `/etc/passwd`.
+- Ambos audits clasificaron `FAIL` con `changed=0`; ambos verify fallaron sin
+  modificar los objetivos.
+- Check mode predijo `0744 -> 0644` en ambas plataformas.
+- La primera convergencia realizó un cambio por host, las verificaciones
+  independientes pasaron y la segunda convergencia terminó con `changed=0`.
+- El gate read-only `scripts/test_p4_common.sh` terminó correctamente y ambos
+  pings finales devolvieron `pong`. Este control no requiere reboot.
+
+### Estado P4
+
+P4 queda `IN_PROGRESS`: el primer mecanismo común está probado. La siguiente
+vertical del plan es banners; requiere definir y aprobar el texto antes de
+permitir remediación.

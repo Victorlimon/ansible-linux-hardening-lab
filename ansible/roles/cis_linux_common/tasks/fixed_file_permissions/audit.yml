@@ -1,0 +1,50 @@
+---
+- name: Common fixed file permissions | Load audit contract
+  ansible.builtin.import_tasks: fixed_file_permissions/validate.yml
+
+- name: Common fixed file permissions | Inspect metadata for audit
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_fixed_file_path }}"
+  register: cis_linux_common_fixed_file_audit
+
+- name: Common fixed file permissions | Classify observed metadata
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_audit_compliant: >-
+      {{
+        cis_linux_common_fixed_file_audit.stat.exists | default(false)
+        and cis_linux_common_fixed_file_audit.stat.isreg | default(false)
+        and cis_linux_common_fixed_file_audit.stat.pw_name | default('')
+            == cis_linux_common_fixed_file_owner
+        and cis_linux_common_fixed_file_audit.stat.gr_name | default('')
+            == cis_linux_common_fixed_file_group
+        and (cis_linux_common_fixed_file_audit.stat.mode | default('9999'))[1]
+            in cis_linux_common_fixed_file_allowed_owner_digits
+        and (cis_linux_common_fixed_file_audit.stat.mode | default('9999'))[2]
+            in cis_linux_common_fixed_file_allowed_group_digits
+        and (cis_linux_common_fixed_file_audit.stat.mode | default('9999'))[3]
+            in cis_linux_common_fixed_file_allowed_other_digits
+      }}
+
+- name: Common fixed file permissions | Report observed metadata
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      benchmark: "{{ cis_linux_common_benchmark }}"
+      classification: >-
+        {{ 'PASS' if cis_linux_common_fixed_file_audit_compliant else 'FAIL' }}
+      expected:
+        path: "{{ cis_linux_common_fixed_file_path }}"
+        owner: "{{ cis_linux_common_fixed_file_owner }}"
+        group: "{{ cis_linux_common_fixed_file_group }}"
+        mode: 0644 or more restrictive without execute bits
+      observed:
+        exists: "{{ cis_linux_common_fixed_file_audit.stat.exists | default(false) }}"
+        is_regular: "{{ cis_linux_common_fixed_file_audit.stat.isreg | default(false) }}"
+        owner: >-
+          {{ cis_linux_common_fixed_file_audit.stat.pw_name | default('unavailable') }}
+        group: >-
+          {{ cis_linux_common_fixed_file_audit.stat.gr_name | default('unavailable') }}
+        mode: >-
+          {{ cis_linux_common_fixed_file_audit.stat.mode | default('unavailable') }}
+      changed_target: false

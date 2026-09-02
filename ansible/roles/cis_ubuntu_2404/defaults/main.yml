@@ -1,0 +1,5 @@
+---
+# Audit and verification remain available independently. Remediation keeps the
+# historical section 7 opt-in gates in addition to this control selector.
+cis_ubuntu_2404_execution_mode: remediation
+cis_ubuntu_2404_7_1_1_passwd_permissions: true

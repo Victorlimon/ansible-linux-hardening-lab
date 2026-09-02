@@ -1,8 +1,5 @@
 ---
-- name: Apply CIS hardening to Ubuntu 24.04
-  hosts: ubuntu
-  serial: 1
-  any_errors_fatal: true
-  become: true
-  roles:
-    - role: cis_ubuntu_2404
+# Compatibility wrapper. New automation should use
+# playbooks/hardening/cis_ubuntu_2404.yml.
+- name: Import the canonical Ubuntu 24.04 hardening playbook
+  ansible.builtin.import_playbook: hardening/cis_ubuntu_2404.yml
