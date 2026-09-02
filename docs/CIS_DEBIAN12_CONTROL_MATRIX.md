@@ -6,7 +6,7 @@ del proyecto; no representa una certificación de cumplimiento.
 | Control | Perfil | Tipo | Estado | Implementación y riesgo |
 |---|---|---|---|---|
 | 3.1.1 Identificar estado IPv6 | L1 Server/Workstation | Manual | `TESTED_CONVERGED` | Auditoría de solo lectura de parámetro del módulo y sysctl global/default. Debian del laboratorio observó IPv6 habilitado y dos ejecuciones con `changed=0`. No cambia conectividad. |
-| 1.6.2 Banner local | L1 Server/Workstation | Automated | `NOT_REVIEWED` | Requiere texto y aprobación legal antes de reemplazar `/etc/issue`. |
+| 1.6.2 Banner local | L1 Server/Workstation | Automated | `AUDIT_IMPLEMENTED_BLOCKED` | Auditoría sanitizada detecta metadata y exposición del SO con `changed=0`. Verification y remediation rechazan operar sin texto no vacío y aprobación legal explícita. Falta demostrar equivalencia contra el benchmark Ubuntu exacto antes de extraer un mecanismo común. |
 | 7.1.1 Permisos `/etc/passwd` | L1 Server/Workstation | Automated | `P4_COMMON_TESTED` | Mecanismo común probado en Debian 12 y Ubuntu 24.04 con evidencia separada. La auditoría detectó deriva con `changed=0`; check mode predijo el cambio, la primera convergencia corrigió solo el modo, la segunda terminó con `changed=0` y la verificación posterior pasó. |
 | 7.1.5 Permisos `/etc/shadow` | L1 Server/Workstation | Automated | `TESTED_CONVERGED` | Canario opt-in; Debian permite grupo `root` o `shadow`; se usa `shadow`. Dos ejecuciones reales y verificación posterior finalizaron con `changed=0`. |
 | 2.4.1.2 Permisos `/etc/crontab` | L1 Server/Workstation | Automated | `NOT_REVIEWED` | Aplicar solo cuando cron y el archivo ya existan; no instalar ni crear implícitamente. |

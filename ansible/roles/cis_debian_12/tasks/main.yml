@@ -32,6 +32,29 @@
     - cis_debian_12_3_1_1_ipv6_audit | bool
   tags: [cis_debian_12, cis_debian_12_audit, cis_3_1_1, ipv6_audit]
 
+- name: Audit Debian 12 CIS 1.6.2
+  ansible.builtin.import_tasks: audit/1_6_2_issue_banner.yml
+  when:
+    - cis_debian_12_execution_mode == 'audit'
+    - cis_debian_12_1_6_2_issue_banner | bool
+  tags: [cis_debian_12, cis_debian_12_audit, cis_1_6_2, banners, issue]
+
+- name: Remediate Debian 12 CIS 1.6.2
+  ansible.builtin.import_tasks: remediation/1_6_2_issue_banner.yml
+  when:
+    - cis_debian_12_execution_mode == 'remediation'
+    - cis_debian_12_remediation_enabled | bool
+    - cis_debian_12_banner_remediation_enabled | bool
+    - cis_debian_12_1_6_2_issue_banner | bool
+  tags: [cis_debian_12, cis_debian_12_remediation, cis_1_6_2, banners, issue]
+
+- name: Verify Debian 12 CIS 1.6.2
+  ansible.builtin.import_tasks: verification/1_6_2_issue_banner.yml
+  when:
+    - cis_debian_12_execution_mode == 'verification'
+    - cis_debian_12_1_6_2_issue_banner | bool
+  tags: [cis_debian_12, cis_debian_12_verification, cis_1_6_2, banners, issue]
+
 - name: Audit Debian 12 CIS 7.1.1
   ansible.builtin.import_tasks: audit/7_1_1_passwd_permissions.yml
   when:

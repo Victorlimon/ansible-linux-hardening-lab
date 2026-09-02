@@ -337,3 +337,23 @@ Después de los commits, `git status --short` quedó vacío y
 P4 queda `IN_PROGRESS`: el primer mecanismo común está probado. La siguiente
 vertical del plan es banners; requiere definir y aprobar el texto antes de
 permitir remediación.
+
+## 2026-09-02 — P4 banners, avance seguro
+
+- La referencia Debian 12 confirma que el contenido es específico del sitio y
+  debe revisarlo asesoría legal antes de modificar sistemas.
+- Se implementaron audit, remediation y verification separados para Debian
+  CIS 1.6.2. Audit nunca publica el contenido: solo informa metadata,
+  presencia de información prohibida y clasificación.
+- El banner Debian observado contiene información del sistema operativo; audit
+  lo clasificó `FAIL` con `changed=0` y metadata `0644 root:root` conforme.
+- Verification rechazó declarar `PASS` porque no existe texto aprobado.
+- Remediation sin su gate específico terminó con `changed=0`; al habilitar el
+  gate sin texto aprobado, falló de forma explícita antes de cambiar el archivo.
+- En Ubuntu, el contenido de ejemplo de `/etc/motd`, `/etc/issue`,
+  `/etc/issue.net`, SSH y GDM quedó protegido por
+  `cis_benchmark_banner_text_approved=false`. El check mode por tags confirmó
+  `changed=0` y no sustituyó banners.
+- No se extrajo esta vertical a `cis_linux_common`: falta la referencia exacta
+  Ubuntu 24.04 y la política legal aprobada. El gate automatizado es
+  `scripts/test_p4_banners.sh`.

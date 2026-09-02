@@ -83,7 +83,9 @@ cis_1_5_3_restrict_core_dumps: true
 cis_1_5_4_prelink_absent: false
 cis_1_5_5_disable_apport: false
 
-# 1.6 - Generic legal text avoids exposing OS and organization details.
+# 1.6 - Banner content is site-specific and requires legal approval. The text
+# below is an example only and must never be applied without this gate.
+cis_benchmark_banner_text_approved: false
 cis_1_6_1_login_banner_text: true
 cis_1_6_2_issue_banner_text: true
 cis_1_6_3_remote_login_banner: true

@@ -31,6 +31,7 @@ bash ./scripts/check_control.sh
 bash ./scripts/test_contracts.sh
 bash ./scripts/test_p3_pilot.sh
 bash ./scripts/test_p4_common.sh
+bash ./scripts/test_p4_banners.sh
 ```
 
 `check_control.sh` valida inventario y sintaxis de todos los entry points. Si se
@@ -46,6 +47,12 @@ conectividad final; no induce deriva ni remedia el objetivo.
 independiente y ping para CIS 7.1.1 en Ubuntu 24.04 y Debian 12. Es un gate
 read-only; la inducción de deriva y las convergencias permanecen como prueba de
 integración explícita.
+
+`test_p4_banners.sh` comprueba que Debian 12 CIS 1.6.2 audita con contenido
+redactado y `changed=0`, que remediation deshabilitada no predice cambios, que
+remediation habilitada no acepta texto vacío sin aprobación, que verification
+no puede declarar `PASS` en ese estado y que la conectividad permanece
+disponible.
 
 ### Integración en laboratorio
 

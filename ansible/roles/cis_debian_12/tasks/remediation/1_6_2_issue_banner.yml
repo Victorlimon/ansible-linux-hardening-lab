@@ -1,0 +1,16 @@
+---
+- name: CIS 1.6.2 | Remediation | Validate approved banner policy
+  ansible.builtin.assert:
+    that:
+      - cis_debian_12_banner_text_approved | bool
+      - cis_debian_12_issue_banner_text | trim | length > 0
+    fail_msg: Debian banner remediation requires non-empty legally approved text.
+
+- name: CIS 1.6.2 | Remediation | Configure the approved local banner
+  ansible.builtin.copy:
+    content: "{{ cis_debian_12_issue_banner_text | trim }}\n"
+    dest: /etc/issue
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true

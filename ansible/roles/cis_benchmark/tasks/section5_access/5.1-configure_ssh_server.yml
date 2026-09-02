@@ -115,7 +115,9 @@
   tags: [level1-server, level1-workstation, remediation, cis_5.1.4, sshd]
 
 - name: "CIS 5.1.5 | Remediation | Configure the SSH warning banner"
-  when: cis_ssh_config.banner | default(true)
+  when:
+    - cis_ssh_config.banner | default(true)
+    - cis_benchmark_banner_text_approved | default(false) | bool
   ansible.builtin.copy:
     dest: /etc/issue.net
     content: "{{ cis_issue_net_text | default('Authorized users only. All activity may be monitored and reported.') }}\n"

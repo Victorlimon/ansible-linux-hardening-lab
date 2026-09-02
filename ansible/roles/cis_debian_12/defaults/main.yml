@@ -13,3 +13,10 @@ cis_debian_12_canary_confirmed: false
 
 cis_debian_12_7_1_1_passwd_permissions: true
 cis_debian_12_7_1_5_shadow_permissions: true
+
+# CIS 1.6.2 can always be audited. Remediation and PASS verification require
+# organization-specific text reviewed by legal counsel.
+cis_debian_12_1_6_2_issue_banner: true
+cis_debian_12_banner_remediation_enabled: false
+cis_debian_12_banner_text_approved: false
+cis_debian_12_issue_banner_text: ""

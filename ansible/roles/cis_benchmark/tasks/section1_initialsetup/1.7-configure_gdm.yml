@@ -42,6 +42,7 @@
   when:
     - cis_section1_7_gdm | default(false)
     - cis_1_7_2_gdm_login_banner | default(true)
+    - cis_benchmark_banner_text_approved | default(false) | bool
     - "'gdm3' in ansible_facts.packages"
     - not (cis_1_7_1_gdm_removed | default(false))
   block:

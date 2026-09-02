@@ -16,6 +16,7 @@
   when:
     - cis_section1_6_banners | default(true)
     - cis_1_6_1_login_banner_text | default(true)
+    - cis_benchmark_banner_text_approved | default(false) | bool
   tags: ['cis_sec1', 'cis_1.6.1', 'banners', 'motd']
 
 # 1.6.2 - /etc/issue
@@ -30,6 +31,7 @@
   when:
     - cis_section1_6_banners | default(true)
     - cis_1_6_2_issue_banner_text | default(true)
+    - cis_benchmark_banner_text_approved | default(false) | bool
   tags: ['cis_sec1', 'cis_1.6.2', 'banners', 'issue']
 
 # 1.6.3 - /etc/issue.net
@@ -44,6 +46,7 @@
   when:
     - cis_section1_6_banners | default(true)
     - cis_1_6_3_remote_login_banner | default(true)
+    - cis_benchmark_banner_text_approved | default(false) | bool
   tags: ['cis_sec1', 'cis_1.6.3', 'banners', 'issue_net']
 
 # 1.6.4 - Permissions on /etc/motd
