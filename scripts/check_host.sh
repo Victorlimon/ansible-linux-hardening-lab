@@ -19,7 +19,14 @@ if [[ -n "$tracked_lab_keys" ]]; then
 fi
 
 if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks git --config .gitleaks.toml --redact
+  if gitleaks git --help >/dev/null 2>&1; then
+    gitleaks git --config .gitleaks.toml --redact
+  elif gitleaks detect --help >/dev/null 2>&1; then
+    gitleaks detect --source . --config .gitleaks.toml --redact
+  else
+    printf '%s\n' "ERROR: the installed gitleaks CLI is not supported." >&2
+    exit 1
+  fi
 else
   printf '%s\n' "WARN: gitleaks is not installed; secret scanning was skipped." >&2
 fi

@@ -18,7 +18,8 @@ destino permitidas son `ubuntu24` y `debian12`, siempre con inventario local y
 ```
 
 Comprueba whitespace, sintaxis Bash de scripts versionados y claves de
-laboratorio rastreadas. Ejecuta Gitleaks si está instalado. La historia remota
+laboratorio rastreadas. Ejecuta Gitleaks si está instalado y detecta las
+interfaces `git` actual o `detect` histórica. La historia remota
 fue reemplazada tras retirar la clave efímera comprometida; los clones anteriores
 deben descartarse o restablecerse contra la historia saneada.
 

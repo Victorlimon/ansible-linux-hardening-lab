@@ -40,9 +40,10 @@ interfaces canónicas separadas para auditoría, remediación y verificación; l
 playbooks raíz son wrappers compatibles. El catálogo interno del preflight es la
 única fuente de identidad, arquitectura y estado de plataforma.
 
-El primer mecanismo extraído a `cis_linux_common` es el control 7.1.1 sobre
-`/etc/passwd`. Los adaptadores conservan IDs, benchmark, habilitación y gates;
-el rol común solo recibe el contrato técnico parametrizado.
+`cis_linux_common` contiene verticales probadas para `/etc/passwd`,
+`/etc/crontab`, estado IPv6 y TCP SYN cookies. Los adaptadores conservan IDs,
+benchmark, habilitación y gates; el rol común solo recibe contratos técnicos
+parametrizados.
 
 ## Inventario y usuarios
 

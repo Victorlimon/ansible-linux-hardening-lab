@@ -63,7 +63,9 @@ Un control Debian no se marca liberado hasta registrar:
 
 - [x] Matriz inicial por control y auditoría IPv6 3.1.1 de solo lectura.
 - [x] Canarios 7.1.1 y 7.1.5 de permisos fijos con gates por control.
-- [ ] Banners, permisos fijos restantes y cron con gates por control.
+- [x] Cron con gates por control y regresión común en ambas plataformas.
+- [x] Auditoría de banners con remediación bloqueada hasta aprobación legal.
+- [ ] Permisos fijos restantes con gates por control.
 - Regresión Ubuntu en cada extracción común.
 
 ### D3 — Plataforma Debian
