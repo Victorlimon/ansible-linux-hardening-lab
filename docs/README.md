@@ -15,8 +15,10 @@ ansible/
 │   ├── cis_hardening.yml                 # compatibilidad Ubuntu
 │   ├── cis_ubuntu_2404_hardening.yml     # canónico Ubuntu
 │   ├── cis_debian_12_preflight.yml
-│   ├── cis_debian_12_audit.yml
-│   └── cis_debian_12_hardening.yml
+│   ├── cis_debian_12_{audit,hardening,verify}.yml  # wrappers
+│   ├── audit/cis_debian_12.yml
+│   ├── hardening/cis_debian_12.yml
+│   └── verify/cis_debian_12.yml
 ├── inventories/
 │   ├── local/
 │   │   ├── hosts.yml
@@ -31,9 +33,10 @@ ansible/
 ```
 
 `cis_hardening.yml` importa el entry point canónico Ubuntu. El adaptador
-`cis_ubuntu_2404` compone temporalmente `cis_benchmark`. Debian utiliza un
-adaptador y plays separados con gates canario. El catálogo interno del preflight
-es la única fuente de identidad, arquitectura y estado de plataforma.
+`cis_ubuntu_2404` compone temporalmente `cis_benchmark`. Debian utiliza
+interfaces canónicas separadas para auditoría, remediación y verificación; los
+playbooks raíz son wrappers compatibles. El catálogo interno del preflight es la
+única fuente de identidad, arquitectura y estado de plataforma.
 
 ## Inventario y usuarios
 

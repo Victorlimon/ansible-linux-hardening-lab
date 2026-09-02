@@ -1,0 +1,30 @@
+---
+- name: "CIS 7.1.1 | Verification | Inspect /etc/passwd metadata"
+  ansible.builtin.stat:
+    path: /etc/passwd
+  register: cis_debian_12_7_1_1_verification_passwd
+
+- name: "CIS 7.1.1 | Verification | Validate /etc/passwd metadata"
+  ansible.builtin.assert:
+    that:
+      - cis_debian_12_7_1_1_verification_passwd.stat.exists | default(false)
+      - cis_debian_12_7_1_1_verification_passwd.stat.isreg | default(false)
+      - >-
+        cis_debian_12_7_1_1_verification_passwd.stat.pw_name |
+        default('') == 'root'
+      - >-
+        cis_debian_12_7_1_1_verification_passwd.stat.gr_name |
+        default('') == 'root'
+      - >-
+        (cis_debian_12_7_1_1_verification_passwd.stat.mode |
+        default('9999'))[1] in ['0', '2', '4', '6']
+      - >-
+        (cis_debian_12_7_1_1_verification_passwd.stat.mode |
+        default('9999'))[2] in ['0', '4']
+      - >-
+        (cis_debian_12_7_1_1_verification_passwd.stat.mode |
+        default('9999'))[3] in ['0', '4']
+    fail_msg: >-
+      /etc/passwd must be a regular file owned by root:root and have mode 0644
+      or more restrictive without execute bits.
+    success_msg: Debian 12 CIS 7.1.1 verification passed.

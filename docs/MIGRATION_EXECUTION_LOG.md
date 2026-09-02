@@ -255,3 +255,53 @@ Después de los commits, `git status --short` quedó vacío y
 | P7 Producción | PLANNED | Gates, staging y runbooks |
 | P8 Compatibilidad anterior | PLANNED | Servidores principales released |
 | P9 Docker | DEFERRED | Proyecto de servidores concluido |
+
+## 2026-09-01 — Cierre remoto de P0 y vertical piloto P3
+
+### Historia remota saneada — COMPLETED
+
+- Se obtuvo `origin/main` y se confirmó el tip comprometido exacto
+  `c0533011289273f86d12b8fc2399ae55b5a7d9f0`.
+- El reemplazo autorizado se realizó con un lease explícito; `origin/main`
+  quedó en `1d06d54c955ad9f4f5fd07054fe76f2a4133eb2f`.
+- Gitleaks volvió a escanear las nueve revisiones alcanzables y no encontró
+  secretos. Los clones anteriores requieren reemplazo o reset coordinado.
+
+### P3 — CIS Debian 12 7.1.1 — COMPLETED
+
+- Se crearon entry points canónicos independientes en `playbooks/audit/`,
+  `playbooks/hardening/` y `playbooks/verify/`; los entry points Debian de la
+  raíz permanecen como wrappers compatibles.
+- El control 7.1.1 separa físicamente `audit`, `remediation` y `verification`.
+  Audit y verify no usan handlers, no cambian contenido y no requieren reboot.
+- La auditoría inicial clasificó `/etc/passwd` conforme y terminó con
+  `changed=0`.
+- Se indujo una deriva controlada de modo `0644` a `0744`. La auditoría la
+  clasificó `FAIL` con `changed=0` y la verificación independiente falló sin
+  cambios.
+- Sin gates, hardening terminó con `changed=0`. Con habilitación de remediación
+  pero sin confirmación canario, el gate rechazó la ejecución y la deriva
+  permaneció intacta.
+- Con ambos gates, `--check --diff` predijo exactamente `0744 -> 0644` sin que
+  la verificación mezclada produjera un falso fallo.
+- La primera convergencia realizó un cambio; la verificación independiente pasó
+  con `changed=0`; la segunda convergencia terminó con `changed=0`.
+- La auditoría final clasificó `PASS` con modo `0644` y el ping final devolvió
+  `pong`.
+- `scripts/test_p3_pilot.sh` automatiza el gate read-only de auditoría,
+  verificación y conectividad sin inducir deriva ni remediar.
+
+## Estado de fases después del piloto P3
+
+| Fase | Estado | Próximo gate |
+|---|---|---|
+| P0 Saneamiento | COMPLETED | Mantener secret scan y retirar clones antiguos |
+| P1 Toolchain | COMPLETED | Mantener lock y hashes |
+| P2 Baseline | COMPLETED | Evitar regresiones y reducir warnings |
+| P3 Separación audit/remediation/verification | COMPLETED | Iniciar P4 |
+| P4 Verticales comunes | PLANNED | Comparar 7.1.1 en Ubuntu y Debian |
+| P5 Debian released | PLANNED | Matriz y secciones probadas |
+| P6 Evidencia/SIEM | PLANNED | Schema aprobado |
+| P7 Producción | PLANNED | Gates, staging y runbooks |
+| P8 Compatibilidad anterior | PLANNED | Servidores principales released |
+| P9 Docker | DEFERRED | Proyecto de servidores concluido |

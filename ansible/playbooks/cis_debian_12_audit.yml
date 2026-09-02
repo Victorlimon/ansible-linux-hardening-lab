@@ -1,13 +1,4 @@
 ---
-- name: Audit implemented CIS controls on Debian 12 without remediation
-  hosts: debian_12
-  become: false
-  gather_facts: true
-  vars:
-    cis_preflight_allowed_release_statuses: [canary, released]
-    cis_debian_12_execution_mode: audit
-  roles:
-    - role: cis_platform_preflight
-      tags: [always, preflight, platform]
-    - role: cis_debian_12
-      tags: [cis_debian_12, cis_debian_12_audit]
+# Compatibility wrapper. New automation should use playbooks/audit/cis_debian_12.yml.
+- name: Import the canonical Debian 12 audit playbook
+  ansible.builtin.import_playbook: audit/cis_debian_12.yml

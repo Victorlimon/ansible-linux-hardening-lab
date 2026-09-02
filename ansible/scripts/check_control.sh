@@ -32,6 +32,10 @@ playbooks=(
   playbooks/cis_debian_12_preflight.yml
   playbooks/cis_debian_12_audit.yml
   playbooks/cis_debian_12_hardening.yml
+  playbooks/cis_debian_12_verify.yml
+  playbooks/audit/cis_debian_12.yml
+  playbooks/hardening/cis_debian_12.yml
+  playbooks/verify/cis_debian_12.yml
 )
 
 for playbook in "${playbooks[@]}"; do

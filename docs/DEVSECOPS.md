@@ -18,9 +18,9 @@ destino permitidas son `ubuntu24` y `debian12`, siempre con inventario local y
 ```
 
 Comprueba whitespace, sintaxis Bash de scripts versionados y claves de
-laboratorio rastreadas. Ejecuta Gitleaks si está instalado. Actualmente la clave
-histórica eliminada sigue en el índice/historial y debe considerarse un bloqueo
-de seguridad hasta su rotación y limpieza aprobada.
+laboratorio rastreadas. Ejecuta Gitleaks si está instalado. La historia remota
+fue reemplazada tras retirar la clave efímera comprometida; los clones anteriores
+deben descartarse o restablecerse contra la historia saneada.
 
 ### Nodo de control, sin remediar destinos
 
@@ -29,12 +29,17 @@ make ansible-control
 cd /home/vagrant/ansible/ansible
 bash ./scripts/check_control.sh
 bash ./scripts/test_contracts.sh
+bash ./scripts/test_p3_pilot.sh
 ```
 
 `check_control.sh` valida inventario y sintaxis de todos los entry points. Si se
 define `CIS_STRICT_QUALITY_TOOLS=true`, la ausencia de `ansible-lint` o
 `yamllint` es un error. `test_contracts.sh` verifica que Ubuntu y Debian no se
 seleccionen mutuamente.
+
+`test_p3_pilot.sh` ejecuta únicamente la auditoría y verificación independientes
+de Debian 12 CIS 7.1.1. Exige `changed=0` en el recap de auditoría y comprueba la
+conectividad final; no induce deriva ni remedia el objetivo.
 
 ### Integración en laboratorio
 

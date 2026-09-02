@@ -28,9 +28,9 @@ Para validar que la documentación sigue correspondiendo al código, revise:
 - `ansible/roles/cis_benchmark/defaults/main/*.yml` para defaults efectivos.
 - `ansible/inventories/local/hosts.yml` y `group_vars/ubuntu_2404.yml` para el
   laboratorio.
-- `ansible/playbooks/cis_debian_12_audit.yml`,
-  `ansible/playbooks/cis_debian_12_hardening.yml` y `roles/cis_debian_12/` para
-  auditoría y canarios Debian 12.
+- `ansible/playbooks/{audit,hardening,verify}/cis_debian_12.yml` y
+  `roles/cis_debian_12/` para las interfaces canónicas y canarios Debian 12;
+  los playbooks Debian de la raíz son wrappers compatibles.
 - `ansible/requirements.yml` para colecciones.
 - `Makefile`, `lab/vagrant/Vagrantfile` y scripts de provisión para usuarios y
   flujo del laboratorio.

@@ -1,0 +1,15 @@
+---
+- name: Apply validated CIS canary controls on Debian 12
+  hosts: debian_12
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  vars:
+    cis_preflight_allowed_release_statuses: [canary, released]
+    cis_debian_12_execution_mode: remediation
+  roles:
+    - role: cis_platform_preflight
+      tags: [always, preflight, platform]
+    - role: cis_debian_12
+      tags: [cis_debian_12, cis_debian_12_remediation]

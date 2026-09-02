@@ -53,6 +53,18 @@ debian_wrong_limit="$(ansible-playbook -i inventories/local/hosts.yml \
   playbooks/cis_debian_12_hardening.yml --limit ubuntu24 --list-hosts 2>&1)"
 assert_contains "$debian_wrong_limit" "hosts (0)" "Debian entry point accepted Ubuntu limit"
 
+debian_verify_hosts="$(ansible-playbook -i inventories/local/hosts.yml \
+  playbooks/verify/cis_debian_12.yml --limit debian12 --list-hosts)"
+assert_contains "$debian_verify_hosts" "debian12" \
+  "Debian verification entry point did not select debian12"
+assert_not_contains "$debian_verify_hosts" "ubuntu24" \
+  "Debian verification entry point selected Ubuntu"
+
+debian_verify_wrong_limit="$(ansible-playbook -i inventories/local/hosts.yml \
+  playbooks/verify/cis_debian_12.yml --limit ubuntu24 --list-hosts 2>&1)"
+assert_contains "$debian_verify_wrong_limit" "hosts (0)" \
+  "Debian verification entry point accepted Ubuntu limit"
+
 compatibility_hosts="$(ansible-playbook -i inventories/local/hosts.yml \
   playbooks/cis_hardening.yml --limit ubuntu24 --list-hosts)"
 assert_contains "$compatibility_hosts" "ubuntu24" "Compatibility entry point changed host selection"

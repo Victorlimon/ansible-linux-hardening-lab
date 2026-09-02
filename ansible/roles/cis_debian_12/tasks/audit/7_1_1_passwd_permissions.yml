@@ -1,0 +1,44 @@
+---
+- name: "CIS 7.1.1 | Audit | Inspect /etc/passwd metadata"
+  ansible.builtin.stat:
+    path: /etc/passwd
+  register: cis_debian_12_7_1_1_audit_passwd
+
+- name: "CIS 7.1.1 | Audit | Classify /etc/passwd metadata"
+  ansible.builtin.set_fact:
+    cis_debian_12_7_1_1_audit_compliant: >-
+      {{
+        cis_debian_12_7_1_1_audit_passwd.stat.exists | default(false)
+        and cis_debian_12_7_1_1_audit_passwd.stat.isreg | default(false)
+        and cis_debian_12_7_1_1_audit_passwd.stat.pw_name | default('') == 'root'
+        and cis_debian_12_7_1_1_audit_passwd.stat.gr_name | default('') == 'root'
+        and (cis_debian_12_7_1_1_audit_passwd.stat.mode | default('9999'))[1]
+            in ['0', '2', '4', '6']
+        and (cis_debian_12_7_1_1_audit_passwd.stat.mode | default('9999'))[2]
+            in ['0', '4']
+        and (cis_debian_12_7_1_1_audit_passwd.stat.mode | default('9999'))[3]
+            in ['0', '4']
+      }}
+
+- name: "CIS 7.1.1 | Audit | Report /etc/passwd metadata"
+  ansible.builtin.debug:
+    msg:
+      control: "7.1.1"
+      classification: >-
+        {{ 'PASS' if cis_debian_12_7_1_1_audit_compliant else 'FAIL' }}
+      expected:
+        owner: root
+        group: root
+        mode: 0644 or more restrictive without execute bits
+      observed:
+        exists: >-
+          {{ cis_debian_12_7_1_1_audit_passwd.stat.exists | default(false) }}
+        is_regular: >-
+          {{ cis_debian_12_7_1_1_audit_passwd.stat.isreg | default(false) }}
+        owner: >-
+          {{ cis_debian_12_7_1_1_audit_passwd.stat.pw_name | default('unavailable') }}
+        group: >-
+          {{ cis_debian_12_7_1_1_audit_passwd.stat.gr_name | default('unavailable') }}
+        mode: >-
+          {{ cis_debian_12_7_1_1_audit_passwd.stat.mode | default('unavailable') }}
+      changed_target: false
