@@ -328,8 +328,8 @@
     direction: "{{ item.direction }}"
     interface: lo
   loop:
-    - { direction: in }
-    - { direction: out }
+    - direction: in
+    - direction: out
   when: cis_4_2_4_ufw_configure_loopback | default(true) | bool
   tags: [cis_sec4, cis_4_2, cis_4_2_4, ufw, level1]
 

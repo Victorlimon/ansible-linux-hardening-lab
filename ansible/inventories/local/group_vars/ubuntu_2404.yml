@@ -18,9 +18,21 @@ cis_ufw_allowed_in_rules:
     proto: tcp
     comment: HTTPS service
 cis_ufw_allowed_out_ports:
-  - { port: 53, proto: udp, comment: DNS }
-  - { port: 53, proto: tcp, comment: DNS fallback }
-  - { port: 67, proto: udp, comment: DHCP renewal }
-  - { port: 80, proto: tcp, comment: HTTP repositories }
-  - { port: 443, proto: tcp, comment: HTTPS repositories }
-  - { port: 123, proto: udp, comment: NTP }
+  - port: 53
+    proto: udp
+    comment: DNS
+  - port: 53
+    proto: tcp
+    comment: DNS fallback
+  - port: 67
+    proto: udp
+    comment: DHCP renewal
+  - port: 80
+    proto: tcp
+    comment: HTTP repositories
+  - port: 443
+    proto: tcp
+    comment: HTTPS repositories
+  - port: 123
+    proto: udp
+    comment: NTP

@@ -53,7 +53,6 @@
   tags:
     - cis_3
     - cis_sec3
-    
 
 # =============================================================================
 # SECTION 4: FIREWALL
@@ -74,9 +73,6 @@
   tags:
     - cis_5
     - cis_sec5
-
-
-
 
 # BEGIN SECTION 6 BLOCK
 # Section 6: Logging and Auditing

@@ -105,3 +105,153 @@ Después de los commits, `git status --short` quedó vacío y
   Gitleaks y git-filter-repo disponibles para Ubuntu 24.04 del nodo de control.
 - Se eliminó el `apt upgrade` implícito del flujo de provisión.
 - La instalación todavía no se ejecutó.
+
+## 2026-09-01 — Ejecución de P1 y baseline parcial P2
+
+### Rotación y provisión — PARTIAL
+
+- Se corrigieron las rutas WSL usadas por `vagrant upload`.
+- La clave efímera ED25519 quedó instalada para el usuario remoto `ansible` en
+  Debian 12 y su par privado/público quedó disponible únicamente para
+  `vagrant` en `ansible-control`.
+- Debian 12 pasó `ansible.builtin.ping` y una recopilación de facts con
+  `become`; se confirmó Debian 12.15.
+- Ubuntu 24.04 dejó de aceptar conexiones Vagrant durante la reprovisión y no
+  fue alcanzable desde `ansible-control` (`timeout`/`No route to host`). No se
+  ejecutaron remediaciones nuevas sobre Ubuntu.
+- `make provision-lab` permanece parcial hasta reconstruir o recuperar Ubuntu.
+
+### Toolchain reproducible — COMPLETED
+
+- Se instaló y verificó `ansible-core 2.21.2` exclusivamente dentro de
+  `ansible-control` en `/home/vagrant/.venvs/ansible-cis`.
+- Se instalaron las colecciones fijadas `ansible.posix 1.5.4` y
+  `community.general 8.6.0`.
+- Se generó `ansible/requirements-dev.lock` con hashes y `--allow-unsafe` para
+  fijar también `pip` y `setuptools`.
+- Una instalación posterior con `pip install --require-hashes` terminó
+  correctamente.
+- También quedaron disponibles ansible-lint 26.8.0, yamllint 1.38.0,
+  ShellCheck 0.9.0, Gitleaks 8.16.0 y git-filter-repo 2.38.0.
+
+### Baseline estático y contratos — PARTIAL
+
+- `ansible --version` confirmó Core 2.21.2 y el `ansible.cfg` del proyecto.
+- El inventario se interpretó correctamente.
+- Los cinco entry points pasaron `--syntax-check`.
+- Los contratos de aislamiento Ubuntu/Debian pasaron.
+- `ansible-doc` resolvió los módulos `file`, `stat`, `assert`, `slurp`,
+  `set_fact` y `debug` antes de las pruebas de los canarios Debian.
+- ansible-lint procesó 138 archivos y reportó 518 infracciones preexistentes;
+  el baseline todavía no está verde y no se ocultaron los resultados.
+- La ejecución inicial de yamllint y Gitleaks no fue válida para el repositorio
+  completo: Vagrant solo había montado `ansible/`, por lo que yamllint recorrió
+  colecciones instaladas y Gitleaks no encontró `.git`.
+- Se corrigió el `Vagrantfile` para montar el repositorio completo en
+  `/home/vagrant/ansible`; la corrección requiere reconstrucción o recarga del
+  nodo de control antes de repetir ambos checks.
+
+### Canarios Debian 12 — COMPLETED
+
+- Se ejecutó primero `--check --diff` limitado a `debian12` y a los tags
+  `cis_7_1_1,cis_7_1_5` con los gates canario explícitos.
+- El check, la primera ejecución real y la segunda ejecución real finalizaron
+  con `changed=0`, `unreachable=0` y `failed=0`.
+- Las verificaciones de propietario, grupo y permisos de `/etc/passwd` y
+  `/etc/shadow` pasaron; el ping final también pasó.
+
+## Estado de fases actualizado
+
+| Fase | Estado | Próximo gate |
+|---|---|---|
+| P0 Saneamiento | PARTIAL | Secret scan Git válido y limpieza del historial |
+| P1 Toolchain | COMPLETED | Verificarla tras reconstrucción limpia |
+| P2 Baseline | PARTIAL | Recuperar Ubuntu, repetir lint/yamllint/Gitleaks |
+| P3 Separación audit/remediation/verification | PLANNED | Baseline aceptado |
+| P4 Verticales comunes | PLANNED | Vertical piloto validada |
+| P5 Debian released | PLANNED | Matriz y secciones probadas |
+| P6 Evidencia/SIEM | PLANNED | Schema aprobado |
+| P7 Producción | PLANNED | Gates, staging y runbooks |
+| P8 Compatibilidad anterior | PLANNED | Servidores principales released |
+| P9 Docker | DEFERRED | Proyecto de servidores concluido |
+
+## 2026-09-01 — Reconstrucción limpia y saneamiento local P0
+
+### Reconstrucción del laboratorio — COMPLETED
+
+- El propietario reconstruyó las tres VMs y `make status` confirmó
+  `ansible-control`, `ubuntu24` y `debian12` en ejecución.
+- `make provision-lab` completó la rotación de identidad, la instalación desde
+  el lock con hashes y las colecciones fijadas.
+- Ubuntu 24.04 y Debian 12 pasaron ping, facts con `become`, contratos de
+  aislamiento y los cinco syntax checks.
+- El preflight Ubuntu en `--check --diff` finalizó con `changed=0`.
+- El gate negativo Debian falló de la forma esperada cuando faltó la
+  confirmación canario.
+- Los canarios Debian 7.1.1 y 7.1.5 pasaron `--check --diff`, dos ejecuciones
+  reales con `changed=0` y ping final en ambos nodos.
+
+### Calidad estática — PARTIAL
+
+- yamllint ya usó la configuración real del repositorio. Se corrigieron sus
+  errores bloqueantes y la comprobación termina correctamente; conserva
+  warnings no bloqueantes de deuda histórica.
+- ansible-lint confirmó que el perfil `min` pasa, pero el perfil `basic`
+  requerido reportó 585 infracciones. La deuda no fue silenciada.
+
+### Purga de la clave histórica — COMPLETED LOCAL / REMOTE PENDING
+
+- Gitleaks confirmó un único hallazgo previo: la clave privada
+  `lab/vagrant/ssh/id_rsa` en el antiguo commit `c053301`.
+- Antes de reescribir se creó un respaldo nuevo en `/tmp/opencode` con bundle,
+  patches de índice/working tree, archivos no rastreados y checksums válidos.
+- `git-filter-repo` eliminó la clave privada y su pública de los seis commits
+  locales; los hashes de toda la rama cambiaron.
+- Se eliminaron refs temporales de stash/replace, se expiraron reflogs y se
+  ejecutó `git gc --prune=now`; `git fsck --full` terminó sin errores.
+- El objeto antiguo `c053301` ya no existe localmente, las claves efímeras no
+  están rastreadas y permanecen cubiertas por `.gitignore`.
+- Gitleaks volvió a escanear los seis commits y finalizó sin hallazgos.
+- No se realizó push. `origin/main` todavía contiene la historia comprometida;
+  su reemplazo requerirá coordinación y un push no fast-forward explícito.
+
+## 2026-09-01 — Cierre local de P2
+
+### Baseline auditable de ansible-lint — COMPLETED
+
+- Se generó y revisó `.ansible-lint-ignore` con 96 parejas archivo/regla.
+- Siete hallazgos de formato YAML se corrigieron antes del cierre; las 585
+  infracciones iniciales quedaron en 578 warnings históricos explícitos.
+- Con el perfil `basic`, ansible-lint procesó 138 archivos y terminó con cero
+  fallos. La salida conserva los 578 warnings como evidencia visible.
+- El baseline no se debe regenerar automáticamente. Su formato opera por
+  archivo/regla, por lo que las revisiones deben impedir instancias nuevas de
+  reglas ya exceptuadas en el mismo archivo y retirar entradas al sanear deuda.
+
+### Gates finales desde ansible-control — COMPLETED
+
+- Se confirmó `ansible-core 2.21.2` y la configuración versionada del proyecto.
+- `ansible-doc` resolvió `ansible.builtin.import_tasks`.
+- El inventario, los cinco syntax checks y los contratos de aislamiento
+  Ubuntu/Debian pasaron.
+- yamllint terminó correctamente con warnings históricos no bloqueantes.
+- ShellCheck terminó sin hallazgos sobre los scripts versionados.
+- Gitleaks escaneó los seis commits saneados y no encontró secretos.
+- `ansible.builtin.ping`, con inventario local y límites separados, devolvió
+  `pong` para `ubuntu24` y `debian12`.
+- No se ejecutó ninguna remediación en este cierre.
+
+## Estado de fases al cierre local
+
+| Fase | Estado | Próximo gate |
+|---|---|---|
+| P0 Saneamiento | COMPLETED LOCAL / REMOTE PENDING | Push coordinado con lease |
+| P1 Toolchain | COMPLETED | Mantener lock y hashes |
+| P2 Baseline | COMPLETED | Evitar regresiones y reducir warnings |
+| P3 Separación audit/remediation/verification | PLANNED | Vertical piloto |
+| P4 Verticales comunes | PLANNED | Vertical piloto validada |
+| P5 Debian released | PLANNED | Matriz y secciones probadas |
+| P6 Evidencia/SIEM | PLANNED | Schema aprobado |
+| P7 Producción | PLANNED | Gates, staging y runbooks |
+| P8 Compatibilidad anterior | PLANNED | Servidores principales released |
+| P9 Docker | DEFERRED | Proyecto de servidores concluido |

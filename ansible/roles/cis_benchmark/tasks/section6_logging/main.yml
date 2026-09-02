@@ -15,7 +15,7 @@
 
 - name: "6.1 | Include System Logging tasks"
   ansible.builtin.import_tasks: "6.1-system_logging/main.yml"
-  when: 
+  when:
     - section6_logging.enabled | default(true)
     - section6_logging['6_1_1_journald_service'].enabled | default(true) or
       section6_logging['6_1_3_1_rsyslog_installed'].enabled | default(true)
@@ -43,7 +43,7 @@
 
 - name: "6.2 | Include System Auditing tasks"
   ansible.builtin.import_tasks: "6.2-system_auditing/main.yml"
-  when: 
+  when:
     - section6_logging.enabled | default(true)
     - section6_logging['6_2_1_1_auditd_packages'].enabled | default(true)
   tags:
@@ -58,7 +58,7 @@
 
 - name: "6.3 | Include Integrity Checking tasks"
   ansible.builtin.import_tasks: "6.3-configure_integrity_checking.yml"
-  when: 
+  when:
     - section6_logging.enabled | default(true)
     - >-
       section6_logging['6_3_1_aide_installed'].enabled | default(false) | bool
