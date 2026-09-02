@@ -1,0 +1,68 @@
+---
+- name: Common IPv6 status | Load the observation contract
+  ansible.builtin.import_tasks: ipv6_status/validate.yml
+
+- name: Common IPv6 status | Inspect the kernel module parameter
+  ansible.builtin.stat:
+    path: /sys/module/ipv6/parameters/disable
+  register: cis_linux_common_ipv6_module_parameter
+
+- name: Common IPv6 status | Read the kernel module parameter
+  ansible.builtin.slurp:
+    src: /sys/module/ipv6/parameters/disable
+  register: cis_linux_common_ipv6_module_parameter_content
+  when: cis_linux_common_ipv6_module_parameter.stat.exists | default(false)
+
+- name: Common IPv6 status | Inspect the global sysctl
+  ansible.builtin.stat:
+    path: /proc/sys/net/ipv6/conf/all/disable_ipv6
+  register: cis_linux_common_ipv6_all_sysctl
+
+- name: Common IPv6 status | Read the global sysctl
+  ansible.builtin.slurp:
+    src: /proc/sys/net/ipv6/conf/all/disable_ipv6
+  register: cis_linux_common_ipv6_all_sysctl_content
+  when: cis_linux_common_ipv6_all_sysctl.stat.exists | default(false)
+
+- name: Common IPv6 status | Inspect the default sysctl
+  ansible.builtin.stat:
+    path: /proc/sys/net/ipv6/conf/default/disable_ipv6
+  register: cis_linux_common_ipv6_default_sysctl
+
+- name: Common IPv6 status | Read the default sysctl
+  ansible.builtin.slurp:
+    src: /proc/sys/net/ipv6/conf/default/disable_ipv6
+  register: cis_linux_common_ipv6_default_sysctl_content
+  when: cis_linux_common_ipv6_default_sysctl.stat.exists | default(false)
+
+- name: Common IPv6 status | Normalize the observed values
+  ansible.builtin.set_fact:
+    cis_linux_common_ipv6_module_disable: >-
+      {{
+        (cis_linux_common_ipv6_module_parameter_content.content | b64decode | trim)
+        if cis_linux_common_ipv6_module_parameter.stat.exists | default(false)
+        else 'unavailable'
+      }}
+    cis_linux_common_ipv6_all_disable: >-
+      {{
+        (cis_linux_common_ipv6_all_sysctl_content.content | b64decode | trim)
+        if cis_linux_common_ipv6_all_sysctl.stat.exists | default(false)
+        else 'unavailable'
+      }}
+    cis_linux_common_ipv6_default_disable: >-
+      {{
+        (cis_linux_common_ipv6_default_sysctl_content.content | b64decode | trim)
+        if cis_linux_common_ipv6_default_sysctl.stat.exists | default(false)
+        else 'unavailable'
+      }}
+
+- name: Common IPv6 status | Derive the benchmark status
+  ansible.builtin.set_fact:
+    cis_linux_common_ipv6_observed_status: >-
+      {{
+        'disabled'
+        if cis_linux_common_ipv6_module_disable != '0' or
+           (cis_linux_common_ipv6_all_disable == '1' and
+            cis_linux_common_ipv6_default_disable == '1')
+        else 'enabled'
+      }}

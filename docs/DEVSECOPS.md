@@ -33,6 +33,7 @@ bash ./scripts/test_p3_pilot.sh
 bash ./scripts/test_p4_common.sh
 bash ./scripts/test_p4_banners.sh
 bash ./scripts/test_p4_cron.sh
+bash ./scripts/test_p4_network.sh
 ```
 
 `check_control.sh` valida inventario y sintaxis de todos los entry points. Si se
@@ -62,6 +63,12 @@ crea `/etc/crontab` cuando el paquete no está instalado. El gate también prueb
 la clasificación `NOT_APPLICABLE` mediante un nombre de paquete deliberadamente
 ausente.
 
+`test_p4_network.sh` ejecuta CIS 3.1.1 en modo audit y verification para las
+dos plataformas. Exige clasificación manual, evidencia del parámetro del
+módulo y de ambos sysctl, `changed=0` y ping posterior. Esta vertical no ofrece
+remediation: la política IPv6 se decide fuera del mecanismo de observación. El
+gate también rechaza valores distintos de `enabled`, `disabled` o `undecided`.
+
 ### Integración en laboratorio
 
 La integración requiere, por control: ping inicial, `--check --diff`, primera
@@ -78,7 +85,7 @@ y valida desde `ansible-control`; estas herramientas no se instalan en el host.
 ## Baseline de ansible-lint
 
 `.ansible-lint-ignore` registra deuda histórica por pareja archivo/regla. El
-baseline aceptado contiene 96 parejas que representan 578 warnings con el
+baseline aceptado contiene 96 parejas que representan 575 warnings con el
 perfil `basic`; ansible-lint debe terminar con cero fallos. No se debe regenerar
 el archivo automáticamente en cambios ordinarios: cada corrección elimina su
 entrada cuando ya no quedan infracciones de esa regla en el archivo.

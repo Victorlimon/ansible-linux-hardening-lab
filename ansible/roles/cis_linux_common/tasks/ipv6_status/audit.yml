@@ -1,0 +1,23 @@
+---
+- name: Common IPv6 status | Inspect status for audit
+  ansible.builtin.import_tasks: ipv6_status/inspect.yml
+
+- name: Common IPv6 status | Report status without remediation
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      benchmark: "{{ cis_linux_common_benchmark }}"
+      classification: MANUAL
+      observed_status: "{{ cis_linux_common_ipv6_observed_status }}"
+      site_policy: "{{ cis_linux_common_ipv6_site_policy }}"
+      policy_matches_observation: >-
+        {{
+          cis_linux_common_ipv6_site_policy == 'undecided' or
+          cis_linux_common_ipv6_site_policy == cis_linux_common_ipv6_observed_status
+        }}
+      evidence:
+        module_disable: "{{ cis_linux_common_ipv6_module_disable }}"
+        all_disable_ipv6: "{{ cis_linux_common_ipv6_all_disable }}"
+        default_disable_ipv6: "{{ cis_linux_common_ipv6_default_disable }}"
+      changed_target: false

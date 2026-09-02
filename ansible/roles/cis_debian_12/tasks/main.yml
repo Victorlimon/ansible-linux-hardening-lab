@@ -30,7 +30,32 @@
   when:
     - cis_debian_12_execution_mode == 'audit'
     - cis_debian_12_3_1_1_ipv6_audit | bool
-  tags: [cis_debian_12, cis_debian_12_audit, cis_3_1_1, ipv6_audit]
+  tags:
+    - cis_debian_12
+    - cis_debian_12_audit
+    - cis_3
+    - cis_3_1
+    - cis_3_1_1
+    - network
+    - ipv6
+    - ipv6_audit
+    - level_1
+
+- name: Verify Debian 12 CIS 3.1.1
+  ansible.builtin.import_tasks: verification/3_1_1_identify_ipv6.yml
+  when:
+    - cis_debian_12_execution_mode == 'verification'
+    - cis_debian_12_3_1_1_ipv6_audit | bool
+  tags:
+    - cis_debian_12
+    - cis_debian_12_verification
+    - cis_3
+    - cis_3_1
+    - cis_3_1_1
+    - network
+    - ipv6
+    - ipv6_audit
+    - level_1
 
 - name: Audit Debian 12 CIS 2.4.1.2
   ansible.builtin.import_tasks: audit/2_4_1_2_crontab_permissions.yml

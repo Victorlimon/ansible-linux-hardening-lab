@@ -1,8 +1,8 @@
 # Historical ansible-lint baseline generated on 2026-09-01.
 #
-# The 96 file/rule entries below account for 578 warnings after seven simple
-# YAML formatting findings were corrected. Do not regenerate this file during
-# routine changes: remove entries as the corresponding debt is fixed. Because
+# The 96 file/rule entries below account for 575 warnings after incremental
+# debt reductions. Do not regenerate this file during routine changes: remove
+# entries as the corresponding debt is fixed. Because
 # ansible-lint baselines are scoped by file and rule, reviews must reject new
 # instances of an already listed rule in the same file.
 ansible/playbooks/cis_debian_12_preflight.yml var-naming[no-role-prefix]

@@ -1,28 +1,4 @@
 ---
-- name: "3.1.1 | Identify IPv6 status"
-  block:
-    - name: "3.1.1 | Check the IPv6 kernel status file"
-      ansible.builtin.stat:
-        path: /sys/module/ipv6/parameters/disable
-      register: _cis_ipv6_disable_file
-
-    - name: "3.1.1 | Read the IPv6 kernel status"
-      ansible.builtin.slurp:
-        src: /sys/module/ipv6/parameters/disable
-      register: _cis_ipv6_disable_value
-      when: _cis_ipv6_disable_file.stat.exists
-      changed_when: false
-
-    - name: "3.1.1 | Report IPv6 status"
-      ansible.builtin.debug:
-        msg: >-
-          IPv6 is {{ 'enabled' if
-          (_cis_ipv6_disable_value.content | default('MQ==') | b64decode | trim) == '0'
-          else 'disabled' }}; section 3 IPv6 controls are
-          {{ 'applicable' if section3_network['3_1_network_devices'].ipv6_enabled |
-          default(true) | bool else 'disabled by site policy' }}.
-  tags: [cis_3, cis_3_1, cis_3_1_1, network, ipv6, level_1]
-
 - name: "3.1.2 | Ensure wireless interfaces are disabled"
   when: section3_network['3_1_network_devices'].wireless_disabled | default(false) | bool
   block:

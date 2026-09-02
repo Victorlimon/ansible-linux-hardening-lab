@@ -383,3 +383,24 @@ permitir remediación.
   aplicable: audit y remediation en check mode reportaron `NOT_APPLICABLE` con
   `changed=0`, sin ejecutar el mecanismo de archivo.
 - El gate read-only posterior a la convergencia es `scripts/test_p4_cron.sh`.
+
+## 2026-09-02 — P4 vertical común read-only CIS 3.1.1
+
+- Se compararon los controles CIS 3.1.1 de Ubuntu 24.04 v1.0.0 y Debian 12
+  v1.1.0. Ambos usan la misma decisión: IPv6 está deshabilitado si el parámetro
+  del módulo no es `0`, o si los sysctl global y default son ambos `1`.
+- La auditoría Debian se extrajo a `cis_linux_common`; la observación histórica
+  Ubuntu, que solo leía el parámetro del módulo, fue sustituida por el mecanismo
+  completo común.
+- Los adaptadores exponen audit y verification independientes. No existe camino
+  de remediation para este control manual; habilitar o deshabilitar IPv6 exige
+  una decisión de política y una vertical posterior específica.
+- Ubuntu y Debian observaron módulo `0`, sysctl global `0` y sysctl default `0`:
+  estado `enabled`. Audit clasificó `MANUAL` y terminó con `changed=0`.
+- Verification identificó el mismo estado con `changed=0`. Los hardening entry
+  points ejecutados con `--check --diff --tags cis_3_1_1` también terminaron con
+  `changed=0`, y los pings posteriores devolvieron `pong`.
+- El contrato rechazó una política IPv6 deliberadamente inválida antes de
+  interpretar la evidencia.
+- No se requiere rollback porque no se escribió configuración ni se alteró la
+  conectividad. El gate automatizado es `scripts/test_p4_network.sh`.
