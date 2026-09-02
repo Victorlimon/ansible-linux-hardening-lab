@@ -132,7 +132,7 @@
 - name: Audit Ubuntu 24.04 CIS 7.1.1 with the common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: fixed_file_permissions/audit.yml
+    tasks_from: sections/section_07_maintenance/7_1_1_passwd_permissions/audit.yml
   vars: &ubuntu_passwd_contract
     cis_linux_common_control_id: "7.1.1"
     cis_linux_common_platform: ubuntu_2404
@@ -236,7 +236,7 @@
 - name: Remediate Ubuntu 24.04 CIS 7.1.1 with the common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: fixed_file_permissions/remediation.yml
+    tasks_from: sections/section_07_maintenance/7_1_1_passwd_permissions/remediation.yml
   vars: *ubuntu_passwd_contract
   when:
     - cis_ubuntu_2404_execution_mode == 'remediation'
@@ -255,7 +255,7 @@
 - name: Verify Ubuntu 24.04 CIS 7.1.1 with the common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: fixed_file_permissions/verification.yml
+    tasks_from: sections/section_07_maintenance/7_1_1_passwd_permissions/verification.yml
   vars: *ubuntu_passwd_contract
   when:
     - cis_ubuntu_2404_execution_mode == 'verification'

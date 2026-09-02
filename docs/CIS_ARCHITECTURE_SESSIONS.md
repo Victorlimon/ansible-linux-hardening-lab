@@ -17,8 +17,8 @@ explícita.
 
 | Sesión | Alcance | Riesgo | Estado |
 |---|---|---|---|
-| A1 | Definir arquitectura semántica y migrar CIS 3.1.1 a `sections/section_03_network` | Bajo; control read-only | `VALIDATED` |
-| A2 | Migrar CIS 7.1.1 a `sections/section_07_maintenance` | Bajo; solo cambia la ruta de composición | `PLANNED` |
+| A1 | Definir arquitectura semántica y migrar CIS 3.1.1 a `sections/section_03_network` | Bajo; control read-only | `COMPLETED` |
+| A2 | Migrar CIS 7.1.1 a `sections/section_07_maintenance` | Bajo; solo cambia la ruta de composición | `COMPLETED` |
 | A3 | Migrar CIS 2.4.1.2 a `sections/section_02_services` | Bajo; conservar rama `NOT_APPLICABLE` | `PLANNED` |
 | A4 | Migrar CIS 3.3.10 a `sections/section_03_network` | Medio; preservar runtime, persistencia y gates | `PLANNED` |
 | A5 | Reubicar mecanismos bajo `tasks/mechanisms/` con wrappers compatibles | Medio; cambia rutas internas | `PLANNED` |
@@ -45,3 +45,16 @@ explícita.
   `changed=0` y conectividad en ambas plataformas.
 - Contratos, syntax-check, ansible-lint y yamllint pasaron sin deuda nueva;
   ansible-lint mantuvo 0 fallos y 575 warnings históricos.
+
+## Evidencia A2
+
+- CIS 7.1.1 dispone de entradas semánticas separadas para audit, remediation y
+  verification bajo `section_07_maintenance/7_1_1_passwd_permissions`.
+- Los adaptadores Ubuntu 24.04 y Debian 12 consumen la nueva ruta sin cambiar
+  contratos, gates, tags ni el mecanismo `fixed_file_permissions`.
+- El baseline previo y el gate posterior clasificaron `PASS` con `/etc/passwd`
+  en `root:root` y modo `0644`; audit y verification terminaron con
+  `changed=0` y ping correcto en ambas plataformas.
+- Los seis entry points afectados pasaron syntax-check. También pasaron
+  contratos, inventario, ansible-lint y yamllint sin deuda nueva; ansible-lint
+  mantuvo 0 fallos y 575 warnings históricos.

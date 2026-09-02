@@ -2,7 +2,7 @@
 - name: CIS 7.1.1 | Remediation | Use the common fixed-file mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: fixed_file_permissions/remediation.yml
+    tasks_from: sections/section_07_maintenance/7_1_1_passwd_permissions/remediation.yml
   vars:
     cis_linux_common_control_id: "7.1.1"
     cis_linux_common_platform: debian_12

@@ -16,9 +16,14 @@ hardening completo.
 tasks/
 ├── main.yml
 ├── sections/                         # API semántica por benchmark/control
-│   └── section_03_network/
-│       └── 3_1_1_ipv6_status/
+│   ├── section_03_network/
+│   │   └── 3_1_1_ipv6_status/
+│   │       ├── audit.yml
+│   │       └── verification.yml
+│   └── section_07_maintenance/
+│       └── 7_1_1_passwd_permissions/
 │           ├── audit.yml
+│           ├── remediation.yml
 │           └── verification.yml
 ├── ipv6_status/                      # mecanismo técnico existente
 ├── sysctl_parameter/

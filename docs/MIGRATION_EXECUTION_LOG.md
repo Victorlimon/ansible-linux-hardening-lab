@@ -453,3 +453,19 @@ permitir remediación.
   `test_contracts.sh`, `test_p4_network.sh`, inventario, ansible-lint y yamllint.
   El gate mantuvo `changed=0` y ping posterior; ansible-lint mantuvo 0 fallos y
   575 warnings históricos.
+
+## 2026-09-02 — Sesión de arquitectura A2
+
+- Se capturó primero el baseline de CIS 7.1.1 en ambas VMs: audit `PASS`,
+  `/etc/passwd` en `root:root` con modo `0644`, verification independiente,
+  `changed=0` y conectividad correcta.
+- Se añadieron entradas audit, remediation y verification bajo
+  `sections/section_07_maintenance/7_1_1_passwd_permissions/`. Estas entradas
+  delegan mediante imports estáticos al mecanismo `fixed_file_permissions`.
+- Los adaptadores Ubuntu y Debian usan ahora la ruta semántica. No cambiaron
+  los contratos, valores, condiciones, gates, tags ni el orden de ejecución;
+  las rutas técnicas previas permanecen compatibles.
+- Pasaron syntax-check de los seis entry points de ambas plataformas,
+  `test_p4_common.sh`, `test_contracts.sh`, inventario, ansible-lint y yamllint.
+  El gate posterior mantuvo `PASS`, `changed=0` y ping; ansible-lint conservó
+  0 fallos y 575 warnings históricos.
