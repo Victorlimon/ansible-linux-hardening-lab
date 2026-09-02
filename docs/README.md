@@ -42,14 +42,16 @@ es la única fuente de identidad, arquitectura y estado de plataforma.
 selecciona exclusivamente su grupo de plataforma.
 
 - Usuario de control de Vagrant: `vagrant`.
-- Usuario que debe lanzar Ansible en `ansible-control`: `ansible`.
+- Usuario que debe lanzar Ansible en `ansible-control`: `vagrant`.
 - Usuario SSH remoto configurado por inventario: `ansible`.
 - Elevación remota: `sudo`, `become_user=root`, sin solicitud de contraseña en
   el laboratorio.
 
 El script `create-ansible-user.sh` crea `ansible` en las VMs, instala su clave y
-solo copia la clave privada a `/home/ansible/.ssh/id_rsa` en `ansible-control`.
-El repositorio Ansible se monta en `/home/vagrant/ansible`.
+solo copia la clave privada a `/home/vagrant/.ssh/id_rsa` en
+`ansible-control`. El repositorio completo se monta en
+`/home/vagrant/ansible`; el proyecto Ansible está en su subdirectorio
+`ansible/`.
 `ansible.cfg` mantiene `host_key_checking` activo. La excepción
 `StrictHostKeyChecking=no` existe únicamente en el inventario local efímero;
 producción debe gestionar `known_hosts` y verificar la huella de cada nodo.
@@ -61,7 +63,8 @@ nodo de control antes de operar. Las colecciones requeridas son las fijadas en
 `ansible/requirements.yml`:
 
 ```bash
-cd /home/vagrant/ansible
+cd /home/vagrant/ansible/ansible
+export PATH=/home/vagrant/.venvs/ansible-cis/bin:$PATH
 ansible --version
 ansible-galaxy collection install -r requirements.yml
 ```
@@ -84,8 +87,8 @@ make ansible-control
 En el nodo de control:
 
 ```bash
-sudo -iu ansible
-cd /home/vagrant/ansible
+cd /home/vagrant/ansible/ansible
+export PATH=/home/vagrant/.venvs/ansible-cis/bin:$PATH
 ansible-inventory --graph
 ansible ubuntu24 --limit ubuntu24 -m ansible.builtin.ping
 ansible-playbook playbooks/cis_hardening.yml --syntax-check

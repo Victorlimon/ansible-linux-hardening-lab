@@ -60,21 +60,21 @@ make ansible-control
 ```
 
 No continúe si `make status` no muestra `ansible-control` y el objetivo elegido en
-ejecución. `make ansible-control` entra como usuario de Vagrant, `vagrant`. En
-el nodo de control cambie al usuario operativo `ansible`; su clave privada y el
-usuario remoto fueron preparados por `make provision-lab`:
+ejecución. `make ansible-control` entra como usuario de Vagrant, `vagrant`, que
+ejecuta Ansible con la toolchain aislada. La identidad remota `ansible` y su
+clave fueron preparadas por `make provision-lab`:
 
 ```bash
-sudo -iu ansible
-cd /home/vagrant/ansible
+cd /home/vagrant/ansible/ansible
+export PATH=/home/vagrant/.venvs/ansible-cis/bin:$PATH
 ansible --version
 ansible-galaxy collection install -r requirements.yml
 ansible-inventory --graph
 ansible ubuntu24 --limit ubuntu24 -m ansible.builtin.ping
 ```
 
-La separación es intencionada: `vagrant` controla la VM y `ansible` ejecuta
-Ansible y se conecta al objetivo remoto como `ansible`. La configuración
+La separación es intencionada: `vagrant` controla la VM y ejecuta Ansible; la
+identidad remota no privilegiada `ansible` se conecta a los objetivos. La configuración
 `ansible/ansible.cfg` selecciona el inventario local, el rol y `become`.
 La verificación de host keys está activa globalmente; solo el inventario local
 efímero contiene una excepción SSH y esta no debe copiarse a producción.

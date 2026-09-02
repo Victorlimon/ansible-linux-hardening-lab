@@ -9,11 +9,15 @@ Vagrant.configure("2") do |config|
     node.vm.box_version = "202510.26.0"
     node.vm.hostname = "ansible-control"
     node.vm.network "private_network", ip: "192.168.56.10"
-    # El código Ansible solo se comparte con el nodo de control.
-    node.vm.synced_folder "../../ansible", "/home/vagrant/ansible",
+    # El repositorio completo solo se comparte con el nodo de control. Esto
+    # permite aplicar desde la VM las políticas de lint y el secret scan del
+    # proyecto, sin instalar herramientas en el host.
+    node.vm.synced_folder "../..", "/home/vagrant/ansible",
       owner: "vagrant",
       group: "vagrant",
-      mount_options: ["dmode=755,fmode=755"]
+      # Los scripts se invocan con su intérprete. No fuerce el bit ejecutable
+      # sobre cada archivo del repositorio porque altera el estado de Git.
+      mount_options: ["dmode=755,fmode=644"]
     node.vm.provider "virtualbox" do |vb|
       vb.name = "lab-ansible-control"
       vb.memory = 2048

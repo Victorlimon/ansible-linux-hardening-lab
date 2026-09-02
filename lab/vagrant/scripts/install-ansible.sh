@@ -8,7 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
 NODE="ansible-control"
-PROJECT_ROOT="/home/vagrant/ansible"
+REPOSITORY_ROOT="/home/vagrant/ansible"
+PROJECT_ROOT="$REPOSITORY_ROOT/ansible"
 VENV="/home/vagrant/.venvs/ansible-cis"
 LOCK_FILE="$PROJECT_ROOT/requirements-dev.lock"
 
@@ -37,12 +38,14 @@ if [ ! -f "../../ansible/requirements-dev.lock" ]; then
         $VENV/bin/python -m pip install pip-tools && \
         cd $PROJECT_ROOT && \
         $VENV/bin/pip-compile --generate-hashes \
+          --allow-unsafe \
           --output-file requirements-dev.lock requirements-dev.in \
     "
 fi
 
 echo "  Instalando toolchain Python desde el lock..."
 vagrant.exe ssh "$NODE" -c "\
+    cd $PROJECT_ROOT && \
     $VENV/bin/python -m pip install --require-hashes -r $LOCK_FILE && \
     $VENV/bin/ansible-galaxy collection install -r $PROJECT_ROOT/requirements.yml --force && \
     $VENV/bin/ansible --version && \

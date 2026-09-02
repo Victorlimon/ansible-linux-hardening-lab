@@ -47,7 +47,8 @@ make ansible-control
 Laboratorio desde `ansible-control`:
 
 ```bash
-cd /home/vagrant/ansible
+cd /home/vagrant/ansible/ansible
+export PATH=/home/vagrant/.venvs/ansible-cis/bin:$PATH
 ansible --version
 ansible-inventory --graph
 ansible ubuntu24 --limit ubuntu24 -m ansible.builtin.ping
