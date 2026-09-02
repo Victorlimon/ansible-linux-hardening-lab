@@ -83,6 +83,8 @@ explícita.
   valor `1`, clasificación `PASS`, `changed=0` y ping correcto en ambas VMs.
 - Ubuntu continuó considerando `/etc/ufw/sysctl.conf`; Debian mantuvo UFW como
   no configurado. No se modificó `/etc/sysctl.d/99-cis-network.conf`.
+- Un ciclo posterior completo `make stop`/`make start` confirmó runtime y
+  persistencia `1`, verification `changed=0` y conectividad en ambas VMs.
 - Los seis entry points pasaron syntax-check. También pasaron contratos,
   inventario, ansible-lint y yamllint; ansible-lint mantuvo 0 fallos y 575
   warnings históricos.

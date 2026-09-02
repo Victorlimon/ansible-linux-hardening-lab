@@ -568,3 +568,19 @@ permitir remediación.
 - Pasaron también `test_contracts.sh`, todos los gates P3/P4, los syntax-check,
   inventario, ansible-lint y yamllint. Ansible-lint conservó 0 fallos y 575
   warnings históricos.
+
+## 2026-09-02 — Evidencia post-reboot CIS 3.3.10
+
+- El baseline previo confirmó `net.ipv4.tcp_syncookies=1` en runtime y
+  persistencia efectiva, audit y verification con `changed=0`, y ping en ambas
+  plataformas.
+- El primer intento de `ansible.builtin.reboot` sobre Ubuntu perdió la interfaz
+  host-only durante la espera y terminó `UNREACHABLE`; no se ocultó el fallo.
+  La VM quedó marcada `aborted` tras el intento de parada mientras terminaba su
+  transición.
+- La recuperación usó exclusivamente `make stop` y `make start`. El ciclo
+  completo reinició ansible-control, Ubuntu 24.04 y Debian 12 y restauró las
+  interfaces administradas por Vagrant.
+- Tras el arranque, ambos pings pasaron y `test_p4_sysctl.sh` confirmó de nuevo
+  runtime `1`, persistencia `1`, classification `PASS`, verification
+  independiente y `changed=0` en Ubuntu y Debian.
