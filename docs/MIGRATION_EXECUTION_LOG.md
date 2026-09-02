@@ -519,3 +519,19 @@ permitir remediación.
   `test_p4_common.sh`, `test_p3_pilot.sh`, `test_contracts.sh`, los syntax-check,
   inventario, ansible-lint y yamllint. Ansible-lint conservó 0 fallos y 575
   warnings históricos; ningún target fue remediado por el baseline estático.
+
+## 2026-09-02 — Sesión de arquitectura A6
+
+- Las once entradas comunes del adaptador Ubuntu se separaron bajo
+  `cis_ubuntu_2404/tasks/sections/` por sección, control y modo.
+- `tasks/main.yml` mantiene la validación del target y la delegación al rol
+  histórico. Los nuevos imports son estáticos e incondicionales; cada hoja
+  conserva íntegros contrato, condiciones y tags.
+- Se duplicaron deliberadamente los contratos en cada documento YAML para no
+  alterar precedencia ni depender de anchors fuera de su documento.
+- Las listas de tareas y tags de audit, hardening y verification resultaron
+  idénticas al baseline, preservando también el orden histórico no numérico.
+- Pasaron `test_contracts.sh`, `test_p4_network.sh`, `test_p4_sysctl.sh`,
+  `test_p4_cron.sh`, `test_p4_common.sh`, los syntax-check, inventario,
+  ansible-lint y yamllint. Ansible-lint conservó 0 fallos y 575 warnings
+  históricos; ningún target fue remediado por el baseline estático.

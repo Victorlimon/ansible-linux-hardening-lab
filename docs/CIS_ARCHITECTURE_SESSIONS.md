@@ -22,7 +22,7 @@ explícita.
 | A3 | Migrar CIS 2.4.1.2 a `sections/section_02_services` | Bajo; conservar rama `NOT_APPLICABLE` | `COMPLETED` |
 | A4 | Migrar CIS 3.3.10 a `sections/section_03_network` | Medio; preservar runtime, persistencia y gates | `COMPLETED` |
 | A5 | Reubicar mecanismos bajo `tasks/mechanisms/` con wrappers compatibles | Medio; cambia rutas internas | `COMPLETED` |
-| A6 | Dividir adaptador Ubuntu por secciones, sin alterar orden histórico | Medio | `PLANNED` |
+| A6 | Dividir adaptador Ubuntu por secciones, sin alterar orden histórico | Medio | `COMPLETED` |
 | A7 | Dividir adaptador Debian por secciones, sin alterar gates canary | Medio | `PLANNED` |
 | A8 | Completar interfaces independientes de Debian CIS 7.1.5 | Alto; cambio funcional | `PLANNED` |
 
@@ -101,3 +101,19 @@ explícita.
 - Pasaron los gates de IPv6, sysctl, cron, permisos comunes y el piloto P3 en
   ambas VMs, además de contratos y baseline estático. Ansible-lint mantuvo
   0 fallos y 575 warnings históricos.
+
+## Evidencia A6
+
+- El adaptador Ubuntu distribuye sus once entradas comunes bajo
+  `tasks/sections/`, por sección, control y modo; `tasks/main.yml` conserva la
+  validación de plataforma y el rol histórico.
+- Cada entrada mantiene localmente el contrato, los gates y los tags originales;
+  no se trasladaron variables a defaults o vars ni se usaron aliases YAML entre
+  documentos.
+- El orden estático histórico se preservó, incluida la ubicación separada de las
+  entradas de CIS 7.1.1 alrededor de CIS 2.4.1.2.
+- Las listas de tareas y tags de audit, hardening y verification fueron
+  idénticas al baseline previo.
+- Pasaron los cuatro gates comunes, contratos, syntax-check, inventario,
+  ansible-lint y yamllint. Ansible-lint mantuvo 0 fallos y 575 warnings
+  históricos; el baseline estático no remedió targets.

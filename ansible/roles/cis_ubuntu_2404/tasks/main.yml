@@ -15,256 +15,35 @@
     name: cis_benchmark
   when: cis_ubuntu_2404_execution_mode == 'remediation'
 
-- name: Audit Ubuntu 24.04 CIS 3.1.1 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_03_network/3_1_1_ipv6_status/audit.yml
-  vars: &ubuntu_ipv6_contract
-    cis_linux_common_control_id: "3.1.1"
-    cis_linux_common_platform: ubuntu_2404
-    cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0
-    cis_linux_common_ipv6_site_policy: "{{ cis_ubuntu_2404_ipv6_site_policy }}"
-  when:
-    - cis_ubuntu_2404_execution_mode == 'audit'
-    - cis_ubuntu_2404_3_1_1_ipv6_audit | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_audit
-    - cis_3
-    - cis_sec3
-    - cis_3_1
-    - cis_3_1_1
-    - network
-    - ipv6
-    - ipv6_audit
-    - level_1
+- name: Load Ubuntu CIS 3.1.1 audit adapter
+  ansible.builtin.import_tasks: sections/section_03_network/3_1_1_ipv6_status/audit.yml
 
-- name: Verify Ubuntu 24.04 CIS 3.1.1 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_03_network/3_1_1_ipv6_status/verification.yml
-  vars: *ubuntu_ipv6_contract
-  when:
-    - cis_ubuntu_2404_execution_mode == 'verification'
-    - cis_ubuntu_2404_3_1_1_ipv6_audit | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_verification
-    - cis_3
-    - cis_sec3
-    - cis_3_1
-    - cis_3_1_1
-    - network
-    - ipv6
-    - ipv6_audit
-    - level_1
+- name: Load Ubuntu CIS 3.1.1 verification adapter
+  ansible.builtin.import_tasks: sections/section_03_network/3_1_1_ipv6_status/verification.yml
 
-- name: Audit Ubuntu 24.04 CIS 3.3.10 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_03_network/3_3_10_tcp_syncookies/audit.yml
-  vars: &ubuntu_tcp_syncookies_contract
-    cis_linux_common_control_id: "3.3.10"
-    cis_linux_common_platform: ubuntu_2404
-    cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0
-    cis_linux_common_sysctl_parameter: net.ipv4.tcp_syncookies
-    cis_linux_common_sysctl_runtime_path: /proc/sys/net/ipv4/tcp_syncookies
-    cis_linux_common_sysctl_value: '1'
-    cis_linux_common_sysctl_file: /etc/sysctl.d/99-cis-network.conf
-  when:
-    - cis_ubuntu_2404_execution_mode == 'audit'
-    - cis_ubuntu_2404_3_3_10_tcp_syncookies | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_audit
-    - cis_3
-    - cis_sec3
-    - cis_3_3
-    - cis_3_3_10
-    - network
-    - sysctl
-    - tcp_syncookies
-    - level_1
+- name: Load Ubuntu CIS 3.3.10 audit adapter
+  ansible.builtin.import_tasks: sections/section_03_network/3_3_10_tcp_syncookies/audit.yml
 
-- name: Remediate Ubuntu 24.04 CIS 3.3.10 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_03_network/3_3_10_tcp_syncookies/remediation.yml
-  vars: *ubuntu_tcp_syncookies_contract
-  when:
-    - cis_ubuntu_2404_execution_mode == 'remediation'
-    - cis_ubuntu_2404_3_3_10_tcp_syncookies | bool
-    - cis_section3_network | bool
-    - section3_network.enabled | bool
-    - section3_network['3_3_network_kernel_parameters'].tcp_syncookies | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_remediation
-    - cis_3
-    - cis_sec3
-    - cis_3_3
-    - cis_3_3_10
-    - network
-    - sysctl
-    - tcp_syncookies
-    - level_1
+- name: Load Ubuntu CIS 3.3.10 remediation adapter
+  ansible.builtin.import_tasks: sections/section_03_network/3_3_10_tcp_syncookies/remediation.yml
 
-- name: Verify Ubuntu 24.04 CIS 3.3.10 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_03_network/3_3_10_tcp_syncookies/verification.yml
-  vars: *ubuntu_tcp_syncookies_contract
-  when:
-    - cis_ubuntu_2404_execution_mode == 'verification'
-    - cis_ubuntu_2404_3_3_10_tcp_syncookies | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_verification
-    - cis_3
-    - cis_sec3
-    - cis_3_3
-    - cis_3_3_10
-    - network
-    - sysctl
-    - tcp_syncookies
-    - level_1
+- name: Load Ubuntu CIS 3.3.10 verification adapter
+  ansible.builtin.import_tasks: sections/section_03_network/3_3_10_tcp_syncookies/verification.yml
 
-- name: Audit Ubuntu 24.04 CIS 7.1.1 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_07_maintenance/7_1_1_passwd_permissions/audit.yml
-  vars: &ubuntu_passwd_contract
-    cis_linux_common_control_id: "7.1.1"
-    cis_linux_common_platform: ubuntu_2404
-    cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark
-    cis_linux_common_fixed_file_path: /etc/passwd
-    cis_linux_common_fixed_file_owner: root
-    cis_linux_common_fixed_file_group: root
-    cis_linux_common_fixed_file_remediation_mode: 'u-x,go-wx'
-    cis_linux_common_fixed_file_expected_mode_description: >-
-      0644 or more restrictive without execute bits
-    cis_linux_common_fixed_file_allowed_owner_digits: ['0', '2', '4', '6']
-    cis_linux_common_fixed_file_allowed_group_digits: ['0', '4']
-    cis_linux_common_fixed_file_allowed_other_digits: ['0', '4']
-  when:
-    - cis_ubuntu_2404_execution_mode == 'audit'
-    - cis_ubuntu_2404_7_1_1_passwd_permissions | bool
-  tags: &ubuntu_passwd_tags
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_audit
-    - cis_7
-    - cis_sec7
-    - cis_7_1
-    - cis_7_1_1
-    - fixed_file_permissions
+- name: Load Ubuntu CIS 7.1.1 audit adapter
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_1_passwd_permissions/audit.yml
 
-- name: Audit Ubuntu 24.04 CIS 2.4.1.2 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_02_services/2_4_1_2_crontab_permissions/audit.yml
-  vars: &ubuntu_crontab_contract
-    cis_linux_common_control_id: "2.4.1.2"
-    cis_linux_common_platform: ubuntu_2404
-    cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0
-    cis_linux_common_package_name: cron
-    cis_linux_common_fixed_file_path: /etc/crontab
-    cis_linux_common_fixed_file_owner: root
-    cis_linux_common_fixed_file_group: root
-    cis_linux_common_fixed_file_remediation_mode: '0600'
-    cis_linux_common_fixed_file_expected_mode_description: >-
-      0600 or more restrictive without execute bits
-    cis_linux_common_fixed_file_allowed_owner_digits: ['0', '2', '4', '6']
-    cis_linux_common_fixed_file_allowed_group_digits: ['0']
-    cis_linux_common_fixed_file_allowed_other_digits: ['0']
-  when:
-    - cis_ubuntu_2404_execution_mode == 'audit'
-    - cis_ubuntu_2404_2_4_1_2_crontab_permissions | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_audit
-    - cis_2
-    - cis_sec2
-    - cis_2_4
-    - cis_2_4_1
-    - cis_2_4_1_2
-    - cis_2.4.1.2
-    - cron
-    - fixed_file_permissions
+- name: Load Ubuntu CIS 2.4.1.2 audit adapter
+  ansible.builtin.import_tasks: sections/section_02_services/2_4_1_2_crontab_permissions/audit.yml
 
-- name: Remediate Ubuntu 24.04 CIS 2.4.1.2 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_02_services/2_4_1_2_crontab_permissions/remediation.yml
-  vars: *ubuntu_crontab_contract
-  when:
-    - cis_ubuntu_2404_execution_mode == 'remediation'
-    - cis_ubuntu_2404_2_4_1_2_crontab_permissions | bool
-    - cis_section2_services | bool
-    - cis_2_4_job_schedulers['2_4_1_2_crontab_perms'] | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_remediation
-    - cis_2
-    - cis_sec2
-    - cis_2_4
-    - cis_2_4_1
-    - cis_2_4_1_2
-    - cis_2.4.1.2
-    - cron
-    - fixed_file_permissions
+- name: Load Ubuntu CIS 2.4.1.2 remediation adapter
+  ansible.builtin.import_tasks: sections/section_02_services/2_4_1_2_crontab_permissions/remediation.yml
 
-- name: Verify Ubuntu 24.04 CIS 2.4.1.2 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_02_services/2_4_1_2_crontab_permissions/verification.yml
-  vars: *ubuntu_crontab_contract
-  when:
-    - cis_ubuntu_2404_execution_mode == 'verification'
-    - cis_ubuntu_2404_2_4_1_2_crontab_permissions | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_verification
-    - cis_2
-    - cis_sec2
-    - cis_2_4
-    - cis_2_4_1
-    - cis_2_4_1_2
-    - cis_2.4.1.2
-    - cron
-    - fixed_file_permissions
+- name: Load Ubuntu CIS 2.4.1.2 verification adapter
+  ansible.builtin.import_tasks: sections/section_02_services/2_4_1_2_crontab_permissions/verification.yml
 
-- name: Remediate Ubuntu 24.04 CIS 7.1.1 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_07_maintenance/7_1_1_passwd_permissions/remediation.yml
-  vars: *ubuntu_passwd_contract
-  when:
-    - cis_ubuntu_2404_execution_mode == 'remediation'
-    - cis_ubuntu_2404_7_1_1_passwd_permissions | bool
-    - cis_section7_system | bool
-    - section7_system_7_1_system_file_permissions | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_remediation
-    - cis_7
-    - cis_sec7
-    - cis_7_1
-    - cis_7_1_1
-    - fixed_file_permissions
+- name: Load Ubuntu CIS 7.1.1 remediation adapter
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_1_passwd_permissions/remediation.yml
 
-- name: Verify Ubuntu 24.04 CIS 7.1.1 with the common mechanism
-  ansible.builtin.import_role:
-    name: cis_linux_common
-    tasks_from: sections/section_07_maintenance/7_1_1_passwd_permissions/verification.yml
-  vars: *ubuntu_passwd_contract
-  when:
-    - cis_ubuntu_2404_execution_mode == 'verification'
-    - cis_ubuntu_2404_7_1_1_passwd_permissions | bool
-  tags:
-    - cis_ubuntu_2404
-    - cis_ubuntu_2404_verification
-    - cis_7
-    - cis_sec7
-    - cis_7_1
-    - cis_7_1_1
-    - fixed_file_permissions
+- name: Load Ubuntu CIS 7.1.1 verification adapter
+  ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_1_passwd_permissions/verification.yml
