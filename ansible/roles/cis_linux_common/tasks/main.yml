@@ -1,0 +1,8 @@
+---
+- name: Common library | Require an explicit CIS control entry point
+  ansible.builtin.fail:
+    msg: >-
+      cis_linux_common is a control library. Invoke it with an explicit
+      tasks_from path under tasks/sections/; direct role execution is unsafe
+      because it does not identify a control or execution mode.
+  tags: [always, safety]

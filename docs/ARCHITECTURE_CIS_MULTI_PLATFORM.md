@@ -23,6 +23,7 @@ roles/
 ├── cis_platform_preflight/   # plataforma, arquitectura y gates
 ├── cis_ubuntu_2404/          # adaptador canónico Ubuntu
 ├── cis_debian_12/            # mapeo/política CIS Debian v1.1.0
+├── cis_linux_common/          # controles equivalentes y mecanismos comunes
 └── cis_benchmark/            # implementación Ubuntu histórica en migración
 ```
 
@@ -30,6 +31,46 @@ No se realizará una migración masiva. El rol `cis_benchmark` permanece como
 implementación Ubuntu compatible mientras se extraen controles con pruebas.
 Las capas comunes, evidencia y postflight se crearán únicamente cuando exista
 un control real que las justifique; no se mantienen roles vacíos.
+
+## Capas de un control común
+
+`cis_linux_common` separa la navegación semántica de la reutilización técnica:
+
+```text
+adaptador de plataforma
+  -> tasks/sections/section_<NN>_<dominio>/<control>/<modo>.yml
+     -> mecanismo técnico (sysctl, permisos, observación, etc.)
+        -> módulo Ansible con FQCN
+```
+
+- El adaptador define benchmark, variables, aplicabilidad, gates y tags.
+- `sections/` permite localizar un control por su ID CIS y expone audit,
+  remediation y verification como entradas separadas.
+- El mecanismo técnico implementa una operación reutilizable sin decidir la
+  política de una distribución.
+- `tasks/main.yml` rechaza la invocación directa del rol común: siempre se debe
+  seleccionar un control y un modo mediante `tasks_from`.
+
+Las rutas se normalizan como
+`section_<NN>_<dominio>/<ID_con_guiones_bajos>_<nombre>/<modo>.yml`. Durante la
+migración, las rutas técnicas anteriores permanecen disponibles para mantener
+compatibilidad. La referencia operativa del rol está en
+`ansible/roles/cis_linux_common/README.md`.
+
+## Trabajo por sesiones
+
+Cada sesión modifica un solo control o una sola preocupación arquitectónica:
+
+1. declarar alcance, riesgo y archivos permitidos;
+2. capturar el comportamiento previo;
+3. realizar el cambio estructural mínimo;
+4. ejecutar syntax-check y el gate específico;
+5. ejecutar regresiones compartidas;
+6. registrar evidencia, riesgo pendiente y rollback;
+7. cerrar con un commit enfocado, sin mezclar la sesión siguiente.
+
+El estado y orden de las sesiones se registra en
+`CIS_ARCHITECTURE_SESSIONS.md`.
 
 ## Contrato de plataforma
 

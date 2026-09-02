@@ -435,3 +435,21 @@ permitir remediación.
   no disponible `gitleaks git` con la versión instalada 8.16.0. El escaneo
   equivalente `gitleaks detect` se ejecutó por separado y no encontró
   filtraciones; ShellCheck pasó para el gate sysctl nuevo.
+
+## 2026-09-02 — Sesión de arquitectura A1
+
+- Se formalizó el trabajo por sesiones en `CIS_ARCHITECTURE_SESSIONS.md`: cada
+  sesión limita su alcance a un control o preocupación arquitectónica y exige
+  validación y evidencia independientes.
+- `cis_linux_common` ahora documenta dos capas: entradas semánticas bajo
+  `tasks/sections/` y mecanismos técnicos reutilizables. La invocación directa
+  del rol se rechaza para exigir un control y modo explícitos mediante
+  `tasks_from`.
+- Como piloto read-only, CIS 3.1.1 se expuso en
+  `sections/section_03_network/3_1_1_ipv6_status/`. Los adaptadores Ubuntu y
+  Debian consumen esa ruta sin cambiar contratos, condiciones ni tags. El
+  mecanismo y sus rutas anteriores permanecen compatibles.
+- Pasaron syntax-check de audit/verification para ambas plataformas,
+  `test_contracts.sh`, `test_p4_network.sh`, inventario, ansible-lint y yamllint.
+  El gate mantuvo `changed=0` y ping posterior; ansible-lint mantuvo 0 fallos y
+  575 warnings históricos.

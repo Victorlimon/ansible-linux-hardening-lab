@@ -2,7 +2,7 @@
 - name: CIS 3.1.1 | Verification | Run the common IPv6 observation mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
-    tasks_from: ipv6_status/verification.yml
+    tasks_from: sections/section_03_network/3_1_1_ipv6_status/verification.yml
   vars:
     cis_linux_common_control_id: "3.1.1"
     cis_linux_common_platform: debian_12
