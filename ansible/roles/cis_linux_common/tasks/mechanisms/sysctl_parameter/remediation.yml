@@ -1,0 +1,12 @@
+---
+- name: Common sysctl parameter | Load the remediation contract
+  ansible.builtin.import_tasks: mechanisms/sysctl_parameter/validate.yml
+
+- name: Common sysctl parameter | Apply runtime and persistent value
+  ansible.posix.sysctl:
+    name: "{{ cis_linux_common_sysctl_parameter }}"
+    value: "{{ cis_linux_common_sysctl_value }}"
+    state: present
+    sysctl_file: "{{ cis_linux_common_sysctl_file }}"
+    sysctl_set: true
+    reload: true

@@ -1,0 +1,22 @@
+---
+- name: Common installed-package file | Load remediation applicability contract
+  ansible.builtin.import_tasks: mechanisms/installed_package_fixed_file/validate.yml
+
+- name: Common installed-package file | Gather packages for remediation applicability
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common installed-package file | Report skipped remediation
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      benchmark: "{{ cis_linux_common_benchmark }}"
+      classification: NOT_APPLICABLE
+      reason: "Package {{ cis_linux_common_package_name }} is not installed; nothing was created."
+      changed_target: false
+  when: cis_linux_common_package_name not in ansible_facts.packages
+
+- name: Common installed-package file | Remediate metadata when applicable
+  ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/remediation.yml
+  when: cis_linux_common_package_name in ansible_facts.packages

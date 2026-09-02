@@ -21,7 +21,7 @@ explícita.
 | A2 | Migrar CIS 7.1.1 a `sections/section_07_maintenance` | Bajo; solo cambia la ruta de composición | `COMPLETED` |
 | A3 | Migrar CIS 2.4.1.2 a `sections/section_02_services` | Bajo; conservar rama `NOT_APPLICABLE` | `COMPLETED` |
 | A4 | Migrar CIS 3.3.10 a `sections/section_03_network` | Medio; preservar runtime, persistencia y gates | `COMPLETED` |
-| A5 | Reubicar mecanismos bajo `tasks/mechanisms/` con wrappers compatibles | Medio; cambia rutas internas | `PLANNED` |
+| A5 | Reubicar mecanismos bajo `tasks/mechanisms/` con wrappers compatibles | Medio; cambia rutas internas | `COMPLETED` |
 | A6 | Dividir adaptador Ubuntu por secciones, sin alterar orden histórico | Medio | `PLANNED` |
 | A7 | Dividir adaptador Debian por secciones, sin alterar gates canary | Medio | `PLANNED` |
 | A8 | Completar interfaces independientes de Debian CIS 7.1.5 | Alto; cambio funcional | `PLANNED` |
@@ -86,3 +86,18 @@ explícita.
 - Los seis entry points pasaron syntax-check. También pasaron contratos,
   inventario, ansible-lint y yamllint; ansible-lint mantuvo 0 fallos y 575
   warnings históricos.
+
+## Evidencia A5
+
+- Los cuatro mecanismos comunes se reubicaron bajo `tasks/mechanisms/` sin
+  cambiar tareas, contratos, variables, clasificaciones ni comportamiento.
+- Las 17 rutas técnicas anteriores permanecen disponibles mediante wrappers
+  estáticos; un fixture temporal confirmó que los cuatro `tasks_from` públicos
+  anteriores siguen parseando y no quedó incluido en el árbol del proyecto.
+- Las entradas semánticas y los imports internos apuntan directamente a las
+  implementaciones canónicas, sin atravesar wrappers de compatibilidad.
+- Las listas de tareas y tags de audit, hardening y verification fueron
+  idénticas antes y después para Ubuntu 24.04 y Debian 12.
+- Pasaron los gates de IPv6, sysctl, cron, permisos comunes y el piloto P3 en
+  ambas VMs, además de contratos y baseline estático. Ansible-lint mantuvo
+  0 fallos y 575 warnings históricos.

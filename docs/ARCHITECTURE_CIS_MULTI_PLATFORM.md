@@ -39,22 +39,22 @@ un control real que las justifique; no se mantienen roles vacíos.
 ```text
 adaptador de plataforma
   -> tasks/sections/section_<NN>_<dominio>/<control>/<modo>.yml
-     -> mecanismo técnico (sysctl, permisos, observación, etc.)
+     -> tasks/mechanisms/<mecanismo>/<modo>.yml
         -> módulo Ansible con FQCN
 ```
 
 - El adaptador define benchmark, variables, aplicabilidad, gates y tags.
 - `sections/` permite localizar un control por su ID CIS y expone audit,
   remediation y verification como entradas separadas.
-- El mecanismo técnico implementa una operación reutilizable sin decidir la
+- `tasks/mechanisms/` contiene operaciones técnicas reutilizables sin decidir la
   política de una distribución.
 - `tasks/main.yml` rechaza la invocación directa del rol común: siempre se debe
   seleccionar un control y un modo mediante `tasks_from`.
 
 Las rutas se normalizan como
 `section_<NN>_<dominio>/<ID_con_guiones_bajos>_<nombre>/<modo>.yml`. Durante la
-migración, las rutas técnicas anteriores permanecen disponibles para mantener
-compatibilidad. La referencia operativa del rol está en
+migración, las rutas técnicas anteriores permanecen disponibles como wrappers
+estáticos para mantener compatibilidad. La referencia operativa del rol está en
 `ansible/roles/cis_linux_common/README.md`.
 
 ## Trabajo por sesiones

@@ -1,15 +1,3 @@
 ---
-- name: Common IPv6 status | Inspect status for verification
-  ansible.builtin.import_tasks: ipv6_status/inspect.yml
-
-- name: Common IPv6 status | Verify that status was identified
-  ansible.builtin.assert:
-    that:
-      - cis_linux_common_ipv6_observed_status in ['enabled', 'disabled']
-      - cis_linux_common_ipv6_module_disable in ['0', '1', 'unavailable']
-      - cis_linux_common_ipv6_all_disable in ['0', '1', 'unavailable']
-      - cis_linux_common_ipv6_default_disable in ['0', '1', 'unavailable']
-    fail_msg: IPv6 status could not be identified from kernel and sysctl evidence.
-    success_msg: >-
-      IPv6 status was independently identified as
-      {{ cis_linux_common_ipv6_observed_status }}; no network setting changed.
+- name: Compatibility | Delegate to relocated IPv6 verification mechanism
+  ansible.builtin.import_tasks: mechanisms/ipv6_status/verification.yml

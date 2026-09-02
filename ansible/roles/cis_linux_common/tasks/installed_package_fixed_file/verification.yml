@@ -1,22 +1,3 @@
 ---
-- name: Common installed-package file | Load verification applicability contract
-  ansible.builtin.import_tasks: installed_package_fixed_file/validate.yml
-
-- name: Common installed-package file | Gather packages for verification applicability
-  ansible.builtin.package_facts:
-    manager: auto
-
-- name: Common installed-package file | Report verification as not applicable
-  ansible.builtin.debug:
-    msg:
-      control: "{{ cis_linux_common_control_id }}"
-      platform: "{{ cis_linux_common_platform }}"
-      benchmark: "{{ cis_linux_common_benchmark }}"
-      classification: NOT_APPLICABLE
-      reason: "Package {{ cis_linux_common_package_name }} is not installed."
-      changed_target: false
-  when: cis_linux_common_package_name not in ansible_facts.packages
-
-- name: Common installed-package file | Verify metadata when applicable
-  ansible.builtin.import_tasks: fixed_file_permissions/verification.yml
-  when: cis_linux_common_package_name in ansible_facts.packages
+- name: Compatibility | Delegate to relocated package-file verification mechanism
+  ansible.builtin.import_tasks: mechanisms/installed_package_fixed_file/verification.yml

@@ -1,15 +1,3 @@
 ---
-- name: Common sysctl parameter | Validate the mechanism contract
-  ansible.builtin.assert:
-    that:
-      - cis_linux_common_control_id | length > 0
-      - cis_linux_common_platform | length > 0
-      - cis_linux_common_benchmark | length > 0
-      - >-
-        cis_linux_common_sysctl_parameter |
-        regex_search('^[a-z0-9_.]+$') is not none
-      - cis_linux_common_sysctl_runtime_path is ansible.builtin.abs
-      - cis_linux_common_sysctl_value | string | length > 0
-      - cis_linux_common_sysctl_file is ansible.builtin.abs
-      - cis_linux_common_sysctl_file is ansible.builtin.regex('.*\.conf$')
-    fail_msg: The platform adapter supplied an invalid sysctl contract.
+- name: Compatibility | Delegate to relocated sysctl validation mechanism
+  ansible.builtin.import_tasks: mechanisms/sysctl_parameter/validate.yml

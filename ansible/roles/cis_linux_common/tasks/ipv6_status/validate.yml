@@ -1,9 +1,3 @@
 ---
-- name: Common IPv6 status | Validate the observation contract
-  ansible.builtin.assert:
-    that:
-      - cis_linux_common_control_id | length > 0
-      - cis_linux_common_platform | length > 0
-      - cis_linux_common_benchmark | length > 0
-      - cis_linux_common_ipv6_site_policy in ['enabled', 'disabled', 'undecided']
-    fail_msg: The platform adapter supplied an invalid IPv6 observation contract.
+- name: Compatibility | Delegate to relocated IPv6 validation mechanism
+  ansible.builtin.import_tasks: mechanisms/ipv6_status/validate.yml

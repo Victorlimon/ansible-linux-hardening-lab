@@ -503,3 +503,19 @@ permitir remediación.
 - Pasaron syntax-check de los seis entry points, `test_p4_sysctl.sh`,
   `test_contracts.sh`, inventario, ansible-lint y yamllint. Ansible-lint
   conservó 0 fallos y 575 warnings históricos.
+
+## 2026-09-02 — Sesión de arquitectura A5
+
+- Se reubicaron `ipv6_status`, `sysctl_parameter`, `fixed_file_permissions` e
+  `installed_package_fixed_file` bajo `cis_linux_common/tasks/mechanisms/`.
+- Las 17 rutas técnicas previas se conservaron como wrappers estáticos. Un
+  fixture temporal confirmó por syntax-check el parseo de los cuatro
+  `tasks_from` públicos anteriores y se eliminó después de la comprobación.
+- Las entradas de `tasks/sections/` y los imports entre mecanismos usan ahora
+  directamente las rutas canónicas y no crean ciclos de compatibilidad.
+- Las listas de tareas y tags de los seis flujos de plataforma fueron idénticas
+  al baseline previo.
+- Pasaron `test_p4_network.sh`, `test_p4_sysctl.sh`, `test_p4_cron.sh`,
+  `test_p4_common.sh`, `test_p3_pilot.sh`, `test_contracts.sh`, los syntax-check,
+  inventario, ansible-lint y yamllint. Ansible-lint conservó 0 fallos y 575
+  warnings históricos; ningún target fue remediado por el baseline estático.

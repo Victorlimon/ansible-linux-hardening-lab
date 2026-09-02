@@ -34,18 +34,23 @@ tasks/
 │           ├── audit.yml
 │           ├── remediation.yml
 │           └── verification.yml
-├── ipv6_status/                      # mecanismo técnico existente
-├── sysctl_parameter/
+├── mechanisms/                       # implementaciones técnicas canónicas
+│   ├── ipv6_status/
+│   ├── sysctl_parameter/
+│   ├── fixed_file_permissions/
+│   └── installed_package_fixed_file/
+├── ipv6_status/                      # wrappers de compatibilidad
+├── sysctl_parameter/                 # para rutas tasks_from anteriores
 ├── fixed_file_permissions/
 └── installed_package_fixed_file/
 ```
 
 - `sections/` responde a “qué control CIS se ejecuta”.
-- Los directorios de mecanismo responden a “cómo se declara el estado”.
+- `mechanisms/` responde a “cómo se declara el estado”.
 - Cada control ofrece únicamente los modos que soporta. Un control manual o
   read-only no debe tener un archivo `remediation.yml` vacío.
-- Las rutas técnicas existentes se conservan durante la migración para no
-  romper consumidores ni gates.
+- Las rutas técnicas anteriores se conservan como wrappers estáticos durante la
+  migración para no romper consumidores ni gates.
 
 ## Convención de rutas
 
