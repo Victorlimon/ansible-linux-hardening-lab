@@ -1,0 +1,4 @@
+---
+- name: CIS 6.2.2.4 | Verification | Ubuntu common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_2_2_4_audit_space_warnings/verification.yml}
+  vars: {cis_linux_common_control_id: '6.2.2.4', cis_linux_common_platform: ubuntu_2404}

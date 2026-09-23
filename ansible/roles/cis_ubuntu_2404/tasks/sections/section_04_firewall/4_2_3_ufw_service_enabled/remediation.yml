@@ -1,0 +1,5 @@
+---
+- ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_04_firewall/4_2_3_ufw_service_enabled/remediation.yml
+  vars: {cis_linux_common_control_id: '4.2.3', cis_linux_common_platform: ubuntu_2404, cis_linux_common_service_name: ufw.service, cis_linux_common_service_package: ufw}

@@ -1,0 +1,4 @@
+---
+- name: CIS 6.2.1.1 | Audit | Ubuntu common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_2_1_1_auditd_packages/audit.yml}
+  vars: {cis_linux_common_control_id: '6.2.1.1', cis_linux_common_platform: ubuntu_2404}

@@ -1,0 +1,10 @@
+---
+- name: CIS 6.2.3.3 | verification | ubuntu_2404 common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_2_3_3_sudo_log/verification.yml}
+  vars:
+    cis_linux_common_control_id: '6.2.3.3'
+    cis_linux_common_platform: ubuntu_2404
+    cis_linux_common_config_line: '-w /var/log/sudo.log -p wa -k sudo_log_file'
+    cis_linux_common_config_line_regexp: '^-w\ /var/log/sudo\.log\ -p\ wa\ -k\ sudo_log_file$'
+    cis_linux_common_config_line_path: /etc/audit/rules.d/cis_6_2_3_3.rules
+    cis_linux_common_config_line_package: auditd

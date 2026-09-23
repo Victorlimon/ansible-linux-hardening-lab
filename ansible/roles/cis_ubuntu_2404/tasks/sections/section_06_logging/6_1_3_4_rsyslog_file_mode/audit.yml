@@ -1,0 +1,4 @@
+---
+- name: CIS 6.1.3.4 | Audit | Ubuntu common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_1_3_4_rsyslog_file_mode/audit.yml}
+  vars: {cis_linux_common_control_id: "6.1.3.4", cis_linux_common_platform: ubuntu_2404, cis_linux_common_config_line_package: rsyslog, cis_linux_common_config_line_path: /etc/rsyslog.conf, cis_linux_common_config_line: "$FileCreateMode 0640", cis_linux_common_config_line_regexp: '^\s*\$FileCreateMode\s+0640\s*$'}

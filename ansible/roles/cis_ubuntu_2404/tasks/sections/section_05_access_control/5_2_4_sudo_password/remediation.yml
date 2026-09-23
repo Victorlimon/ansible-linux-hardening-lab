@@ -1,0 +1,2 @@
+---
+- {name: 'CIS 5.2.4 | Remediation | Ubuntu adapter', ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_05_access_control/5_2_4_sudo_password/remediation.yml}, vars: {cis_linux_common_control_id: '5.2.4', cis_linux_common_platform: ubuntu_2404}}

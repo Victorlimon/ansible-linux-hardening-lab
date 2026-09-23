@@ -1,0 +1,6 @@
+---
+- name: CIS 2.1.1 | Remediation | Run common disabled-service mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_02_services/2_1_1_autofs/remediation.yml
+  vars: {cis_linux_common_control_id: "2.1.1", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_service_package: autofs, cis_linux_common_service_name: autofs.service}

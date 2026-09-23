@@ -1,0 +1,8 @@
+---
+- ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_04_firewall/4_2_4_ufw_loopback_traffic/verification.yml
+  vars:
+    cis_linux_common_control_id: '4.2.4'
+    cis_linux_common_platform: ubuntu_2404
+    cis_linux_common_ufw_policy_match: 'Anywhere DENY IN 127\.0\.0\.0/8'

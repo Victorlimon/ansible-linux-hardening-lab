@@ -19,9 +19,8 @@
     cis_linux_common_fixed_file_allowed_other_digits: ['0']
   when:
     - cis_ubuntu_2404_execution_mode == 'remediation'
+    - cis_ubuntu_2404_remediation_enabled | bool
     - cis_ubuntu_2404_2_4_1_2_crontab_permissions | bool
-    - cis_section2_services | bool
-    - cis_2_4_job_schedulers['2_4_1_2_crontab_perms'] | bool
   tags:
     - cis_ubuntu_2404
     - cis_ubuntu_2404_remediation

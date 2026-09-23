@@ -1,0 +1,6 @@
+---
+- name: CIS 1.1.1.9 | Audit | Run common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_01_initial_setup/1_1_1_9_usb_storage/audit.yml
+  vars: {cis_linux_common_control_id: "1.1.1.9", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_kernel_module: usb-storage, cis_linux_common_config_line_path: /etc/modprobe.d/usb-storage.conf, cis_linux_common_config_line_package: kmod}

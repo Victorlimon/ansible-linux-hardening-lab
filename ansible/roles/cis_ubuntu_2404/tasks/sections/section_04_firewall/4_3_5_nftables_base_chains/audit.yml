@@ -1,0 +1,6 @@
+---
+- ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_04_firewall/4_3_5_nftables_base_chains/audit.yml
+  vars: {cis_linux_common_control_id: '4.3.5', cis_linux_common_platform: ubuntu_2404, cis_linux_common_nftables_config: "{{ cis_nftables_config }}", cis_linux_common_nftables_expected_patterns: ['hook input', 'hook forward', 'hook output']}
+  when: cis_firewall == 'nftables'

@@ -1,0 +1,6 @@
+---
+- name: CIS 7.2.7 | Audit | Run common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_07_maintenance/7_2_7_no_duplicate_users/audit.yml
+  vars: {cis_linux_common_control_id: "7.2.7", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_account_check: dup_user, cis_linux_common_account_command: 'cut -d: -f1 /etc/passwd | sort | uniq -d'}

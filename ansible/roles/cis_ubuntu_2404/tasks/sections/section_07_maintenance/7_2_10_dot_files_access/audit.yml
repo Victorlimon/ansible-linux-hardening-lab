@@ -1,0 +1,6 @@
+---
+- name: CIS 7.2.10 | Audit | Run common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_07_maintenance/7_2_10_dot_files_access/audit.yml
+  vars: {cis_linux_common_control_id: "7.2.10", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_account_check: dot_files, cis_linux_common_account_command: 'for u in $(awk -F: ''($3>=1000 && $7 !~ /nologin|false/) {print $1}'' /etc/passwd); do d=$(getent passwd $u | cut -d: -f6); find $d -maxdepth 1 -type f -name ''.*'' ! -user $u 2>/dev/null; done'}

@@ -18,9 +18,8 @@
     cis_linux_common_fixed_file_allowed_other_digits: ['0', '4']
   when:
     - cis_ubuntu_2404_execution_mode == 'remediation'
+    - cis_ubuntu_2404_remediation_enabled | bool
     - cis_ubuntu_2404_7_1_1_passwd_permissions | bool
-    - cis_section7_system | bool
-    - section7_system_7_1_system_file_permissions | bool
   tags:
     - cis_ubuntu_2404
     - cis_ubuntu_2404_remediation

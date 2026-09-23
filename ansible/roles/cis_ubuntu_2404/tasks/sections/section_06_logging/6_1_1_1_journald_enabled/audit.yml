@@ -1,0 +1,4 @@
+---
+- name: CIS 6.1.1.1 | Audit | Ubuntu common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_1_1_1_journald_enabled/audit.yml}
+  vars: {cis_linux_common_control_id: "6.1.1.1", cis_linux_common_platform: ubuntu_2404, cis_linux_common_service_package: systemd, cis_linux_common_service_name: systemd-journald.service}

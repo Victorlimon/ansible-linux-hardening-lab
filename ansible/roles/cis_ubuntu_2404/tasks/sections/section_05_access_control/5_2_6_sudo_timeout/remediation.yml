@@ -1,0 +1,2 @@
+---
+- {name: 'CIS 5.2.6 | Remediation | Ubuntu adapter', ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_05_access_control/5_2_6_sudo_timeout/remediation.yml}, vars: {cis_linux_common_control_id: '5.2.6', cis_linux_common_platform: ubuntu_2404, cis_linux_common_config_line_package: sudo, cis_linux_common_config_line_path: /etc/sudoers.d/cis_timestamp_timeout, cis_linux_common_config_line_regexp: '^Defaults\s+timestamp_timeout=15$', cis_linux_common_config_line: 'Defaults timestamp_timeout=15'}}

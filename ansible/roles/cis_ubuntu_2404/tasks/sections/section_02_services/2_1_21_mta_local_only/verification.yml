@@ -1,0 +1,4 @@
+---
+- name: CIS 2.1.21 | Verification | Ubuntu postfix local-only route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_02_services/2_1_21_mta_local_only/verification.yml}
+  vars: {cis_linux_common_control_id: "2.1.21", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_config_line_path: /etc/postfix/main.cf, cis_linux_common_config_line_regexp: '^inet_interfaces\s*=', cis_linux_common_config_line: 'inet_interfaces = loopback-only', cis_linux_common_config_line_package: postfix}

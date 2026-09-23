@@ -13,10 +13,8 @@
     cis_linux_common_sysctl_file: /etc/sysctl.d/99-cis-network.conf
   when:
     - cis_ubuntu_2404_execution_mode == 'remediation'
+    - cis_ubuntu_2404_remediation_enabled | bool
     - cis_ubuntu_2404_3_3_10_tcp_syncookies | bool
-    - cis_section3_network | bool
-    - section3_network.enabled | bool
-    - section3_network['3_3_network_kernel_parameters'].tcp_syncookies | bool
   tags:
     - cis_ubuntu_2404
     - cis_ubuntu_2404_remediation

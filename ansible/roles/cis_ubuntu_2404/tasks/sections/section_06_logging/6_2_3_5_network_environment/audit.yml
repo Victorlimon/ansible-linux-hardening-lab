@@ -1,0 +1,10 @@
+---
+- name: CIS 6.2.3.5 | audit | ubuntu_2404 common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_2_3_5_network_environment/audit.yml}
+  vars:
+    cis_linux_common_control_id: '6.2.3.5'
+    cis_linux_common_platform: ubuntu_2404
+    cis_linux_common_config_line: '-a always,exit -F arch=b64 -S sethostname,setdomainname -k system-locale'
+    cis_linux_common_config_line_regexp: '^-a\ always,exit\ -F\ arch=b64\ -S\ sethostname,setdomainname\ -k\ system-locale$'
+    cis_linux_common_config_line_path: /etc/audit/rules.d/cis_6_2_3_5.rules
+    cis_linux_common_config_line_package: auditd
