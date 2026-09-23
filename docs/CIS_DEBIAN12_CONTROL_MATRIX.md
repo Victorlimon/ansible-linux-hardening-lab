@@ -50,5 +50,6 @@ orden a producción sin completar sus gates operativos y valores aprobados.
 El gate read-only del piloto se ejecuta desde `ansible-control`:
 
 ```bash
-bash scripts/test_p3_pilot.sh
+ansible-playbook -i inventories/local/hosts.yml playbooks/audit/cis_debian_12.yml \
+  --limit debian12 --tags cis_7_1_1
 ```

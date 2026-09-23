@@ -9,7 +9,7 @@ all: up
 
 help:
 	@echo "Objetivos seguros en el host: check-host, status, start y stop"
-	@echo "Ansible se valida dentro de ansible-control con scripts/check_control.sh"
+	@echo "Ansible se valida dentro de ansible-control con los playbooks audit/hardening/verify y los calificadores Python"
 
 check-host:
 	@./scripts/check_host.sh
