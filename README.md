@@ -1,13 +1,16 @@
 # Hardening CIS con Ansible para Ubuntu 24.04 y Debian 12
 
-Automatización incremental de hardening inspirada en CIS. **Ubuntu 24.04** es la
-implementación liberada; **Debian 12** dispone de auditoría y controles canario
-con gates explícitos. El proyecto no declara cobertura CIS completa ni genera
-por sí solo una certificación de cumplimiento.
+Automatización incremental de hardening inspirada en CIS. **Ubuntu 24.04 x86_64
+is released for the qualified subset**; **Debian 12 x86_64 is canary-only**.
+[Support and evidence policy](docs/SUPPORT.md) is the sole authority for these
+states, exclusions, and claim boundaries.
 
 ## Alcance real
 
-- Ubuntu canónico: `ansible/playbooks/cis_ubuntu_2404_hardening.yml`.
+- Public Ubuntu entry point:
+  `ansible/playbooks/cis_ubuntu_2404_hardening.yml`.
+- Internal imported implementation:
+  `ansible/playbooks/hardening/cis_ubuntu_2404.yml`.
 - Compatibilidad Ubuntu: `ansible/playbooks/cis_hardening.yml`.
 - Debian: `cis_debian_12_preflight.yml`, `cis_debian_12_audit.yml` y
   `cis_debian_12_hardening.yml`.
@@ -93,13 +96,19 @@ ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --list-tags --limit ubu
 
 # Vista previa de una sección
 ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
-  --limit ubuntu24 --tags cis_sec1 --check --diff
+  --limit ubuntu24 --tags cis_sec1 --check --diff \
+  -e cis_ubuntu_2404_remediation_enabled=true
 
 # Aplicación de la sección y segunda aplicación real para idempotencia
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --limit ubuntu24 --tags cis_sec1
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --limit ubuntu24 --tags cis_sec1
 ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
-  --limit ubuntu24 --tags cis_sec1 --check --diff
+  --limit ubuntu24 --tags cis_sec1 \
+  -e cis_ubuntu_2404_remediation_enabled=true
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec1 \
+  -e cis_ubuntu_2404_remediation_enabled=true
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec1 --check --diff \
+  -e cis_ubuntu_2404_remediation_enabled=true
 ```
 
 Las etiquetas estables de sección son `cis_sec1` a `cis_sec7` (también existen
@@ -108,10 +117,11 @@ uniforme histórica: por ejemplo, SSH usa `cis_5.1.4`, UFW usa `cis_4_2_6` y
 auditd usa `cis_6_2_3_1`. Antes de ejecutar un control, obtenga el nombre real:
 
 ```bash
-ansible-playbook playbooks/cis_hardening.yml \
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
   --limit ubuntu24 --tags cis_sec5 --list-tasks
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags 'cis_5.1.4' --check --diff
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags 'cis_5.1.4' --check --diff \
+  -e cis_ubuntu_2404_remediation_enabled=true
 ```
 
 ## Valores seguros y opt-in
@@ -120,7 +130,12 @@ Los defaults se dividen en
 `ansible/roles/cis_benchmark/defaults/main/00-global.yml` hasta
 `07-system-maintenance.yml`.
 
-- Activas por defecto: secciones 1, 2, 3 y 5, con excepciones internas.
+- Toda remediación canónica Ubuntu es opt-in mediante
+  `cis_ubuntu_2404_remediation_enabled: false`. Al habilitar el master gate es
+  obligatorio seleccionar tags explícitos; una ejecución global sin `--tags`
+  se rechaza antes de modificar el objetivo.
+- Tras ambos gates anteriores, las secciones históricamente activas son 1, 2, 3
+  y 5, con excepciones internas.
 - Desactivadas por defecto: firewall (4), logging/auditd/AIDE (6) y mantenimiento
   del sistema (7).
 - También son opt-in: PAM, GDM, retiradas de servicios y clientes, módulos de
@@ -136,6 +151,11 @@ Antes de activar una sección o control opt-in, defina el cambio en variables de
 inventario, sométalo a `--check --diff`, mantenga consola/snapshot y apruebe una
 ventana de mantenimiento. No active toda la cobertura con variables globales
 sin revisar dependencias y riesgo de bloqueo.
+
+Los tags Level 1/Level 2 históricos se conservan para compatibilidad, pero sus
+variantes no sustituyen los gates. Ambos niveles requieren el master gate, tags
+explícitos y todos los selectores de sección/control aplicables. Consulte
+`--list-tasks` antes de usar un tag de perfil histórico.
 
 ## Variables críticas
 
@@ -161,10 +181,11 @@ política de producción.
 ## Documentación
 
 - [Guía técnica](docs/README.md)
+- [Support and evidence policy](docs/SUPPORT.md)
 - [Operación en Ubuntu 24.04](docs/PRODUCTION_UBUNTU24.md)
+- [Controlled Debian 12 canary operation](docs/PRODUCTION_DEBIAN12.md)
 - [Matriz de controles 1-7](docs/CIS_CONTROL_MATRIX.md)
 - [Arquitectura escalable](docs/SCALABILITY.md)
-- [Baseline DevSecOps](docs/DEVSECOPS.md)
 - [Matriz Debian 12](docs/CIS_DEBIAN12_CONTROL_MATRIX.md)
 - [Índice](docs/INDEX.md)
 

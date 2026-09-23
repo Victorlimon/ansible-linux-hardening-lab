@@ -1,9 +1,9 @@
 # Documentación técnica
 
-Esta documentación describe el árbol actual del proyecto. Ubuntu 24.04 es la
-plataforma liberada y Debian 12 permanece en estado canario. No existe todavía
-generación consolidada de evidencia, Molecule ni una prueba que permita afirmar
-cumplimiento CIS completo.
+Esta documentación describe el árbol actual del proyecto. For normative status,
+evidence dimensions, and exclusions, use the sole authority:
+[Support and evidence policy](SUPPORT.md). Ubuntu 24.04 x86_64 is released for
+the qualified subset and Debian 12 x86_64 remains canary-only.
 
 ## Componentes reales
 
@@ -31,14 +31,17 @@ ansible/
     ├── cis_linux_common/                 # mecanismos equivalentes probados
     ├── cis_ubuntu_2404/
     ├── cis_debian_12/
-    └── cis_benchmark/                    # implementación Ubuntu histórica
+    └── cis_benchmark/                    # biblioteca interna/compatibilidad
 ```
 
-`cis_hardening.yml` importa el entry point canónico Ubuntu. El adaptador
-`cis_ubuntu_2404` compone temporalmente `cis_benchmark`. Debian utiliza
+The public Ubuntu path `playbooks/cis_ubuntu_2404_hardening.yml` imports the
+internal implementation `playbooks/hardening/cis_ubuntu_2404.yml`.
+`cis_hardening.yml` remains a compatibility path. El adaptador
+`cis_ubuntu_2404` orquesta setup y siete entradas de sección acotadas de la
+biblioteca histórica, sin importar su `tasks/main.yml`. Debian utiliza
 interfaces canónicas separadas para auditoría, remediación y verificación; los
-playbooks raíz son wrappers compatibles. El catálogo interno del preflight es la
-única fuente de identidad, arquitectura y estado de plataforma.
+playbooks raíz son wrappers compatibles. El catálogo interno del preflight
+aplica identidad y arquitectura en runtime; it is not a public support authority.
 
 `cis_linux_common` contiene verticales probadas para `/etc/passwd`,
 `/etc/crontab`, estado IPv6 y TCP SYN cookies. Los adaptadores conservan IDs,
@@ -101,8 +104,8 @@ cd /home/vagrant/ansible/ansible
 export PATH=/home/vagrant/.venvs/ansible-cis/bin:$PATH
 ansible-inventory --graph
 ansible ubuntu24 --limit ubuntu24 -m ansible.builtin.ping
-ansible-playbook playbooks/cis_hardening.yml --syntax-check
-ansible-playbook playbooks/cis_hardening.yml --list-hosts --limit ubuntu24
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --syntax-check
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --list-hosts --limit ubuntu24
 ```
 
 El límite explícito es una barrera operacional y debe conservarse incluso
@@ -126,18 +129,20 @@ La notación histórica de tags inferiores mezcla puntos y guiones bajos. No
 derive un tag desde el número CIS. Descúbralo y previsualice las tareas:
 
 ```bash
-ansible-playbook playbooks/cis_hardening.yml --limit ubuntu24 --list-tags
-ansible-playbook playbooks/cis_hardening.yml \
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --limit ubuntu24 --list-tags
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
   --limit ubuntu24 --tags cis_sec6 --list-tasks
 ```
 
 Ejecución por sección y por control:
 
 ```bash
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags cis_sec3 --check --diff
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags cis_3_3_1 --check --diff
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec3 --check --diff \
+  -e cis_ubuntu_2404_remediation_enabled=true
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_3_3_1 --check --diff \
+  -e cis_ubuntu_2404_remediation_enabled=true
 ```
 
 Los tags `always` hacen que facts y validaciones necesarias puedan ejecutarse
@@ -173,13 +178,16 @@ adjuntar una evaluación independiente por control.
 Secuencia mínima por sección:
 
 ```bash
-ansible-playbook playbooks/cis_hardening.yml --syntax-check
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags cis_sec5 --check --diff
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags cis_sec5
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags cis_sec5
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --syntax-check
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec5 --check --diff \
+  -e cis_ubuntu_2404_remediation_enabled=true
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec5 \
+  -e cis_ubuntu_2404_remediation_enabled=true
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec5 \
+  -e cis_ubuntu_2404_remediation_enabled=true
 ```
 
 En la segunda aplicación real, investigue cualquier `changed` recurrente. Una

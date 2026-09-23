@@ -13,7 +13,9 @@ compartir mecanismos, pero no necesariamente IDs, aplicabilidad ni impacto.
 
 Cada plataforma tiene un entry point y adaptador explícitos. Un catálogo interno
 define identidad, benchmark, arquitectura y estado. Ubuntu conserva
-`cis_benchmark` detrás de `cis_ubuntu_2404`; Debian usa `cis_debian_12`.
+`cis_benchmark` como biblioteca interna detrás de entradas acotadas de
+`cis_ubuntu_2404`; Debian usa `cis_debian_12`. El adaptador Ubuntu es el único
+orquestador canónico y no importa el entry point principal del rol histórico.
 
 No se crearán implementaciones para plataformas no probadas. Un mecanismo pasa
 a una capa común solo después de demostrar equivalencia e idempotencia en Ubuntu

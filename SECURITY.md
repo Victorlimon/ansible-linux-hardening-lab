@@ -2,10 +2,9 @@
 
 ## Supported scope
 
-- Ubuntu 24.04: released project implementation.
-- Debian 12: explicitly gated canary controls only.
-
-The project automates hardening controls but does not certify CIS compliance.
+Support status and exclusions are owned exclusively by
+[`docs/SUPPORT.md`](docs/SUPPORT.md). This policy does not define a competing
+support matrix.
 
 ## Reporting a vulnerability
 
@@ -28,6 +27,8 @@ compromised until rotation and history cleanup are completed.
 
 ## Operational safety
 
-Run Ansible only from `ansible-control`, use the local inventory and an explicit
-`--limit`. Begin with control-specific `--check --diff`; protect resulting logs
-because diffs may contain sensitive configuration.
+Use an authorized control node, reviewed inventory, verified host keys, a
+non-root remote identity, explicit `--limit`, and explicit tags. The Vagrant
+`ansible-control` node and local inventory are laboratory examples, not
+production requirements. Begin with a control-specific check-mode simulation;
+protect `--diff` output because it may contain sensitive configuration.

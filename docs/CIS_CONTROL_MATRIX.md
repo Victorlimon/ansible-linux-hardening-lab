@@ -12,6 +12,11 @@ cumplimiento. Estados usados:
 Una sección puede tener los tres estados. "Automated" no equivale a cobertura
 completa ni a resultado `PASS`.
 
+El entry point canónico Ubuntu antepone
+`cis_ubuntu_2404_remediation_enabled: false` a todos los defaults de la tabla y
+rechaza habilitarlo sin `--tags` explícitos. Los valores de entrada siguientes
+solo se evalúan después de ese master gate.
+
 | Sección | Default de entrada | Estado real | Opt-in/manual relevante | Riesgos y límites |
 |---|---|---|---|---|
 | 1. Initial Setup | `cis_section1_initial_setup: true` | **Automated + Manual + Opt-in**. Módulos de filesystem seleccionados, repositorios/updates, AppArmor básico, permisos GRUB, hardening de proceso y banners tienen tareas activas. | OverlayFS, squashfs, UDF y USB storage; módulos no usados; retirada de repositorios; auto-updates; enforcing global de AppArmor; password GRUB; retirada de paquetes y GDM son opt-in. Las particiones ausentes solo se reportan. | Deshabilitar módulos puede romper contenedores/medios. Opciones `noexec` pueden romper aplicaciones. GRUB y AppArmor pueden impedir arranque o servicios. No crea/migra particiones. |

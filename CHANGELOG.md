@@ -1,5 +1,17 @@
 # Changelog
 
+> **Historical and non-normative.** This file records dated project statements;
+> it does not define current support. Use
+> [`docs/SUPPORT.md`](docs/SUPPORT.md) for current status and evidence.
+
+## Current correction
+
+The historical phrases “Complete” and “multi-distro support” below are not
+current claims. Ubuntu 24.04 x86_64 is released only for the qualified subset,
+Debian 12 x86_64 is canary-only, and Docker, Ubuntu 22.04, and Debian 11 are
+unsupported. Historical exact control/profile labels are not current-version
+metadata unless backed by an authorized exact-version source.
+
 Todos los cambios notables en este proyecto serán documentados en este archivo.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),

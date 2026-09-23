@@ -1,5 +1,10 @@
 # Plan maestro de migración y preparación para producción
 
+> **Future and non-normative.** This plan describes proposed outcomes, not
+> current behavior or support. Use [SUPPORT.md](SUPPORT.md) for the current
+> authority. In particular, Docker, Ubuntu 22.04, and Debian 11 remain
+> unsupported, and Debian 12 remains canary-only.
+
 ## 1. Propósito
 
 Este documento define la evolución del proyecto de hardening GNU/Linux hacia

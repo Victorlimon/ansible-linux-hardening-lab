@@ -21,14 +21,16 @@ Benchmark v1.1.0. Reconocer una plataforma no autoriza otras remediaciones.
 ```text
 roles/
 ├── cis_platform_preflight/   # plataforma, arquitectura y gates
-├── cis_ubuntu_2404/          # adaptador canónico Ubuntu
+├── cis_ubuntu_2404/          # único orquestador canónico Ubuntu
 ├── cis_debian_12/            # mapeo/política CIS Debian v1.1.0
 ├── cis_linux_common/          # controles equivalentes y mecanismos comunes
-└── cis_benchmark/            # implementación Ubuntu histórica en migración
+└── cis_benchmark/            # biblioteca interna Ubuntu y compatibilidad
 ```
 
-No se realizará una migración masiva. El rol `cis_benchmark` permanece como
-implementación Ubuntu compatible mientras se extraen controles con pruebas.
+El adaptador Ubuntu no importa `cis_benchmark/tasks/main.yml`: compone setup y
+las siete secciones mediante entradas estáticas acotadas. El rol histórico
+permanece como biblioteca interna compatible mientras se extraen controles con
+pruebas, pero ya no decide la orquestación canónica.
 Las capas comunes, evidencia y postflight se crearán únicamente cuando exista
 un control real que las justifique; no se mantienen roles vacíos.
 
@@ -101,6 +103,10 @@ La política de plataforma reside en `group_vars/ubuntu_2404.yml` o
 - `cis_debian_12_preflight.yml`: validación de plataforma Debian.
 - `cis_debian_12_audit.yml`: controles Debian de solo lectura.
 - `cis_debian_12_hardening.yml`: canarios Debian con gates explícitos.
+
+La remediación Ubuntu requiere `cis_ubuntu_2404_remediation_enabled=true` y
+tags explícitos. Este master gate es adicional y nunca reemplaza los gates de
+sección, control, política legal o componentes críticos.
 
 ## Criterio para compartir una implementación
 

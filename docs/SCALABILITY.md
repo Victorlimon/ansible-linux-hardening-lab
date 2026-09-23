@@ -17,8 +17,9 @@ distribuciones que no han sido implementadas y probadas.
 2. **Entry point por plataforma**: selección de hosts, serialización y gates.
 3. **Adaptador de benchmark**: `cis_ubuntu_2404` o `cis_debian_12` decide qué
    controles están liberados para ese benchmark.
-4. **Implementación**: el rol histórico `cis_benchmark` contiene Ubuntu mientras
-   se migra de forma incremental.
+4. **Implementación**: `cis_ubuntu_2404` orquesta setup y secciones; el rol
+   histórico `cis_benchmark` queda como biblioteca interna acotada mientras sus
+   controles se extraen de forma incremental.
 5. **Mecanismos comunes**: solo se extraen después de demostrar equivalencia en
    ambas VMs. No se comparte código solo porque los títulos CIS coincidan.
 

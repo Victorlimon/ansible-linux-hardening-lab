@@ -1,5 +1,11 @@
 # Sesiones de arquitectura CIS
 
+> **Historical and non-normative.** Session outcomes record what was observed at
+> a point in time and do not establish current support or exact benchmark
+> metadata. Use [SUPPORT.md](SUPPORT.md) for the current correction: Ubuntu
+> 24.04 x86_64 is released for the qualified subset, Debian 12 x86_64 is
+> canary-only, and Docker, Ubuntu 22.04, and Debian 11 are unsupported.
+
 Este registro divide la reorganización en cambios pequeños y verificables. Una
 sesión no habilita nuevos controles salvo que su alcance lo indique de forma
 explícita.
@@ -11,6 +17,8 @@ explícita.
 - Imports estáticos y tags existentes preservados.
 - Audit, remediation y verification permanecen separados.
 - Los mecanismos comunes no deciden política de plataforma.
+- Cada control tiene una única implementación canónica. No se crean wrappers de
+  compatibilidad sin un consumidor existente y documentado.
 - Cada sesión termina con validación, evidencia y un commit independiente.
 
 ## Plan incremental
@@ -25,6 +33,9 @@ explícita.
 | A6 | Dividir adaptador Ubuntu por secciones, sin alterar orden histórico | Medio | `COMPLETED` |
 | A7 | Dividir adaptador Debian por secciones, sin alterar gates canary | Medio | `COMPLETED` |
 | A8 | Completar interfaces independientes de Debian CIS 7.1.5 | Alto; cambio funcional | `COMPLETED` |
+| A9 | Implementar Debian CIS 7.1.2 sin declarar equivalencia Ubuntu | Bajo; metadata de un backup requerido | `COMPLETED` |
+| A10 | Transferir la orquestación Ubuntu completa al adaptador canónico | Medio; grafo de 647 tareas históricas | `COMPLETED` |
+| A11 | Implementar Debian CIS 7.1.3 con una única entrada canónica por modo | Bajo; metadata de `/etc/group` | `COMPLETED` |
 
 ## Definition of Done por sesión
 
@@ -151,3 +162,71 @@ explícita.
 - Pasaron además todos los gates P3/P4, contratos, syntax-check, inventario,
   ansible-lint y yamllint. Ansible-lint mantuvo 0 fallos y 575 warnings
   históricos.
+
+## Evidencia A9
+
+- Debian CIS 7.1.2 dispone de audit, remediation y verification independientes
+  bajo `section_07_maintenance/7_1_2_passwd_backup_permissions/`, además de
+  wrappers mode-first compatibles.
+- El adaptador declara `/etc/passwd-` en `root:root` y modo `0644` o más
+  restrictivo sin bits de ejecución. Reutiliza únicamente el mecanismo técnico
+  de permisos fijos; no se añadió una entrada semántica común porque falta citar
+  la fuente exacta del benchmark Ubuntu 24.04.
+- La auditoría inicial observó `0644 root:root` y clasificó `PASS` con
+  `changed=0`. Una deriva controlada a `0666` clasificó `FAIL` sin cambios;
+  check mode predijo solo `0666 -> 0644`, la primera convergencia corrigió el
+  modo y la segunda terminó con `changed=0`.
+- Un path deliberadamente ausente clasificó `FAIL`; la remediación fue rechazada
+  por `ansible.builtin.file` y no creó el archivo. Verification independiente y
+  ping final pasaron sobre el path real.
+- El gate confirmó que la remediación deshabilitada no cambia nada y que el
+  master gate sin confirmación canary es rechazado. No se relajó ningún gate.
+- Pasaron contratos, los syntax-check de todos los entry points, ansible-lint,
+  yamllint y ShellCheck. Ansible-lint mantuvo 0 fallos y 575 warnings históricos.
+
+## Evidencia A10
+
+- `cis_ubuntu_2404/tasks/main.yml` dejó de importar el entry point principal de
+  `cis_benchmark`. Ahora compone setup y las siete secciones mediante imports
+  estáticos propios; cada hoja delega a un `tasks_from` histórico acotado.
+- `cis_benchmark/tasks/main.yml` conserva compatibilidad y consume los mismos
+  ocho entry points raíz. Las tareas internas, helpers dinámicos, handlers,
+  defaults, condiciones, orden y tags no se reescribieron.
+- El setup registra `handlers/main.yml` una sola vez. Las siete importaciones de
+  sección usan `handlers_from: none.yml` para no duplicar handlers en el play.
+- Antes y después del corte, el grafo Ubuntu produjo exactamente SHA-256
+  `3ee9d36be76b0a8fba22eb53fcae10908be183ebb13858353ed68c3baa8a4ecd`
+  para `--list-tasks` y
+  `31a9b8a3c896b81ff5720271acf5b60e3a1bb076ef46314a6abe11c279ccd283`
+  para `--list-tags`.
+- Toda remediación canónica Ubuntu requiere ahora el master gate
+  `cis_ubuntu_2404_remediation_enabled=true` y tags explícitos, además de todos
+  los gates históricos. El default es `false`; no se modificó ningún gate
+  crítico ni se interpretaron tags Level 1/2 como autorización suficiente.
+- `test_ubuntu_adapter_graph.sh` valida permanentemente propiedad del grafo,
+  paridad de tareas/tags, remediación deshabilitada, rechazo de ejecución global
+  y check mode dirigido sobre CIS 3.3.10.
+- Pasaron todos los syntax-check, contratos, gates P3/P4, el gate del grafo,
+  ShellCheck, yamllint y ansible-lint. Este último mantuvo 0 fallos y 575
+  warnings históricos; no se ejecutó hardening global real sobre Ubuntu.
+
+## Evidencia A11
+
+- Debian CIS 7.1.3 dispone de audit, remediation y verification bajo la única
+  ruta canónica
+  `section_07_maintenance/7_1_3_group_permissions/`; no se añadió un wrapper
+  mode-first sin consumidores.
+- El adaptador exige `/etc/group` regular, `root:root` y modo `0644` o más
+  restrictivo sin ejecución. Reutiliza el mecanismo técnico común, pero no
+  declara equivalencia de benchmark con Ubuntu 24.04.
+- El gate común de permisos fijos sustituyó la prueba exclusiva de 7.1.2 para
+  evitar scripts duplicados. Comprueba ambos controles de forma parametrizada.
+- El baseline clasificó `PASS` con `changed=0`. La deriva controlada a `0666`
+  clasificó `FAIL`; check mode predijo una corrección, la primera convergencia
+  restauró `0644` y la segunda terminó con `changed=0`.
+- La ausencia deliberada clasificó `FAIL`; la remediación fue rechazada y no
+  creó el archivo. También pasaron los gates global y canary, verification
+  independiente y el ping final.
+- Pasaron contratos, el gate del grafo Ubuntu, todos los gates P3/P4,
+  syntax-check, ShellCheck, yamllint y ansible-lint. Este último mantuvo
+  0 fallos y 575 warnings históricos.

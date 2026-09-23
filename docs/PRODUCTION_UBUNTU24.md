@@ -1,8 +1,10 @@
 # Operación segura en Ubuntu 24.04 Server
 
-Esta guía prepara una ejecución controlada del rol `cis_benchmark`. No certifica
-cumplimiento, no reemplaza una evaluación CIS independiente y no ofrece rollback
-automático.
+This current operator guide covers only Ubuntu 24.04 x86_64 released for the
+qualified subset defined by [SUPPORT.md](SUPPORT.md). Use the public entry point
+`ansible/playbooks/cis_ubuntu_2404_hardening.yml`; it imports the internal
+implementation `ansible/playbooks/hardening/cis_ubuntu_2404.yml`. This guide
+does not provide automatic rollback.
 
 ## Objetivo y responsabilidades
 
@@ -12,7 +14,8 @@ aprobado que defina ese grupo; `inventories/production/hosts.yml` está vacío y
 no debe usarse hasta completarlo y revisarlo.
 
 En el laboratorio, el host Windows administra Vagrant, `vagrant` entra al nodo
-de control y `ansible` ejecuta Ansible y accede al remoto. En producción, preserve
+de control y ejecuta Ansible, mientras la identidad remota no-root `ansible`
+accede al objetivo. En producción, preserve
 la separación funcional: una identidad de control sin trabajo interactivo
 innecesario y una identidad remota `ansible` con clave protegida, `sudo`
 controlado y trazabilidad.
@@ -22,18 +25,23 @@ controlado y trazabilidad.
 1. Confirme consola fuera de banda y una ventana de mantenimiento.
 2. Tome snapshot o backup recuperable y pruebe su restauración.
 3. Mantenga una segunda sesión privilegiada abierta durante UFW, SSH y PAM.
-4. Confirme Ubuntu 24.04 Server, espacio libre, sincronización horaria y estado
-   de paquetes/servicios.
+4. Confirme Ubuntu 24.04 Server sobre `x86_64`, al menos
+   `cis_production_min_root_free_mb` de espacio libre, sincronización horaria y
+   estado de paquetes/servicios.
 5. Revise excepciones de aplicaciones, puertos, redes de gestión, montajes,
    cuentas locales, autenticación y retención de logs.
 6. Instale Ansible Core 2.16 o posterior y las colecciones fijadas.
 7. Limite primero a un host canario y a una sola sección.
-8. Active `cis_production_mode: true` y complete el identificador de cambio,
-   confirmaciones de backup recuperable y acceso fuera de banda. El rol aborta
-   si faltan esos gates, espacio mínimo, arquitectura soportada o usuario remoto
-   no-root.
-9. Defina `cis_execution_environment: production`. El valor por defecto
+8. Defina `cis_execution_environment: production`. El valor por defecto
    `unconfigured` falla deliberadamente, y el inventario local usa `lab`.
+9. Active `cis_production_mode: true`, defina un
+   `cis_production_change_id` no vacío y confirme
+   `cis_production_backup_confirmed: true` y
+   `cis_production_oob_access_confirmed: true`. El rol aborta si faltan esos
+   gates, capacidad, arquitectura `x86_64` o identidad remota no-root.
+10. Enable `cis_ubuntu_2404_remediation_enabled: true` only for the approved
+    window, select the applicable section and control variables, and retain
+    explicit `--limit` and `--tags`. Every selector is cumulative.
 
 Laboratorio desde el host:
 
@@ -75,6 +83,14 @@ all:
     ansible_python_interpreter: /usr/bin/python3
     ansible_become: true
     ansible_become_method: sudo
+    cis_execution_environment: production
+    cis_production_mode: true
+    cis_production_change_id: CHG-REPLACE-ME
+    cis_production_backup_confirmed: true
+    cis_production_oob_access_confirmed: true
+    cis_production_min_root_free_mb: 2048
+    cis_ubuntu_2404_remediation_enabled: true
+    cis_section1_initial_setup: true
 ```
 
 No almacene claves privadas ni secretos en el inventario. Use una ubicación de
@@ -85,12 +101,27 @@ en `known_hosts` y no copie `ansible_ssh_common_args` del inventario local.
 ```bash
 ansible-inventory -i inventories/production/hosts.yml --graph
 ansible-playbook -i inventories/production/hosts.yml \
-  playbooks/cis_hardening.yml --limit servidor-canario --list-hosts
+  playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit servidor-canario --tags cis_sec1 --list-hosts
 ```
+
+The production inventory is currently empty and unreviewed. The example above
+is a shape, not deployable inventory. Verify host keys against approved
+fingerprints, review the resulting inventory, and keep the remote identity
+non-root before any preview or application.
 
 En el laboratorio, mantenga siempre `--limit ubuntu24`.
 
 ## Variables críticas
+
+Section selectors are `cis_section1_initial_setup`, `cis_section2_services`,
+`cis_section3_network`, `cis_section4_firewall`,
+`cis_section5_access_control`, `cis_section6_logging_audit`, and
+`cis_section7_system`. Select only the approved section and every applicable
+subsection/control variable reported by `--list-tasks` and the role defaults;
+for example, a directed common-control run may also require
+`cis_ubuntu_2404_3_3_10_tcp_syncookies`. None of these selectors replaces
+`cis_ubuntu_2404_remediation_enabled` or a component-specific safety gate.
 
 ### UFW
 
@@ -119,6 +150,11 @@ En el laboratorio, mantenga siempre `--limit ubuntu24`.
   IPv6 declarada, el estado efectivo del kernel y `IPV6=` en `/etc/default/ufw`.
 
 Riesgo principal: pérdida inmediata de SSH o conectividad de aplicaciones.
+
+`cis_ufw_allowed_in_rules` and related variables describe configured firewall
+allow policy. They are not an observation of listening services. Record
+listeners separately with `ss` and service checks; an allowed port does not
+prove a listener, and a listener does not prove external firewall reachability.
 
 ### SSH
 
@@ -219,8 +255,8 @@ backup y ventana independiente.
 Descubra tags y tareas; no presuponga la notación del tag de control:
 
 ```bash
-ansible-playbook playbooks/cis_hardening.yml --limit ubuntu24 --list-tags
-ansible-playbook playbooks/cis_hardening.yml \
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --limit ubuntu24 --list-tags
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
   --limit ubuntu24 --tags cis_sec1 --list-tasks
 ```
 
@@ -228,27 +264,31 @@ Para cada sección:
 
 ```bash
 # 1. Vista previa
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags cis_sec1 --check --diff
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec1 --check --diff \
+  -e cis_ubuntu_2404_remediation_enabled=true
 
 # 2. Aplicación controlada
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags cis_sec1
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec1 \
+  -e cis_ubuntu_2404_remediation_enabled=true
 
 # 3. Segunda aplicación real para idempotencia
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags cis_sec1
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec1 \
+  -e cis_ubuntu_2404_remediation_enabled=true
 
 # 4. Comprobación final sin cambios
-ansible-playbook playbooks/cis_hardening.yml \
-  --limit ubuntu24 --tags cis_sec1 --check --diff
+ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+  --limit ubuntu24 --tags cis_sec1 --check --diff \
+  -e cis_ubuntu_2404_remediation_enabled=true
 ```
 
 Cambie `cis_sec1` por la sección siguiente solo tras validar servicios y
 aplicación. Para un control, use el tag exacto mostrado por `--list-tasks`, por
 ejemplo `cis_5.1.4`, `cis_4_2_6` o `cis_6_2_3_1`.
 
-Check mode no garantiza una aplicación exitosa: módulos sin soporte pueden
+Check mode is a simulation and no garantiza una aplicación exitosa: módulos sin soporte pueden
 omitir acciones y los resultados registrados pueden no existir. Algunas
 consultas del rol usan `check_mode: false` para observar el estado real. Diff
 puede exponer datos sensibles.
@@ -261,6 +301,7 @@ Adapte estas comprobaciones a la sección aplicada:
 sudo sshd -t
 sudo sshd -T | grep -E 'permitrootlogin|usepam|maxauthtries|maxsessions'
 sudo ufw status verbose
+sudo ss -lntup
 sudo sysctl net.ipv4.ip_forward
 systemctl is-active ssh cron rsyslog auditd
 sudo auditctl -s
@@ -272,6 +313,11 @@ Revise el recap. En la segunda aplicación real, `changed=0` es el objetivo para
 el alcance seleccionado; cualquier cambio recurrente debe investigarse, no
 ocultarse. Valide además acceso nuevo por SSH, sudo, resolución DNS, NTP,
 telemetría y salud de la aplicación.
+
+Successful syntax, listing, or check-mode results do not prove remediation or
+the qualified support outcome. Complete task/tag discovery, preview, controlled
+real application, second-run idempotency, scope-specific assertions, new access
+checks, and affected service/application checks.
 
 ## Recuperación
 

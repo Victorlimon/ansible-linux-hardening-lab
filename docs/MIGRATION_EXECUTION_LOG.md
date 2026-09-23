@@ -1,5 +1,11 @@
 # Registro de ejecución de la migración
 
+> **Historical and non-normative.** This dated execution record does not define
+> current support or current exact benchmark metadata. Use
+> [SUPPORT.md](SUPPORT.md) for the current correction: Ubuntu 24.04 x86_64 is
+> released for the qualified subset, Debian 12 x86_64 is canary-only, and
+> Docker, Ubuntu 22.04, and Debian 11 are unsupported.
+
 Este documento registra acciones realmente ejecutadas. El plan y los estados
 objetivo permanecen en `PRODUCTION_MIGRATION_MASTER_PLAN.md`.
 
@@ -584,3 +590,80 @@ permitir remediación.
 - Tras el arranque, ambos pings pasaron y `test_p4_sysctl.sh` confirmó de nuevo
   runtime `1`, persistencia `1`, classification `PASS`, verification
   independiente y `changed=0` en Ubuntu y Debian.
+
+## 2026-09-02 — Sesión de arquitectura A9, Debian CIS 7.1.2
+
+- El texto local de CIS Debian Linux 12 Benchmark v1.1.0 clasifica 7.1.2 como
+  Automated Level 1 Server/Workstation y exige `/etc/passwd-` en `root:root`,
+  modo `0644` o más restrictivo. No hay una cláusula de opcionalidad.
+- Se añadieron interfaces independientes de audit, remediation y verification
+  al adaptador Debian. Estas reutilizan el mecanismo técnico genérico
+  `fixed_file_permissions`, pero no una entrada semántica común: la equivalencia
+  con Ubuntu queda pendiente hasta citar el benchmark Ubuntu 24.04 exacto.
+- El selector del control usa el estado CIS recomendado por defecto. Toda
+  remediación continúa requiriendo `cis_debian_12_remediation_enabled=true` y
+  `cis_debian_12_canary_confirmed=true`; sin ellos terminó con `changed=0` o fue
+  rechazada explícitamente.
+- El baseline fue `/etc/passwd-` `0644 root:root`, audit `PASS` y `changed=0`.
+  Tras inducir únicamente modo `0666`, audit clasificó `FAIL` con `changed=0`,
+  check mode predijo `0666 -> 0644`, la primera convergencia cambió solo el modo
+  y la segunda terminó con `changed=0`.
+- Un path temporal ausente clasificó `FAIL`; remediation en check mode falló con
+  estado ausente y no creó el archivo. El backup real se mantuvo en `0644`.
+- Verification independiente pasó y el ping final devolvió `pong`. El gate
+  reproducible es `scripts/test_p4_debian_fixed_files.sh`; no requiere reboot porque
+  el control solo modifica metadata de un archivo regular.
+- Pasaron contratos, syntax-check de todos los entry points, ansible-lint,
+  yamllint y ShellCheck. Ansible-lint mantuvo 0 fallos y 575 warnings históricos;
+  `check_host.sh` pasó, salvo el aviso conocido de Gitleaks no instalado.
+
+## 2026-09-03 — Sesión de arquitectura A10, orquestación Ubuntu
+
+- Se inventariaron 647 nodos de tarea históricos, 67 archivos de tareas, siete
+  secciones, 157 registros sin dependencias cruzadas y cuatro controles ya
+  extraídos. No se detectaron razones para reescribir las tareas durante el
+  cambio de propietario del grafo.
+- Se capturaron los hashes de `--list-tasks` y `--list-tags` antes del cambio.
+  El primer diseño de `tasks_from` sobre subdirectorios fue rechazado por
+  syntax-check porque alteraba la resolución de imports relativos; no ejecutó
+  tareas ni modificó objetivos.
+- La solución usa ocho wrappers raíz en `cis_benchmark` y ocho entradas
+  canónicas en `cis_ubuntu_2404`. El adaptador ya no importa
+  `cis_benchmark/tasks/main.yml`, pero la interfaz histórica directa conserva el
+  mismo setup y las mismas siete secciones.
+- El setup carga los handlers históricos una vez; las siete entradas de sección
+  seleccionan un archivo de handlers vacío para impedir registros duplicados.
+- Los hashes posteriores fueron idénticos al baseline: tareas
+  `3ee9d36be76b0a8fba22eb53fcae10908be183ebb13858353ed68c3baa8a4ecd`
+  y tags `31a9b8a3c896b81ff5720271acf5b60e3a1bb076ef46314a6abe11c279ccd283`.
+- Se añadió un master gate Ubuntu deshabilitado por defecto. Cuando se habilita,
+  el adaptador exige `--tags`; los gates existentes de firewall, SSH, PAM,
+  banners, auditd, AIDE, red y mantenimiento siguen siendo acumulativos.
+- La prueba negativa global se ejecutó únicamente con `--check --diff`. El
+  primer predicado de lista resultó insuficiente y mostró 55 cambios previstos,
+  sin aplicar ninguno; se sustituyó por la comprobación robusta de pertenencia
+  de `all`, que rechazó después la ejecución en el primer assert con `changed=0`.
+- Pasaron el gate de grafo, contratos, todos los gates P3/P4, syntax-check de
+  todos los entry points, ShellCheck, yamllint y ansible-lint. Ansible-lint
+  mantuvo 0 fallos y 575 warnings históricos.
+
+## 2026-09-04 — Sesión A11, Debian CIS 7.1.3
+
+- Se implementaron audit, remediation y verification para los permisos de
+  `/etc/group` bajo una única ruta canónica de Sección 07. No se creó un wrapper
+  mode-first nuevo porque no existe un consumidor que necesite compatibilidad.
+- El contrato Debian exige archivo regular `root:root`, modo `0644` o más
+  restrictivo sin ejecución, conforme a CIS Debian Linux 12 Benchmark v1.1.0.
+  La política no se compartió con Ubuntu sin evidencia exacta de su benchmark.
+- La prueba de 7.1.2 se generalizó como
+  `scripts/test_p4_debian_fixed_files.sh`; un solo gate parametrizado valida
+  7.1.2 y 7.1.3 y evita mantener scripts prácticamente idénticos.
+- Para 7.1.3, el baseline fue `0644 root:root` y `PASS`. Una deriva controlada a
+  `0666` produjo `FAIL` sin cambios en audit; check mode predijo una corrección,
+  la primera ejecución restauró el modo y la segunda fue idempotente.
+- Un path ausente produjo `FAIL`; remediation abortó explícitamente sin crear el
+  archivo. Los gates de remediación y confirmación canary, verification y ping
+  final también pasaron. No se requirió reboot.
+- Pasaron contratos, el gate del grafo Ubuntu, todos los gates P3/P4,
+  syntax-check, ShellCheck, yamllint y ansible-lint. Ansible-lint mantuvo
+  0 fallos y 575 warnings históricos.
