@@ -86,6 +86,7 @@ reports/*.json
 .vscode/
 .idea/
 .opencode/
+.codegraph/
 *.sublime-project
 *.sublime-workspace
 *.code-workspace
@@ -101,6 +102,7 @@ docs/ansible-documentation/
 
 # Licensed CIS source copies are local references, not project deliverables.
 /docs/CIS_Debian_Linux_12_Benchmark_v*.md
+docs/cis-ubuntu-benchmark/
 
 # --- Secrets ---
 # NEVER commit these
@@ -129,6 +131,8 @@ vault_password_file
 # --- Local Overrides ---
 # Allow example files, exclude local customizations
 group_vars/*_override.yml
+# Local ad-hoc backup copies of scripts; not project deliverables.
+backups-limpia/
 group_vars/*.local.yml
 inventories/*/group_vars/*_override.yml
 inventories/*/group_vars/*.local.yml
@@ -137,3 +141,7 @@ inventories/*/group_vars/*.local.yml
 # Keep config, exclude local artifacts
 .cicd/local/
 .cicd/cache/
+# Local AI runtime state
+.atl/
+# Personal OpenCode model-preset tooling; not project hardening.
+scripts/apply-model-preset.ps1
