@@ -1,0 +1,6 @@
+---
+- name: CIS 6.1.1.1 | Remediation | Start journald without changing its static unit policy
+  ansible.builtin.systemd:
+    name: systemd-journald.service
+    state: started
+    masked: false

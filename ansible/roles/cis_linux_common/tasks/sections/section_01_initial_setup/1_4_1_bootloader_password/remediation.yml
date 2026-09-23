@@ -1,0 +1,3 @@
+---
+- name: bootloader_password remediation | Delegate to mechanism
+  ansible.builtin.import_tasks: mechanisms/bootloader_password/remediation.yml

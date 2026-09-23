@@ -1,0 +1,3 @@
+---
+- name: 'CIS 5.3.1.2 | Remediation | Delegate to package mechanism'
+  ansible.builtin.import_tasks: mechanisms/package_installed/remediation.yml

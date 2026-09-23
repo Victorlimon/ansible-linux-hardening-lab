@@ -1,0 +1,14 @@
+---
+- name: Common UFW rule | Read effective rules
+  ansible.builtin.command:
+    argv: [ufw, status, verbose]
+  register: cis_linux_common_ufw_rule_status
+  changed_when: false
+  failed_when: false
+
+- name: Common UFW rule | Verify required port
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_ufw_rule_status.stdout is search(cis_linux_common_ufw_rule_match)
+    fail_msg: The required UFW rule is missing.
+    success_msg: UFW rule verification passed.

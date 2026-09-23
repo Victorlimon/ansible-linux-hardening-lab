@@ -1,0 +1,3 @@
+---
+- name: world_writable_files audit | Delegate to mechanism
+  ansible.builtin.import_tasks: mechanisms/world_writable_files/audit.yml

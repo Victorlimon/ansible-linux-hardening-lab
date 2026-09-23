@@ -1,0 +1,17 @@
+---
+- name: Common nftables | Read active ruleset
+  ansible.builtin.command:
+    argv: [nft, list, ruleset]
+  register: cis_linux_common_nftables_ruleset
+  changed_when: false
+  failed_when: false
+
+- name: Common nftables | Verify ruleset
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_nftables_ruleset.rc == 0
+      - >-
+        (cis_linux_common_nftables_expected_patterns | select('search', cis_linux_common_nftables_ruleset.stdout) | list | length)
+        == (cis_linux_common_nftables_expected_patterns | length)
+    fail_msg: The required nftables ruleset is missing.
+    success_msg: nftables configuration verification passed.

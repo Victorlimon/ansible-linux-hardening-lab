@@ -1,0 +1,3 @@
+---
+- name: 'CIS 5.2.1 | Verification | Delegate to package mechanism'
+  ansible.builtin.import_tasks: mechanisms/package_installed/verification.yml

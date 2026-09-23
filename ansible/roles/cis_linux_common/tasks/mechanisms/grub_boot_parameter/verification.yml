@@ -1,0 +1,12 @@
+---
+- name: Common GRUB boot parameter | Read generated configuration
+  ansible.builtin.slurp:
+    src: /boot/grub/grub.cfg
+  register: cis_linux_common_grub_content
+
+- name: Common GRUB boot parameter | Verify parameter
+  ansible.builtin.assert:
+    that:
+      - (cis_linux_common_grub_content.content | b64decode) is search(cis_linux_common_grub_parameter_regexp, multiline=True)
+    fail_msg: The required GRUB boot parameter is missing.
+    success_msg: GRUB boot parameter verification passed.

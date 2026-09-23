@@ -1,0 +1,10 @@
+---
+- name: CIS 6.1.3.7 | Remediation | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+- name: CIS 6.1.3.7 | Remediation | Disable receiver module lines
+  ansible.builtin.replace:
+    path: "{{ cis_linux_common_config_line_path }}"
+    regexp: '^\s*(?!#)\s*((?:module\s*\(\s*load\s*=\s*"?im(?:tcp|udp)|\$ModLoad\s+im(?:tcp|udp))\b.*)$'
+    replace: '# \1'
+  when: cis_linux_common_config_line_package in ansible_facts.packages

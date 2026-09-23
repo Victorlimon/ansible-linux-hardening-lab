@@ -1,0 +1,3 @@
+---
+- name: CIS 2.3.1.1 | Audit | Delegate to single-daemon mechanism
+  ansible.builtin.import_tasks: mechanisms/single_daemon/audit.yml

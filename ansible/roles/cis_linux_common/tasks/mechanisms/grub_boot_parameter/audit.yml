@@ -1,0 +1,15 @@
+---
+- name: Common GRUB boot parameter | Read generated configuration
+  ansible.builtin.slurp:
+    src: /boot/grub/grub.cfg
+  register: cis_linux_common_grub_content
+  failed_when: false
+
+- name: Common GRUB boot parameter | Report parameter state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if (cis_linux_common_grub_content.content | default('') | b64decode) is search(cis_linux_common_grub_parameter_regexp, multiline=True) else 'FAIL' }}
+      changed_target: false

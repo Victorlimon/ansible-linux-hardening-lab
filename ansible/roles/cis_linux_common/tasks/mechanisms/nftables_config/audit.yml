@@ -1,0 +1,18 @@
+---
+- name: Common nftables | Read active ruleset
+  ansible.builtin.command:
+    argv: [nft, list, ruleset]
+  register: cis_linux_common_nftables_ruleset
+  changed_when: false
+  failed_when: false
+
+- name: Common nftables | Report ruleset state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if cis_linux_common_nftables_ruleset.rc == 0 and
+           (cis_linux_common_nftables_expected_patterns | select('search', cis_linux_common_nftables_ruleset.stdout) | list | length)
+           == (cis_linux_common_nftables_expected_patterns | length) else 'FAIL' }}
+      changed_target: false

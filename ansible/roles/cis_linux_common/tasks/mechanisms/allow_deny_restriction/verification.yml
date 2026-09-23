@@ -1,0 +1,25 @@
+---
+- name: Common allow-deny restriction | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common allow-deny restriction | Inspect allow and deny files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ cis_linux_common_allow_path }}"
+    - "{{ cis_linux_common_deny_path }}"
+  register: cis_linux_common_allow_deny_verification
+  when: cis_linux_common_restriction_package in ansible_facts.packages
+
+- name: Common allow-deny restriction | Verify authorized-users state
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_restriction_package not in ansible_facts.packages or
+        (cis_linux_common_allow_deny_verification.results[0].stat.exists and
+         cis_linux_common_allow_deny_verification.results[0].stat.pw_name == 'root' and
+         cis_linux_common_allow_deny_verification.results[0].stat.gr_name == 'root' and
+         cis_linux_common_allow_deny_verification.results[0].stat.mode == '0600' and
+         not cis_linux_common_allow_deny_verification.results[1].stat.exists)
+    fail_msg: The allow/deny restriction is not compliant.
+    success_msg: The allow/deny verification passed.

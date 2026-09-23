@@ -1,0 +1,11 @@
+---
+- name: Common AppArmor enforcing | Set profiles to enforcing mode
+  ansible.builtin.shell: aa-enforce /etc/apparmor.d/*
+  when: cis_linux_common_apparmor_strict | bool
+  changed_when: true
+
+- name: Common AppArmor enforcing | Ensure profiles are loaded (enforce/complain)
+  ansible.builtin.shell: |
+    aa-enforce /etc/apparmor.d/* 2>/dev/null || true
+  when: not (cis_linux_common_apparmor_strict | bool)
+  changed_when: true

@@ -1,0 +1,9 @@
+---
+- name: 'CIS 5.2.6 | Remediation | Validate sudo policy before change'
+  ansible.builtin.command: /usr/sbin/visudo -c
+  changed_when: false
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+- {name: 'CIS 5.2.6 | Remediation | Delegate to config-line mechanism', ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml}
+- name: 'CIS 5.2.6 | Remediation | Validate sudo policy after change'
+  ansible.builtin.command: /usr/sbin/visudo -c
+  changed_when: false

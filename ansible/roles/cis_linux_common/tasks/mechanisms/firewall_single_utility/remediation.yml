@@ -1,0 +1,14 @@
+---
+- name: Common single firewall | Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Common single firewall | Disable competing utilities
+  ansible.builtin.systemd_service:
+    name: "{{ item.service }}"
+    state: stopped
+    enabled: false
+  loop: "{{ cis_linux_common_firewall_utilities }}"
+  when:
+    - item.name != cis_linux_common_firewall_utility
+    - item.service in ansible_facts.services
+  failed_when: false

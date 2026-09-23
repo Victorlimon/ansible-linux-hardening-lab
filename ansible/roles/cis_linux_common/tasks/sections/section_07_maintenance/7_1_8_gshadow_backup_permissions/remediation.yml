@@ -1,0 +1,3 @@
+---
+- name: CIS 7.1.8 | Remediation | Delegate to the fixed-file permissions mechanism
+  ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/remediation.yml

@@ -1,0 +1,11 @@
+---
+- name: CIS 6.1.1.1 | Audit | Gather journald service facts
+  ansible.builtin.service_facts:
+
+- name: CIS 6.1.1.1 | Audit | Report journald state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ 'PASS' if ansible_facts.services.get('systemd-journald.service', {}).get('state') == 'running' else 'FAIL' }}"
+      changed_target: false

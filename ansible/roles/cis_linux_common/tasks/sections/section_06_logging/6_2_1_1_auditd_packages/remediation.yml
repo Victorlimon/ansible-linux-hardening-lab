@@ -1,0 +1,7 @@
+---
+- name: CIS 6.2.1.1 | Remediation | Install auditd package
+  ansible.builtin.import_tasks: mechanisms/package_installed/remediation.yml
+  vars: {cis_linux_common_package_name: auditd}
+- name: CIS 6.2.1.1 | Remediation | Install audispd-plugins package
+  ansible.builtin.import_tasks: mechanisms/package_installed/remediation.yml
+  vars: {cis_linux_common_package_name: audispd-plugins}

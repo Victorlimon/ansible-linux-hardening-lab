@@ -1,0 +1,7 @@
+---
+- name: CIS 6.2.2.4 | Audit | Check space-left action
+  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+  vars: {cis_linux_common_config_line: 'space_left_action = email', cis_linux_common_config_line_regexp: '^\s*space_left_action\s*=\s*email\s*$', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}
+- name: CIS 6.2.2.4 | Audit | Check admin-space-left action
+  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+  vars: {cis_linux_common_config_line: 'admin_space_left_action = halt', cis_linux_common_config_line_regexp: '^\s*admin_space_left_action\s*=\s*halt\s*$', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}

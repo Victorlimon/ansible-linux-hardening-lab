@@ -1,0 +1,16 @@
+---
+- name: Common wireless disabled | Detect wireless interfaces
+  ansible.builtin.shell: |
+    set -o pipefail
+    (nmcli radio wifi 2>/dev/null; iw dev 2>/dev/null; ip link 2>/dev/null | grep -i 'wlan\|wlp') | head -20
+  register: cis_wifi
+  changed_when: false
+  failed_when: false
+
+- name: Common wireless disabled | Classify
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ 'PASS' if 'enabled' not in (cis_wifi.stdout | lower) and 'wlan' not in (cis_wifi.stdout | lower) and 'wlp' not in (cis_wifi.stdout | lower) else 'FAIL' }}"
+      changed_target: false

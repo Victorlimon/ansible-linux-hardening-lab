@@ -1,0 +1,18 @@
+---
+- name: Common config line | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common config line | Read configuration
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_config_line_path }}"
+  register: cis_linux_common_config_line_content
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+- name: Common config line | Verify authorized configuration line
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_config_line_package not in ansible_facts.packages or
+        (cis_linux_common_config_line_content.content | default('') | b64decode) is search(cis_linux_common_config_line_regexp, multiline=True)
+    fail_msg: The authorized time synchronization configuration line is missing.
+    success_msg: Configuration line verification passed.

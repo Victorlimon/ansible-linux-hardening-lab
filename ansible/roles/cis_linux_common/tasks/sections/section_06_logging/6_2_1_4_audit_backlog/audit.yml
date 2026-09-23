@@ -1,0 +1,3 @@
+---
+- name: CIS 6.2.1.4 | Audit | Delegate to GRUB boot-parameter mechanism
+  ansible.builtin.import_tasks: mechanisms/grub_boot_parameter/audit.yml

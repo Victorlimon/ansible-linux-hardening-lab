@@ -1,0 +1,18 @@
+---
+- name: Common single firewall | Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Common single firewall | Gather utility paths
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ cis_linux_common_firewall_utilities }}"
+  register: cis_linux_common_firewall_utility_paths
+
+- name: Common single firewall | Verify exactly one utility
+  ansible.builtin.assert:
+    that:
+      - >-
+        (cis_linux_common_firewall_utilities | zip(cis_linux_common_firewall_utility_paths.results)
+        | selectattr('1.stat.exists') | map(attribute='0.name') | list | length) == 1
+    fail_msg: Exactly one firewall utility must be installed and selected.
+    success_msg: Single firewall utility verification passed.

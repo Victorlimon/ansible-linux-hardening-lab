@@ -1,0 +1,3 @@
+---
+- name: CIS 1.4.2 | Verification | Verify grub.cfg permissions
+  ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/verification.yml

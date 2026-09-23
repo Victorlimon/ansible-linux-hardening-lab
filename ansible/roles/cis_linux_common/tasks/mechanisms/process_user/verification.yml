@@ -1,0 +1,19 @@
+---
+- name: Common process user | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common process user | Inspect process owner
+  ansible.builtin.command: "ps -o user= -C {{ cis_linux_common_process_name }}"
+  register: cis_linux_common_process_user_result
+  changed_when: false
+  failed_when: false
+  when: cis_linux_common_process_package in ansible_facts.packages
+
+- name: Common process user | Verify process owner
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_process_package not in ansible_facts.packages or
+        cis_linux_common_process_user_result.stdout | trim == cis_linux_common_process_expected_user
+    fail_msg: The time synchronization process is not running as the expected user.
+    success_msg: Process user verification passed.

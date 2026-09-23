@@ -1,0 +1,22 @@
+---
+- name: CIS 6.1.1.4 | Remediation | Audit logging exclusivity
+  ansible.builtin.import_tasks: sections/section_06_logging/6_1_1_4_single_logging_system/audit.yml
+
+- name: CIS 6.1.1.4 | Remediation | Refuse implicit daemon replacement
+  ansible.builtin.assert:
+    that: cis_linux_common_logging_daemon_count <= 1 or ansible_facts.services.get('systemd-journald.service', {}).get('state') == 'running'
+    fail_msg: No supported logging daemon is active.
+    success_msg: journald is the selected logging system.
+
+- name: CIS 6.1.1.4 | Remediation | Disable competing logging daemons
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop:
+    - rsyslog.service
+    - syslog-ng.service
+  when:
+    - ansible_facts.services.get('systemd-journald.service', {}).get('state') == 'running'
+    - item in ansible_facts.services

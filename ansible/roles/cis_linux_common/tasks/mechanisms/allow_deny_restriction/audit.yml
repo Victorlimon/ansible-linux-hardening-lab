@@ -1,0 +1,27 @@
+---
+- name: Common allow-deny restriction | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common allow-deny restriction | Inspect allow and deny files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ cis_linux_common_allow_path }}"
+    - "{{ cis_linux_common_deny_path }}"
+  register: cis_linux_common_allow_deny_audit
+  when: cis_linux_common_restriction_package in ansible_facts.packages
+
+- name: Common allow-deny restriction | Report state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'NOT_APPLICABLE' if cis_linux_common_restriction_package not in ansible_facts.packages else
+           ('PASS' if cis_linux_common_allow_deny_audit.results[0].stat.exists and
+           cis_linux_common_allow_deny_audit.results[0].stat.pw_name == 'root' and
+           cis_linux_common_allow_deny_audit.results[0].stat.gr_name == 'root' and
+           cis_linux_common_allow_deny_audit.results[0].stat.mode == '0600' and
+           not cis_linux_common_allow_deny_audit.results[1].stat.exists else 'FAIL') }}
+      changed_target: false

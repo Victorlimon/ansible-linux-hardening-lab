@@ -1,0 +1,12 @@
+---
+- name: Common installed package | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common installed package | Report package state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ 'PASS' if cis_linux_common_package_name in ansible_facts.packages else 'FAIL' }}"
+      changed_target: false

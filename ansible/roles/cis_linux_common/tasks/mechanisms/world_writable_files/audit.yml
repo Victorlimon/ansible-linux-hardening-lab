@@ -1,0 +1,15 @@
+---
+- name: Common world-writable files | Enumerate world-writable files
+  ansible.builtin.shell: |
+    df --local -P | awk 'NR>1 {print $6}' | xargs -I '{}' find '{}' -xdev -type f -perm -0002 2>/dev/null
+  register: cis_ww_files
+  changed_when: false
+  failed_when: false
+
+- name: Common world-writable files | Classify
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ 'PASS' if (cis_ww_files.stdout | trim) == '' else 'FAIL' }}"
+      changed_target: false

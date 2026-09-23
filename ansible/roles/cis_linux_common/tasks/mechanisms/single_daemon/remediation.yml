@@ -1,0 +1,14 @@
+---
+- name: Common single time daemon | Audit before remediation
+  ansible.builtin.import_tasks: mechanisms/single_daemon/audit.yml
+
+- name: Common single time daemon | Preserve compliant daemon selection
+  ansible.builtin.debug:
+    msg: No remediation required; active daemon exclusivity is already compliant.
+  when: cis_linux_common_time_daemon_count <= 1
+
+- name: Common single time daemon | Refuse implicit daemon replacement
+  ansible.builtin.assert:
+    that: cis_linux_common_time_daemon_count <= 1
+    fail_msg: Multiple time synchronization daemons are active; select an explicit daemon before remediation.
+    success_msg: No daemon was disabled implicitly.

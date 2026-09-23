@@ -1,0 +1,6 @@
+---
+- name: Config line remediation | Delegate to config_line
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: 'space_left_action = email'
+    cis_linux_common_config_line_regexp: '^space_left_action\s*=\s*email'

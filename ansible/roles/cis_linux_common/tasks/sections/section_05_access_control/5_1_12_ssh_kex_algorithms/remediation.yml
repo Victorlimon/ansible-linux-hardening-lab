@@ -1,0 +1,3 @@
+---
+- {name: 'CIS 5.1.12 | Remediation | Delegate to config-line mechanism', ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml, vars: {cis_linux_common_config_line_regexp: '^KexAlgorithms\s+', cis_linux_common_config_line: 'KexAlgorithms -diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1'}}
+- {name: 'CIS 5.1.12 | Remediation | Restore sshd_config permissions', ansible.builtin.file: {path: '{{ cis_linux_common_config_line_path }}', owner: root, group: root, mode: '0600'}}

@@ -1,0 +1,6 @@
+---
+- name: CIS 5.1.9 | Remediation | Delegate to config-line mechanism
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars: {cis_linux_common_config_line_regexp: '^GSSAPIAuthentication', cis_linux_common_config_line: 'GSSAPIAuthentication no'}
+- name: CIS 5.1.9 | Remediation | Restore sshd_config permissions
+  ansible.builtin.file: {path: "{{ cis_linux_common_config_line_path }}", owner: root, group: root, mode: '0600'}

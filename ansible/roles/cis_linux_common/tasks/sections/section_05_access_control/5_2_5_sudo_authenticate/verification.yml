@@ -1,0 +1,5 @@
+---
+- name: 'CIS 5.2.5 | Verification | Verify re-authentication is enabled'
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_2_5_sudo_authenticate/audit.yml
+- name: 'CIS 5.2.5 | Verification | Assert global authentication is enabled'
+  ansible.builtin.assert: {that: cis_sudo_noauthenticate.rc == 1, fail_msg: 'A !authenticate directive is active.'}

@@ -1,0 +1,9 @@
+---
+- name: 'CIS 5.2.5 | Audit | Check for !authenticate directives'
+  ansible.builtin.command: grep -r -n -E '^[^#].*!authenticate' /etc/sudoers /etc/sudoers.d
+  register: cis_sudo_noauthenticate
+  changed_when: false
+  failed_when: cis_sudo_noauthenticate.rc not in [0, 1, 2]
+- name: 'CIS 5.2.5 | Audit | Report re-authentication state'
+  ansible.builtin.debug:
+    msg: {control: '5.2.5', classification: "{{ 'PASS' if cis_sudo_noauthenticate.rc == 1 else 'FAIL' }}", changed_target: false}

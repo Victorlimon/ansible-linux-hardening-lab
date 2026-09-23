@@ -1,0 +1,3 @@
+---
+- name: CIS 2.1.21 | Remediation | Delegate MTA local-only configuration to config-line mechanisms
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml

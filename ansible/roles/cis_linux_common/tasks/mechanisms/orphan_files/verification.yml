@@ -1,0 +1,13 @@
+---
+- name: Common orphan files | Verify none remain
+  ansible.builtin.shell: |
+    df --local -P | awk 'NR>1 {print $6}' | xargs -I '{}' find '{}' -xdev \( -nouser -o -nogroup \) 2>/dev/null
+  register: cis_orphan_verify
+  changed_when: false
+  failed_when: false
+
+- name: Common orphan files | Assert none remain
+  ansible.builtin.assert:
+    that: (cis_orphan_verify.stdout | trim) == ''
+    fail_msg: Orphan files still exist.
+    success_msg: Orphan files verification passed.

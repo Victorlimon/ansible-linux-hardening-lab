@@ -1,0 +1,15 @@
+---
+- name: Common config line | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common config line | Set authorized configuration line
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_config_line_path }}"
+    regexp: "{{ cis_linux_common_config_line_regexp }}"
+    line: "{{ cis_linux_common_config_line }}"
+    create: true
+    owner: root
+    group: root
+    mode: '0644'
+  when: cis_linux_common_config_line_package in ansible_facts.packages

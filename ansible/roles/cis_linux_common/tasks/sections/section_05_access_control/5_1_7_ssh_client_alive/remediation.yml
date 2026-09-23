@@ -1,0 +1,9 @@
+---
+- name: CIS 5.1.7 | Remediation | Set ClientAliveInterval
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars: {cis_linux_common_config_line_regexp: '^ClientAliveInterval', cis_linux_common_config_line: 'ClientAliveInterval 300'}
+- name: CIS 5.1.7 | Remediation | Set ClientAliveCountMax
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars: {cis_linux_common_config_line_regexp: '^ClientAliveCountMax', cis_linux_common_config_line: 'ClientAliveCountMax 3'}
+- name: CIS 5.1.7 | Remediation | Restore sshd_config permissions
+  ansible.builtin.file: {path: "{{ cis_linux_common_config_line_path }}", owner: root, group: root, mode: '0600'}

@@ -1,0 +1,21 @@
+---
+- name: Common single time daemon | Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Common single time daemon | Count active synchronization daemons
+  ansible.builtin.set_fact:
+    cis_linux_common_time_daemon_count: >-
+      {{ [
+        ansible_facts.services.get('systemd-timesyncd.service', {}).get('state') == 'running',
+        ansible_facts.services.get('chrony.service', {}).get('state') == 'running',
+        ansible_facts.services.get('ntp.service', {}).get('state') == 'running'
+      ] | select('equalto', true) | list | length }}
+
+- name: Common single time daemon | Report daemon exclusivity
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ 'PASS' if cis_linux_common_time_daemon_count <= 1 else 'FAIL' }}"
+      active_daemons: "{{ cis_linux_common_time_daemon_count }}"
+      changed_target: false

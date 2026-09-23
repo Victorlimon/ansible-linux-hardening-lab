@@ -1,0 +1,5 @@
+---
+- name: 'CIS 5.2.4 | Remediation | Audit without changing sudo policy'
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_2_4_sudo_password/audit.yml
+- name: 'CIS 5.2.4 | Remediation | Preserve unattended access'
+  ansible.builtin.debug: {msg: 'No-op remediation: NOPASSWD entries require site review before removal.'}

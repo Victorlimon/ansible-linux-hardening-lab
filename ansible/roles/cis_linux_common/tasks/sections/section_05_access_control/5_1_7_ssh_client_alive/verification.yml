@@ -1,0 +1,7 @@
+---
+- name: CIS 5.1.7 | Verification | Check ClientAliveInterval
+  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
+  vars: {cis_linux_common_config_line_regexp: '^ClientAliveInterval 300$'}
+- name: CIS 5.1.7 | Verification | Check ClientAliveCountMax
+  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
+  vars: {cis_linux_common_config_line_regexp: '^ClientAliveCountMax 3$'}

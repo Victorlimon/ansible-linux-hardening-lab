@@ -1,0 +1,22 @@
+---
+- name: CIS 6.1.4.1 | Verification | Inspect existing logfiles
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ cis_linux_common_fixed_file_entries }}"
+  register: cis_linux_common_logfile_stats
+
+- name: CIS 6.1.4.1 | Verification | Delegate existing logfiles to fixed-file mechanism
+  ansible.builtin.include_tasks: mechanisms/fixed_file_permissions/verification.yml
+  loop: "{{ cis_linux_common_logfile_stats.results }}"
+  loop_control:
+    loop_var: cis_logfile
+  vars:
+    cis_linux_common_fixed_file_path: "{{ cis_logfile.item.path }}"
+    cis_linux_common_fixed_file_owner: "{{ cis_logfile.item.owner }}"
+    cis_linux_common_fixed_file_group: "{{ cis_logfile.item.group }}"
+    cis_linux_common_fixed_file_remediation_mode: "{{ cis_logfile.item.mode }}"
+    cis_linux_common_fixed_file_expected_mode_description: "{{ cis_logfile.item.description }}"
+    cis_linux_common_fixed_file_allowed_owner_digits: "{{ cis_logfile.item.owner_digits }}"
+    cis_linux_common_fixed_file_allowed_group_digits: "{{ cis_logfile.item.group_digits }}"
+    cis_linux_common_fixed_file_allowed_other_digits: "{{ cis_logfile.item.other_digits }}"
+  when: cis_logfile.stat.exists | default(false)

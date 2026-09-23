@@ -1,0 +1,5 @@
+---
+- name: 'CIS 5.2.5 | Remediation | Audit without changing sudo policy'
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_2_5_sudo_authenticate/audit.yml
+- name: 'CIS 5.2.5 | Remediation | Preserve site authentication policy'
+  ansible.builtin.debug: {msg: 'No-op remediation: !authenticate entries require site review before removal.'}

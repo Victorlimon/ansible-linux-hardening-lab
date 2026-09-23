@@ -1,0 +1,11 @@
+---
+- name: Kernel module overlayfs | Add install rule
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: "install overlayfs /bin/true"
+    cis_linux_common_config_line_regexp: "^install overlayfs /bin/true$"
+- name: Kernel module overlayfs | Add blacklist rule
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: "blacklist overlayfs"
+    cis_linux_common_config_line_regexp: "^blacklist overlayfs$"

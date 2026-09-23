@@ -12,7 +12,13 @@
     cis_linux_common_fixed_file_audit_compliant: >-
       {{
         cis_linux_common_fixed_file_audit.stat.exists | default(false)
-        and cis_linux_common_fixed_file_audit.stat.isreg | default(false)
+        and (
+          (cis_linux_common_fixed_file_expected_type | default('file') == 'file'
+            and cis_linux_common_fixed_file_audit.stat.isreg | default(false))
+          or
+          (cis_linux_common_fixed_file_expected_type | default('file') == 'directory'
+            and cis_linux_common_fixed_file_audit.stat.isdir | default(false))
+        )
         and cis_linux_common_fixed_file_audit.stat.pw_name | default('')
             == cis_linux_common_fixed_file_owner
         and cis_linux_common_fixed_file_audit.stat.gr_name | default('')
@@ -41,6 +47,7 @@
       observed:
         exists: "{{ cis_linux_common_fixed_file_audit.stat.exists | default(false) }}"
         is_regular: "{{ cis_linux_common_fixed_file_audit.stat.isreg | default(false) }}"
+        is_directory: "{{ cis_linux_common_fixed_file_audit.stat.isdir | default(false) }}"
         owner: >-
           {{ cis_linux_common_fixed_file_audit.stat.pw_name | default('unavailable') }}
         group: >-

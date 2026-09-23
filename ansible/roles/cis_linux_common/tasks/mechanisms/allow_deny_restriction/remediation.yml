@@ -1,0 +1,20 @@
+---
+- name: Common allow-deny restriction | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common allow-deny restriction | Create authorized-users allow file
+  ansible.builtin.copy:
+    dest: "{{ cis_linux_common_allow_path }}"
+    content: ''
+    force: false
+    owner: root
+    group: root
+    mode: '0600'
+  when: cis_linux_common_restriction_package in ansible_facts.packages
+
+- name: Common allow-deny restriction | Remove deny file
+  ansible.builtin.file:
+    path: "{{ cis_linux_common_deny_path }}"
+    state: absent
+  when: cis_linux_common_restriction_package in ansible_facts.packages

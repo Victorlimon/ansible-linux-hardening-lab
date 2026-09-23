@@ -1,0 +1,6 @@
+---
+- name: Config line remediation | Delegate to config_line
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: 'use_authtok'
+    cis_linux_common_config_line_regexp: '^use_authtok'

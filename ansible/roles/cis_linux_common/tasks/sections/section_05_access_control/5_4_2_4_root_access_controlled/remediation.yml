@@ -1,0 +1,3 @@
+---
+- name: account_integrity remediation | Delegate to mechanism
+  ansible.builtin.import_tasks: mechanisms/account_integrity/remediation.yml

@@ -6,6 +6,7 @@
       - cis_linux_common_platform | length > 0
       - cis_linux_common_benchmark | length > 0
       - cis_linux_common_fixed_file_path is ansible.builtin.abs
+      - (cis_linux_common_fixed_file_expected_type | default('file')) in ['file', 'directory']
       - cis_linux_common_fixed_file_owner | length > 0
       - cis_linux_common_fixed_file_group | length > 0
       - cis_linux_common_fixed_file_remediation_mode | length > 0

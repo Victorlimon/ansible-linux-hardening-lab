@@ -1,0 +1,22 @@
+---
+- name: Common single firewall | Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Common single firewall | Gather utility paths
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ cis_linux_common_firewall_utilities }}"
+  register: cis_linux_common_firewall_utility_paths
+
+- name: Common single firewall | Report utility state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      active_utilities: >-
+        {{ cis_linux_common_firewall_utilities | zip(cis_linux_common_firewall_utility_paths.results)
+           | selectattr('1.stat.exists') | map(attribute='0.name') | list }}
+      classification: >-
+        {{ 'PASS' if (cis_linux_common_firewall_utilities | zip(cis_linux_common_firewall_utility_paths.results)
+           | selectattr('1.stat.exists') | map(attribute='0.name') | list | length) == 1 else 'FAIL' }}
+      changed_target: false

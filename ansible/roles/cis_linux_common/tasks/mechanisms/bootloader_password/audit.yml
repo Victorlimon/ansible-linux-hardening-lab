@@ -1,0 +1,16 @@
+---
+- name: Common bootloader password | Check grub superuser password
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep -RqE 'superusers|password_pbkdf2' /etc/grub.d/ /boot/grub/grub.cfg 2>/dev/null && echo set || echo unset
+  register: cis_grub_pwd
+  changed_when: false
+  failed_when: false
+
+- name: Common bootloader password | Classify
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ 'PASS' if cis_grub_pwd.stdout.strip() == 'set' else 'FAIL' }}"
+      changed_target: false

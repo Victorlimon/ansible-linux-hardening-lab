@@ -1,0 +1,7 @@
+---
+- name: Common UFW rule | Allow required port
+  community.general.ufw:
+    rule: allow
+    direction: in
+    port: "{{ cis_linux_common_ufw_rule_port }}"
+    proto: "{{ cis_linux_common_ufw_rule_proto | default('tcp') }}"

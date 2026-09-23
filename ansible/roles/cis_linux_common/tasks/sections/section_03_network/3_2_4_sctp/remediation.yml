@@ -1,0 +1,11 @@
+---
+- name: Kernel module sctp | Add install rule
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: "install sctp /bin/true"
+    cis_linux_common_config_line_regexp: "^install sctp /bin/true$"
+- name: Kernel module sctp | Add blacklist rule
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: "blacklist sctp"
+    cis_linux_common_config_line_regexp: "^blacklist sctp$"

@@ -1,0 +1,11 @@
+---
+- name: Kernel module dccp | Add install rule
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: "install dccp /bin/true"
+    cis_linux_common_config_line_regexp: "^install dccp /bin/true$"
+- name: Kernel module dccp | Add blacklist rule
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: "blacklist dccp"
+    cis_linux_common_config_line_regexp: "^blacklist dccp$"

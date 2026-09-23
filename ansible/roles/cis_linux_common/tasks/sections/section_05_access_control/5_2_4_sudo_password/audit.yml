@@ -1,0 +1,9 @@
+---
+- name: 'CIS 5.2.4 | Audit | Check for NOPASSWD directives'
+  ansible.builtin.command: grep -r -n -E '^[^#].*NOPASSWD' /etc/sudoers /etc/sudoers.d
+  register: cis_sudo_nopasswd
+  changed_when: false
+  failed_when: cis_sudo_nopasswd.rc not in [0, 1, 2]
+- name: 'CIS 5.2.4 | Audit | Report password requirement'
+  ansible.builtin.debug:
+    msg: {control: '5.2.4', classification: "{{ 'PASS' if cis_sudo_nopasswd.rc == 1 else 'FAIL' }}", changed_target: false}

@@ -1,0 +1,21 @@
+---
+- name: Common config line | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common config line | Read configuration
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_config_line_path }}"
+  register: cis_linux_common_config_line_content
+  failed_when: false
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+- name: Common config line | Report line state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'NOT_APPLICABLE' if cis_linux_common_config_line_package not in ansible_facts.packages else
+           ('PASS' if (cis_linux_common_config_line_content.content | default('') | b64decode) is search(cis_linux_common_config_line_regexp, multiline=True) else 'FAIL') }}
+      changed_target: false

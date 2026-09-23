@@ -1,0 +1,19 @@
+---
+- name: Common AppArmor enforcing | Report profile mode
+  ansible.builtin.shell: |
+    set -o pipefail
+    aa-status 2>/dev/null | grep -E 'profiles are in' || echo 'no profiles'
+  register: cis_aa_status
+  changed_when: false
+  failed_when: false
+
+- name: Common AppArmor enforcing | Classify profile mode
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if (cis_linux_common_apparmor_strict | bool) and 'enforce' in cis_aa_status.stdout and 'complain' not in cis_aa_status.stdout
+           else ('PASS' if not (cis_linux_common_apparmor_strict | bool) and ('enforce' in cis_aa_status.stdout or 'complain' in cis_aa_status.stdout)
+           else 'FAIL') }}
+      changed_target: false

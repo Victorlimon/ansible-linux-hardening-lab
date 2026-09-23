@@ -1,0 +1,12 @@
+---
+- name: Common bootloader password | Verify grub superuser password
+  ansible.builtin.command: grep -RqE 'superusers|password_pbkdf2' /etc/grub.d/ /boot/grub/grub.cfg
+  register: cis_grub_pwd_verify
+  changed_when: false
+  failed_when: cis_grub_pwd_verify.rc not in (0, 1)
+
+- name: Common bootloader password | Assert password set
+  ansible.builtin.assert:
+    that: cis_grub_pwd_verify.rc == 0
+    fail_msg: Bootloader password is not set.
+    success_msg: Bootloader password verification passed.

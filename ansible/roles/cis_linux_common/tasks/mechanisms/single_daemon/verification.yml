@@ -1,0 +1,17 @@
+---
+- name: Common single time daemon | Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Common single time daemon | Verify daemon exclusivity
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          [
+            ansible_facts.services.get('systemd-timesyncd.service', {}).get('state') == 'running',
+            ansible_facts.services.get('chrony.service', {}).get('state') == 'running',
+            ansible_facts.services.get('ntp.service', {}).get('state') == 'running'
+          ] | select('equalto', true) | list | length
+        ) <= 1
+    fail_msg: More than one time synchronization daemon is active.
+    success_msg: Time daemon exclusivity verification passed.

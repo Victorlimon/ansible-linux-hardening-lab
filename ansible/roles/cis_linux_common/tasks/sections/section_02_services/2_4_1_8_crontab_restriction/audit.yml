@@ -1,0 +1,3 @@
+---
+- name: CIS 2.4.1.8 | Audit | Delegate to allow-deny mechanism
+  ansible.builtin.import_tasks: mechanisms/allow_deny_restriction/audit.yml

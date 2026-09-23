@@ -1,0 +1,13 @@
+---
+- name: Common UFW policy | Apply default policy
+  community.general.ufw:
+    policy: "{{ cis_linux_common_ufw_policy }}"
+    direction: "{{ cis_linux_common_ufw_policy_direction }}"
+  when: cis_linux_common_ufw_policy is defined
+
+- name: Common UFW policy | Apply interface rule
+  community.general.ufw:
+    rule: "{{ cis_linux_common_ufw_rule }}"
+    direction: "{{ item.direction }}"
+    interface: "{{ item.interface }}"
+  loop: "{{ cis_linux_common_ufw_interface_rules | default([]) }}"

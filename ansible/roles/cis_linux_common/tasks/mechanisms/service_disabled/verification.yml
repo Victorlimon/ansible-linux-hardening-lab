@@ -1,0 +1,18 @@
+---
+- name: Common disabled service | Gather package and service facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common disabled service | Gather service facts
+  ansible.builtin.service_facts:
+  when: cis_linux_common_service_package in ansible_facts.packages
+
+- name: Common disabled service | Verify service state
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_service_package not in ansible_facts.packages or
+        cis_linux_common_service_name not in ansible_facts.services or
+        (ansible_facts.services[cis_linux_common_service_name].state != 'running' and
+         ansible_facts.services[cis_linux_common_service_name].status != 'enabled')
+    fail_msg: The service is active or enabled.
+    success_msg: Disabled service verification passed.

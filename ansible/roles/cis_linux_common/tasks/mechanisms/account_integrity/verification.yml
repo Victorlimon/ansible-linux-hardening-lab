@@ -1,0 +1,12 @@
+---
+- name: Common account integrity | Re-run parameterized check
+  ansible.builtin.shell: "{{ cis_linux_common_account_command }}"
+  register: cis_acct_verify
+  changed_when: false
+  failed_when: false
+
+- name: Common account integrity | Assert check clean
+  ansible.builtin.assert:
+    that: (cis_acct_verify.stdout | trim) == ''
+    fail_msg: Account integrity check failed.
+    success_msg: Account integrity verification passed.

@@ -1,0 +1,3 @@
+---
+- name: CIS 2.4.1.4 | Audit | Delegate to the installed-package directory mechanism
+  ansible.builtin.import_tasks: mechanisms/installed_package_fixed_file/audit.yml

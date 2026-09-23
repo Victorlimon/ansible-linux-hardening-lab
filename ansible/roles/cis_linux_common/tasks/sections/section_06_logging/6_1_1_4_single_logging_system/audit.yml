@@ -1,0 +1,21 @@
+---
+- name: CIS 6.1.1.4 | Audit | Gather logging service facts
+  ansible.builtin.service_facts:
+
+- name: CIS 6.1.1.4 | Audit | Count active logging daemons
+  ansible.builtin.set_fact:
+    cis_linux_common_logging_daemon_count: >-
+      {{ [
+        ansible_facts.services.get('systemd-journald.service', {}).get('state') == 'running',
+        ansible_facts.services.get('rsyslog.service', {}).get('state') == 'running',
+        ansible_facts.services.get('syslog-ng.service', {}).get('state') == 'running'
+      ] | select('equalto', true) | list | length }}
+
+- name: CIS 6.1.1.4 | Audit | Report logging exclusivity
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ 'PASS' if cis_linux_common_logging_daemon_count <= 1 else 'FAIL' }}"
+      active_daemons: "{{ cis_linux_common_logging_daemon_count }}"
+      changed_target: false

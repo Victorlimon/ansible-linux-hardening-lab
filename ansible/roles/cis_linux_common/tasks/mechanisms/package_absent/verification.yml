@@ -1,0 +1,10 @@
+---
+- name: Common absent package | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common absent package | Verify package state
+  ansible.builtin.assert:
+    that: cis_linux_common_package_name not in ansible_facts.packages
+    fail_msg: The forbidden package is installed.
+    success_msg: Package absence verification passed.

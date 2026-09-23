@@ -1,0 +1,11 @@
+---
+- name: Common wireless disabled | Disable wifi radio
+  ansible.builtin.command: nmcli radio wifi off
+  changed_when: false
+  failed_when: false
+
+- name: Common wireless disabled | Blacklist wireless kernel modules
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: "blacklist cfg80211"
+    cis_linux_common_config_line_regexp: "^blacklist cfg80211$"

@@ -1,0 +1,4 @@
+---
+- name: CIS 5.1.6 | Verification | Delegate to config-line mechanism
+  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
+  vars: {cis_linux_common_config_line_regexp: '^Ciphers -3des-cbc,aes128-cbc,aes192-cbc,aes256-cbc,chacha20-poly1305@openssh.com$'}

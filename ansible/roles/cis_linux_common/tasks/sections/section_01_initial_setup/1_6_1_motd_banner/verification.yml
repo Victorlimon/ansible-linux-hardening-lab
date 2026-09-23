@@ -1,0 +1,3 @@
+---
+- name: CIS 1.6.1 | Verification | Delegate MOTD banner to the common config-line mechanism
+  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml

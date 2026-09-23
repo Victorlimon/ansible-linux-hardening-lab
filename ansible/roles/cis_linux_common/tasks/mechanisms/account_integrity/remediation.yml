@@ -1,0 +1,8 @@
+---
+- name: Common account integrity | Report manual remediation
+  ansible.builtin.debug:
+    msg: >-
+      CIS {{ cis_linux_common_control_id }} ({{ cis_linux_common_account_check }})
+      requires operator review; automated remediation is intentionally withheld
+      because it can lock accounts or break authentication.
+  changed_when: false

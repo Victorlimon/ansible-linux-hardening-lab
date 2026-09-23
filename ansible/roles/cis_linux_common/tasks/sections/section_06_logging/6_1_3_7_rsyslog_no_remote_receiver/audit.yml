@@ -1,0 +1,17 @@
+---
+- name: CIS 6.1.3.7 | Audit | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+- name: CIS 6.1.3.7 | Audit | Read rsyslog configuration
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_config_line_path }}"
+  register: cis_linux_common_rsyslog_content
+  failed_when: false
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+- name: CIS 6.1.3.7 | Audit | Reject active receiver modules
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_config_line_package not in ansible_facts.packages or
+        (cis_linux_common_rsyslog_content.content | default('') | b64decode) is not search('^\s*(?:module\s*\(\s*load\s*=\s*"?im(?:tcp|udp)|\$ModLoad\s+im(?:tcp|udp))\b', multiline=True)
+    fail_msg: Active rsyslog receiver modules are configured.
+    success_msg: No active rsyslog receiver modules are configured.

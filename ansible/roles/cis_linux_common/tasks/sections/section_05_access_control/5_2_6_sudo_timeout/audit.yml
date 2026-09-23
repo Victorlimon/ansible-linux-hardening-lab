@@ -1,0 +1,2 @@
+---
+- {name: 'CIS 5.2.6 | Audit | Delegate to config-line mechanism', ansible.builtin.import_tasks: mechanisms/config_line/audit.yml, vars: {cis_linux_common_config_line_regexp: '^Defaults\s+timestamp_timeout=15$'}}

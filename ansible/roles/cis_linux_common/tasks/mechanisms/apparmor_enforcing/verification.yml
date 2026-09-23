@@ -1,0 +1,15 @@
+---
+- name: Common AppArmor enforcing | Gather status
+  ansible.builtin.shell: |
+    set -o pipefail
+    aa-status 2>/dev/null | grep -E 'profiles are in' || echo 'no profiles'
+  register: cis_aa_status
+  changed_when: false
+
+- name: Common AppArmor enforcing | Assert profile mode
+  ansible.builtin.assert:
+    that: >-
+      {{ ('enforce' in cis_aa_status.stdout and 'complain' not in cis_aa_status.stdout) if (cis_linux_common_apparmor_strict | bool)
+         else ('enforce' in cis_aa_status.stdout or 'complain' in cis_aa_status.stdout) }}
+    fail_msg: AppArmor profiles are not in the required mode.
+    success_msg: AppArmor profile mode verification passed.

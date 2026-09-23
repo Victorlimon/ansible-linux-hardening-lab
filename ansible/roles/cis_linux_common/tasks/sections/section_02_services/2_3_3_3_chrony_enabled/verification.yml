@@ -1,0 +1,3 @@
+---
+- name: CIS 2.3.3.3 | Verification | Delegate to enabled-service mechanism
+  ansible.builtin.import_tasks: mechanisms/service_enabled/verification.yml

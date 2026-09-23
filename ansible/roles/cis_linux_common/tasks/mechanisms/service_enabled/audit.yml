@@ -1,0 +1,19 @@
+---
+- name: Common enabled service | Gather package and service facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common enabled service | Gather service facts
+  ansible.builtin.service_facts:
+  when: cis_linux_common_service_package in ansible_facts.packages
+
+- name: Common enabled service | Report applicability or state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'NOT_APPLICABLE' if cis_linux_common_service_package not in ansible_facts.packages else
+           ('PASS' if ansible_facts.services[cis_linux_common_service_name].state == 'running' and
+           ansible_facts.services[cis_linux_common_service_name].status == 'enabled' else 'FAIL') }}
+      changed_target: false

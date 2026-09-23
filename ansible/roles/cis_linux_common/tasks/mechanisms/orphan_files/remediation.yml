@@ -1,0 +1,5 @@
+---
+- name: Common orphan files | Reassign orphaned files to root
+  ansible.builtin.shell: |
+    df --local -P | awk 'NR>1 {print $6}' | xargs -I '{}' find '{}' -xdev \( -nouser -o -nogroup \) -print0 2>/dev/null | xargs -0 -r chown root:root
+  changed_when: true

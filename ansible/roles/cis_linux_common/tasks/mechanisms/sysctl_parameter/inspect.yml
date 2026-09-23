@@ -45,9 +45,9 @@
       {{
         cis_linux_common_sysctl_systemd_config.stdout |
         regex_findall(
-          '(?m)^[ \t]*' ~
-          (cis_linux_common_sysctl_parameter | regex_escape) ~
-          '[ \t]*=[ \t]*([^ \t#]+)'
+          '(?m)^' ~
+           (cis_linux_common_sysctl_parameter | regex_escape) ~
+           '[ \t]*=[ \t]*([^ \t#\r\n]+)'
         )
       }}
     cis_linux_common_sysctl_ufw_paths: >-

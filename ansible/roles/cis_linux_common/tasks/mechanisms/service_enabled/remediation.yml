@@ -1,0 +1,12 @@
+---
+- name: Common enabled service | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common enabled service | Enable and start service
+  ansible.builtin.systemd:
+    name: "{{ cis_linux_common_service_name }}"
+    enabled: true
+    state: started
+    masked: false
+  when: cis_linux_common_service_package in ansible_facts.packages

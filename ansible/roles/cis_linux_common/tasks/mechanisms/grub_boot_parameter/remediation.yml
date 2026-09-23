@@ -1,0 +1,19 @@
+---
+- name: Common GRUB boot parameter | Replace existing parameter
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: "(?m)^(GRUB_CMDLINE_LINUX=\"[^\"]*\\b{{ cis_linux_common_grub_parameter }}=)[^ \"\\n]+([^\"]*\"$)"
+    replace: "\\g<1>{{ cis_linux_common_grub_value }}\\g<2>"
+  register: cis_linux_common_grub_replace
+
+- name: Common GRUB boot parameter | Add missing parameter
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=\"(?![^\"]*\\b{{ cis_linux_common_grub_parameter }}=)[^\"]*)\"$"
+    replace: "\\1 {{ cis_linux_common_grub_parameter }}={{ cis_linux_common_grub_value }}\""
+  register: cis_linux_common_grub_add
+
+- name: Common GRUB boot parameter | Regenerate configuration
+  ansible.builtin.command: update-grub
+  changed_when: true
+  when: cis_linux_common_grub_replace.changed or cis_linux_common_grub_add.changed

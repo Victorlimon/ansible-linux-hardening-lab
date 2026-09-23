@@ -1,0 +1,5 @@
+---
+- name: Common world-writable files | Remove world-writable bit
+  ansible.builtin.shell: |
+    df --local -P | awk 'NR>1 {print $6}' | xargs -I '{}' find '{}' -xdev -type f -perm -0002 -print0 2>/dev/null | xargs -0 -r chmod o-w
+  changed_when: true

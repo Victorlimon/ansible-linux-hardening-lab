@@ -1,0 +1,4 @@
+---
+- name: CIS 5.1.8 | Verification | Delegate to config-line mechanism
+  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
+  vars: {cis_linux_common_config_line_regexp: '^DisableForwarding yes$'}

@@ -1,0 +1,9 @@
+---
+- name: CIS 6.1.1.4 | Verification | Audit logging exclusivity
+  ansible.builtin.import_tasks: sections/section_06_logging/6_1_1_4_single_logging_system/audit.yml
+
+- name: CIS 6.1.1.4 | Verification | Assert logging exclusivity
+  ansible.builtin.assert:
+    that: cis_linux_common_logging_daemon_count <= 1
+    fail_msg: Multiple logging daemons are active.
+    success_msg: Logging exclusivity verification passed.

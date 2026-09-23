@@ -1,0 +1,22 @@
+---
+- name: Common process user | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common process user | Inspect process owner
+  ansible.builtin.command: "ps -o user= -C {{ cis_linux_common_process_name }}"
+  register: cis_linux_common_process_user_result
+  changed_when: false
+  failed_when: false
+  when: cis_linux_common_process_package in ansible_facts.packages
+
+- name: Common process user | Report process owner
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'NOT_APPLICABLE' if cis_linux_common_process_package not in ansible_facts.packages else
+           ('PASS' if cis_linux_common_process_user_result.stdout | trim == cis_linux_common_process_expected_user else 'FAIL') }}
+      observed_user: "{{ cis_linux_common_process_user_result.stdout | default('') | trim }}"
+      changed_target: false

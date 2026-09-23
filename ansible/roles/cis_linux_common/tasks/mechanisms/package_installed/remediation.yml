@@ -1,0 +1,12 @@
+---
+- name: Common installed package | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common installed package | Install package
+  ansible.builtin.apt:
+    name: "{{ cis_linux_common_package_name }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: cis_linux_common_package_name not in ansible_facts.packages

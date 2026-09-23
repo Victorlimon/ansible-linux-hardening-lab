@@ -1,0 +1,3 @@
+---
+- name: CIS 4.1.1 | Remediate | Single firewall utility
+  ansible.builtin.import_tasks: mechanisms/firewall_single_utility/remediation.yml

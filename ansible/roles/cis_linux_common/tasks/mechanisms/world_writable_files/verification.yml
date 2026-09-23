@@ -1,0 +1,13 @@
+---
+- name: Common world-writable files | Verify none remain
+  ansible.builtin.shell: |
+    df --local -P | awk 'NR>1 {print $6}' | xargs -I '{}' find '{}' -xdev -type f -perm -0002 2>/dev/null
+  register: cis_ww_verify
+  changed_when: false
+  failed_when: false
+
+- name: Common world-writable files | Assert none remain
+  ansible.builtin.assert:
+    that: (cis_ww_verify.stdout | trim) == ''
+    fail_msg: World-writable files still exist.
+    success_msg: World-writable files verification passed.

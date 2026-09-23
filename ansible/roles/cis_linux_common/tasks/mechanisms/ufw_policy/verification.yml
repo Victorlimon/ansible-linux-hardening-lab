@@ -1,0 +1,15 @@
+---
+- name: Common UFW policy | Read effective policy
+  ansible.builtin.command:
+    argv: [ufw, status, verbose]
+  register: cis_linux_common_ufw_policy_status
+  changed_when: false
+  failed_when: false
+
+- name: Common UFW policy | Verify policy
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_ufw_policy_status.rc == 0
+      - cis_linux_common_ufw_policy_status.stdout is search(cis_linux_common_ufw_policy_match)
+    fail_msg: The required UFW policy is missing.
+    success_msg: UFW policy verification passed.

@@ -1,0 +1,10 @@
+---
+- name: Common installed package | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common installed package | Verify package state
+  ansible.builtin.assert:
+    that: cis_linux_common_package_name in ansible_facts.packages
+    fail_msg: The required package is not installed.
+    success_msg: Package verification passed.

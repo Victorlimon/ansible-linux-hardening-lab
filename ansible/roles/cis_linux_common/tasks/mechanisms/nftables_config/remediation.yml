@@ -1,0 +1,13 @@
+---
+- name: Common nftables | Render permanent ruleset
+  ansible.builtin.copy:
+    dest: "{{ cis_linux_common_nftables_config_path | default('/etc/nftables.conf') }}"
+    content: "{{ cis_linux_common_nftables_config }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Common nftables | Apply ruleset
+  ansible.builtin.command:
+    argv: [nft, -f, "{{ cis_linux_common_nftables_config_path | default('/etc/nftables.conf') }}"]
+  changed_when: false

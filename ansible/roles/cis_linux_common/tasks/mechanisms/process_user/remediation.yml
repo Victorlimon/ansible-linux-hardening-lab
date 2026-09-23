@@ -1,0 +1,7 @@
+---
+- name: Common process user | Audit process owner before remediation
+  ansible.builtin.import_tasks: mechanisms/process_user/audit.yml
+
+- name: Common process user | Preserve process ownership contract
+  ansible.builtin.debug:
+    msg: Process ownership is audited; no implicit process mutation is performed.

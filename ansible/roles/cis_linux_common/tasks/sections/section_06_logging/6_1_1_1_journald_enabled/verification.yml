@@ -1,0 +1,9 @@
+---
+- name: CIS 6.1.1.1 | Verification | Gather journald service facts
+  ansible.builtin.service_facts:
+
+- name: CIS 6.1.1.1 | Verification | Assert journald is active
+  ansible.builtin.assert:
+    that: ansible_facts.services.get('systemd-journald.service', {}).get('state') == 'running'
+    fail_msg: systemd-journald is not active.
+    success_msg: journald verification passed.

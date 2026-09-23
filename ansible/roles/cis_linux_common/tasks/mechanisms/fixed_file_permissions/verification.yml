@@ -11,7 +11,14 @@
   ansible.builtin.assert:
     that:
       - cis_linux_common_fixed_file_verification.stat.exists | default(false)
-      - cis_linux_common_fixed_file_verification.stat.isreg | default(false)
+      - >-
+        (
+          (cis_linux_common_fixed_file_expected_type | default('file') == 'file'
+            and cis_linux_common_fixed_file_verification.stat.isreg | default(false))
+          or
+          (cis_linux_common_fixed_file_expected_type | default('file') == 'directory'
+            and cis_linux_common_fixed_file_verification.stat.isdir | default(false))
+        )
       - >-
         cis_linux_common_fixed_file_verification.stat.pw_name | default('') ==
         cis_linux_common_fixed_file_owner

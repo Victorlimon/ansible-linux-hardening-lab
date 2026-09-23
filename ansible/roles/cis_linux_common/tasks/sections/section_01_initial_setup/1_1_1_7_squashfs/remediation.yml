@@ -1,0 +1,11 @@
+---
+- name: Kernel module squashfs | Add install rule
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: "install squashfs /bin/true"
+    cis_linux_common_config_line_regexp: "^install squashfs /bin/true$"
+- name: Kernel module squashfs | Add blacklist rule
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line: "blacklist squashfs"
+    cis_linux_common_config_line_regexp: "^blacklist squashfs$"

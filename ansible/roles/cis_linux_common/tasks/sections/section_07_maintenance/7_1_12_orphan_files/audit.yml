@@ -1,0 +1,3 @@
+---
+- name: orphan_files audit | Delegate to mechanism
+  ansible.builtin.import_tasks: mechanisms/orphan_files/audit.yml

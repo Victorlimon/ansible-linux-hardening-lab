@@ -1,0 +1,9 @@
+---
+- name: CIS 5.1.3 | Verification | Find public host keys
+  ansible.builtin.find: {paths: /etc/ssh, patterns: ssh_host_*_key.pub, file_type: file}
+  register: cis_ssh_public_host_keys
+- name: CIS 5.1.3 | Verification | Delegate each public host key
+  ansible.builtin.include_tasks: mechanisms/fixed_file_permissions/verification.yml
+  loop: "{{ cis_ssh_public_host_keys.files }}"
+  loop_control: {label: "{{ item.path }}"}
+  vars: {cis_linux_common_fixed_file_path: "{{ item.path }}"}

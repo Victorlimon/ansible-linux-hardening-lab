@@ -1,0 +1,11 @@
+---
+- name: Common absent package | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common absent package | Remove package
+  ansible.builtin.apt:
+    name: "{{ cis_linux_common_package_name }}"
+    state: absent
+    purge: true
+  when: cis_linux_common_package_name in ansible_facts.packages
