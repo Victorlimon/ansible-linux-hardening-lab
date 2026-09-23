@@ -1,6 +1,6 @@
 ---
 - name: Verify implemented CIS controls on Ubuntu 24.04 without remediation
-  hosts: ubuntu
+  hosts: ubuntu_2404
   become: false
   gather_facts: true
   vars:

@@ -1,0 +1,20 @@
+---
+# Copy to debian_12.yml only after replacing and approving every
+# environment-specific value. This example is not loaded automatically.
+
+# Fail closed until the canary host, change, backup, and recovery path are ready.
+cis_execution_environment: unconfigured
+cis_production_mode: false
+cis_production_change_id: ""
+cis_production_backup_confirmed: false
+cis_production_oob_access_confirmed: false
+cis_production_min_root_free_mb: 2048
+
+# Debian remediation remains canary-only, opt-in, and bounded by explicit tags.
+cis_debian_12_remediation_enabled: false
+cis_debian_12_canary_confirmed: false
+
+# Banner changes require a separately approved local policy.
+cis_debian_12_banner_remediation_enabled: false
+cis_debian_12_banner_text_approved: false
+cis_debian_12_issue_banner_text: ""

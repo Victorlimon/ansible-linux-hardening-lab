@@ -6,6 +6,10 @@
   become: true
   gather_facts: true
   vars:
+    cis_preflight_allowed_release_statuses: [released]
     cis_ubuntu_2404_execution_mode: remediation
   roles:
+    - role: cis_platform_preflight
+      tags: [always, preflight, platform]
     - role: cis_ubuntu_2404
+      tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation]

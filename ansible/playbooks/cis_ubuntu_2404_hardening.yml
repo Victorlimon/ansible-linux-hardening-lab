@@ -1,5 +1,5 @@
 ---
-# Compatibility wrapper. New automation should use
-# playbooks/hardening/cis_ubuntu_2404.yml.
+# Stable public Ubuntu 24.04 hardening entry point.
+# New automation should use playbooks/cis_ubuntu_2404_hardening.yml.
 - name: Import the canonical Ubuntu 24.04 hardening playbook
   ansible.builtin.import_playbook: hardening/cis_ubuntu_2404.yml

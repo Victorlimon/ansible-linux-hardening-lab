@@ -9,7 +9,6 @@ cis_production_change_id: ""  # REEMPLAZAR: ticket/cambio aprobado
 cis_production_backup_confirmed: false
 cis_production_oob_access_confirmed: false
 cis_production_min_root_free_mb: 2048
-cis_production_expected_architecture: x86_64
 
 # Firewall: permanece bloqueado hasta declarar y aprobar redes reales.
 cis_section4_firewall: false
