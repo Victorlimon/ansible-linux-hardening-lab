@@ -1,0 +1,13 @@
+---
+- name: Remediate Debian 12 CIS 3.3.3 bogus ICMP responses
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_03_network/3_3_3_bogus_icmp/remediation.yml
+  vars:
+    cis_linux_common_control_id: "3.3.3"
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0
+    cis_linux_common_sysctl_parameter: net.ipv4.icmp_ignore_bogus_error_responses
+    cis_linux_common_sysctl_runtime_path: /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
+    cis_linux_common_sysctl_value: '1'
+    cis_linux_common_sysctl_file: /etc/sysctl.d/99-cis-3-3-3-bogus-icmp.conf

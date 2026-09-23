@@ -1,0 +1,2 @@
+---
+- {ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_05_access_control/5_1_16_ssh_max_auth_tries/remediation.yml}, vars: {cis_linux_common_control_id: '5.1.16', cis_linux_common_platform: debian_12, cis_linux_common_benchmark: 'CIS Debian Linux 12 Benchmark v1.1.0', cis_linux_common_config_line_package: openssh-server, cis_linux_common_config_line_path: /etc/ssh/sshd_config, cis_linux_common_config_line_regexp: '^MaxAuthTries\s+', cis_linux_common_config_line: 'MaxAuthTries 4'}}

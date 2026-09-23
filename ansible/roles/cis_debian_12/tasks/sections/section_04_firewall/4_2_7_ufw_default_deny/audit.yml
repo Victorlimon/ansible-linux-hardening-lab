@@ -1,0 +1,6 @@
+---
+- ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_04_firewall/4_2_7_ufw_default_deny/audit.yml
+  vars: {cis_linux_common_control_id: '4.2.7', cis_linux_common_platform: debian_12, cis_linux_common_ufw_policy_match: 'Default: deny \\(incoming\\)'}
+  when: cis_firewall == 'ufw'

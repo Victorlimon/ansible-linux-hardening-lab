@@ -1,16 +1,2 @@
 ---
-- name: CIS 1.6.2 | Remediation | Validate approved banner policy
-  ansible.builtin.assert:
-    that:
-      - cis_debian_12_banner_text_approved | bool
-      - cis_debian_12_issue_banner_text | trim | length > 0
-    fail_msg: Debian banner remediation requires non-empty legally approved text.
-
-- name: CIS 1.6.2 | Remediation | Configure the approved local banner
-  ansible.builtin.copy:
-    content: "{{ cis_debian_12_issue_banner_text | trim }}\n"
-    dest: /etc/issue
-    owner: root
-    group: root
-    mode: '0644'
-    backup: true
+- {name: 'CIS 1.6.2 | Remediation | Debian common route', ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_01_initial_setup/1_6_2_issue_banner/remediation.yml}, vars: {cis_linux_common_control_id: '1.6.2', cis_linux_common_platform: debian_12, cis_linux_common_benchmark: 'CIS Debian Linux 12 Benchmark v1.1.0', cis_linux_common_config_line_path: /etc/issue, cis_linux_common_config_line_regexp: '^.*$', cis_linux_common_config_line: 'Authorized users only. All activity may be monitored and reported.', cis_linux_common_config_line_package: base-files}}

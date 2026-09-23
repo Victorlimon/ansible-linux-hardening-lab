@@ -1,0 +1,26 @@
+---
+- name: Audit Debian 12 CIS 3.3.11 IPv6 router advertisements (all)
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_03_network/3_3_11_ipv6_router_advertisements/audit.yml
+  vars:
+    cis_linux_common_control_id: "3.3.11"
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0
+    cis_linux_common_sysctl_parameter: net.ipv6.conf.all.accept_ra
+    cis_linux_common_sysctl_runtime_path: /proc/sys/net/ipv6/conf/all/accept_ra
+    cis_linux_common_sysctl_value: '0'
+    cis_linux_common_sysctl_file: /etc/sysctl.d/99-cis-3-3-11-ipv6.conf
+
+- name: Audit Debian 12 CIS 3.3.11 IPv6 router advertisements (default)
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_03_network/3_3_11_ipv6_router_advertisements/audit.yml
+  vars:
+    cis_linux_common_control_id: "3.3.11"
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0
+    cis_linux_common_sysctl_parameter: net.ipv6.conf.default.accept_ra
+    cis_linux_common_sysctl_runtime_path: /proc/sys/net/ipv6/conf/default/accept_ra
+    cis_linux_common_sysctl_value: '0'
+    cis_linux_common_sysctl_file: /etc/sysctl.d/99-cis-3-3-11-ipv6.conf

@@ -1,0 +1,4 @@
+---
+- name: CIS 6.2.2.1 | Verification | Debian common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_2_2_1_audit_log_size/verification.yml}
+  vars: {cis_linux_common_control_id: '6.2.2.1', cis_linux_common_platform: debian_12, cis_linux_common_config_line_regexp: '^\s*max_log_file\s*=\s*\d+\s*$', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}

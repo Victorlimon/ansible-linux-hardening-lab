@@ -1,0 +1,16 @@
+---
+- name: CIS 6.1.4.1 | Remediation | Debian common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_1_4_1_logfile_permissions/remediation.yml}
+  vars:
+    cis_linux_common_control_id: "6.1.4.1"
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0
+    cis_linux_common_fixed_file_entries:
+      - {path: /var/log/syslog, owner: root, group: adm, mode: 'u-x,g-wx,o-rwx', description: '0640 or more restrictive', owner_digits: ['0','2','4','6'], group_digits: ['0','4'], other_digits: ['0']}
+      - {path: /var/log/auth.log, owner: root, group: adm, mode: 'u-x,g-wx,o-rwx', description: '0640 or more restrictive', owner_digits: ['0','2','4','6'], group_digits: ['0','4'], other_digits: ['0']}
+      - {path: /var/log/kern.log, owner: root, group: adm, mode: 'u-x,g-wx,o-rwx', description: '0640 or more restrictive', owner_digits: ['0','2','4','6'], group_digits: ['0','4'], other_digits: ['0']}
+      - {path: /var/log/messages, owner: root, group: adm, mode: 'u-x,g-wx,o-rwx', description: '0640 or more restrictive', owner_digits: ['0','2','4','6'], group_digits: ['0','4'], other_digits: ['0']}
+      - {path: /var/log/secure, owner: root, group: adm, mode: 'u-x,g-wx,o-rwx', description: '0640 or more restrictive', owner_digits: ['0','2','4','6'], group_digits: ['0','4'], other_digits: ['0']}
+      - {path: /var/log/wtmp, owner: root, group: utmp, mode: 'ug-x,o-wx', description: '0660 or more restrictive', owner_digits: ['0','2','4','6'], group_digits: ['0','2','4','6'], other_digits: ['0','2','4','6']}
+      - {path: /var/log/btmp, owner: root, group: utmp, mode: 'ug-x,o-wx', description: '0660 or more restrictive', owner_digits: ['0','2','4','6'], group_digits: ['0','2','4','6'], other_digits: ['0','2','4','6']}
+      - {path: /var/log/lastlog, owner: root, group: utmp, mode: 'ug-x,o-wx', description: '0660 or more restrictive', owner_digits: ['0','2','4','6'], group_digits: ['0','2','4','6'], other_digits: ['0','2','4','6']}

@@ -1,0 +1,6 @@
+---
+- name: CIS 5.4.2.3 | Remediation | Run common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_05_access_control/5_4_2_3_root_only_group_gid0/remediation.yml
+  vars: {cis_linux_common_control_id: "5.4.2.3", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_account_check: group_gid0, cis_linux_common_account_command: 'awk -F: ''($3==0 && $1!="root") {print $1}'' /etc/group'}

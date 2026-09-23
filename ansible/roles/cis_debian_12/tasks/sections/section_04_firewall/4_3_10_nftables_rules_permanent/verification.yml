@@ -1,0 +1,5 @@
+---
+- ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_04_firewall/4_3_10_nftables_rules_permanent/verification.yml
+  vars: {cis_linux_common_control_id: '4.3.10', cis_linux_common_platform: debian_12, cis_linux_common_nftables_expected_patterns: ['table inet filter', 'hook input', 'hook forward', 'hook output']}

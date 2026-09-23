@@ -1,0 +1,2 @@
+---
+- {name: 'CIS 5.2.3 | Remediation | Debian adapter', ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_05_access_control/5_2_3_sudo_logfile/remediation.yml}, vars: {cis_linux_common_control_id: '5.2.3', cis_linux_common_platform: debian_12, cis_linux_common_config_line_package: sudo, cis_linux_common_config_line_path: /etc/sudoers.d/cis_logfile, cis_linux_common_config_line_regexp: '^Defaults\s+logfile="/var/log/sudo\.log"$', cis_linux_common_config_line: 'Defaults logfile="/var/log/sudo.log"'}}

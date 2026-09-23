@@ -1,0 +1,6 @@
+---
+- name: CIS 3.2.1 | Remediation | Run common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_03_network/3_2_1_dccp/remediation.yml
+  vars: {cis_linux_common_control_id: "3.2.1", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_kernel_module: dccp, cis_linux_common_config_line_path: /etc/modprobe.d/dccp.conf, cis_linux_common_config_line_package: kmod}

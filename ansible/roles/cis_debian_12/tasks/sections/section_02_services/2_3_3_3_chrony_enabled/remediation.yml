@@ -1,0 +1,4 @@
+---
+- name: CIS 2.3.3.3 | Remediation | Debian common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_02_services/2_3_3_3_chrony_enabled/remediation.yml}
+  vars: {cis_linux_common_control_id: "2.3.3.3", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_service_package: chrony, cis_linux_common_service_name: chrony.service}

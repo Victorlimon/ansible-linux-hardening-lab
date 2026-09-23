@@ -1,0 +1,26 @@
+---
+- name: Remediate Debian 12 CIS 3.3.2 all-interface redirects
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_03_network/3_3_2_packet_redirect/remediation.yml
+  vars:
+    cis_linux_common_control_id: "3.3.2"
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0
+    cis_linux_common_sysctl_parameter: net.ipv4.conf.all.send_redirects
+    cis_linux_common_sysctl_runtime_path: /proc/sys/net/ipv4/conf/all/send_redirects
+    cis_linux_common_sysctl_value: '0'
+    cis_linux_common_sysctl_file: /etc/sysctl.d/99-cis-3-3-2-all.conf
+
+- name: Remediate Debian 12 CIS 3.3.2 default-interface redirects
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_03_network/3_3_2_packet_redirect/remediation.yml
+  vars:
+    cis_linux_common_control_id: "3.3.2"
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0
+    cis_linux_common_sysctl_parameter: net.ipv4.conf.default.send_redirects
+    cis_linux_common_sysctl_runtime_path: /proc/sys/net/ipv4/conf/default/send_redirects
+    cis_linux_common_sysctl_value: '0'
+    cis_linux_common_sysctl_file: /etc/sysctl.d/99-cis-3-3-2-default.conf

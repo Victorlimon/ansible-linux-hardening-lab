@@ -1,0 +1,6 @@
+---
+- name: CIS 3.1.3 | Audit | Run common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_03_network/3_1_3_bluetooth/audit.yml
+  vars: {cis_linux_common_control_id: "3.1.3", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_service_package: bluez, cis_linux_common_service_name: bluetooth.service}

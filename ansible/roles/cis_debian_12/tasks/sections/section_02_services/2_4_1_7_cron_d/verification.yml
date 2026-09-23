@@ -1,0 +1,4 @@
+---
+- name: CIS 2.4.1.7 | Verification | Run common directory mechanism
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_02_services/2_4_1_7_cron_d/verification.yml}
+  vars: {cis_linux_common_control_id: "2.4.1.7", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_package_name: cron, cis_linux_common_fixed_file_path: /etc/cron.d, cis_linux_common_fixed_file_expected_type: directory, cis_linux_common_fixed_file_owner: root, cis_linux_common_fixed_file_group: root, cis_linux_common_fixed_file_remediation_mode: '0700', cis_linux_common_fixed_file_expected_mode_description: 0700 root:root directory, cis_linux_common_fixed_file_allowed_owner_digits: ['7'], cis_linux_common_fixed_file_allowed_group_digits: ['0'], cis_linux_common_fixed_file_allowed_other_digits: ['0']}

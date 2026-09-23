@@ -1,0 +1,6 @@
+---
+- ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_04_firewall/4_2_3_ufw_service_enabled/verification.yml
+  vars: {cis_linux_common_control_id: '4.2.3', cis_linux_common_platform: debian_12, cis_linux_common_service_name: ufw.service, cis_linux_common_service_package: ufw}
+  when: cis_firewall == 'ufw'

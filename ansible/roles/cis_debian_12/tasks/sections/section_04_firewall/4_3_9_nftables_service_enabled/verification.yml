@@ -1,0 +1,5 @@
+---
+- ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_04_firewall/4_3_9_nftables_service_enabled/verification.yml
+  vars: {cis_linux_common_control_id: '4.3.9', cis_linux_common_platform: debian_12, cis_linux_common_service_name: nftables.service, cis_linux_common_service_package: nftables}

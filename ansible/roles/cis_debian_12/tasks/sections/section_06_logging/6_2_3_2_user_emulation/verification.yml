@@ -1,0 +1,10 @@
+---
+- name: CIS 6.2.3.2 | verification | debian_12 common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_2_3_2_user_emulation/verification.yml}
+  vars:
+    cis_linux_common_control_id: '6.2.3.2'
+    cis_linux_common_platform: debian_12
+    cis_linux_common_config_line: '-a always,exit -F arch=b64 -C euid!=uid -F auid!=unset -S execve -k user_emulation'
+    cis_linux_common_config_line_regexp: '^-a\ always,exit\ -F\ arch=b64\ -C\ euid!=uid\ -F\ auid!=unset\ -S\ execve\ -k\ user_emulation$'
+    cis_linux_common_config_line_path: /etc/audit/rules.d/cis_6_2_3_2.rules
+    cis_linux_common_config_line_package: auditd

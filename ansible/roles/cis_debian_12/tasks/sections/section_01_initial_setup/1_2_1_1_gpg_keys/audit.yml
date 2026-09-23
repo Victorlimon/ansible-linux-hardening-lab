@@ -1,0 +1,7 @@
+---
+- name: CIS 1.2.1.1 | Audit | Manual control (operator review)
+  ansible.builtin.debug:
+    msg:
+      control: "1.2.1.1"
+      classification: MANUAL_REVIEW
+      changed_target: false

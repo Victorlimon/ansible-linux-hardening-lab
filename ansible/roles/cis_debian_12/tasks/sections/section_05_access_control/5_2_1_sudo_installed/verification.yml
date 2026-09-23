@@ -1,0 +1,2 @@
+---
+- {name: 'CIS 5.2.1 | Verification | Debian adapter', ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_05_access_control/5_2_1_sudo_installed/verification.yml}, vars: {cis_linux_common_control_id: '5.2.1', cis_linux_common_platform: debian_12, cis_linux_common_package_name: sudo}}

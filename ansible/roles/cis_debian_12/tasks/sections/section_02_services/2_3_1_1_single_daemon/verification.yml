@@ -1,0 +1,4 @@
+---
+- name: CIS 2.3.1.1 | Verification | Debian common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_02_services/2_3_1_1_single_daemon/verification.yml}
+  vars: {cis_linux_common_control_id: "2.3.1.1", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0}

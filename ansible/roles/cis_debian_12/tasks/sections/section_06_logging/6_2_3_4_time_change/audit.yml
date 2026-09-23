@@ -1,0 +1,10 @@
+---
+- name: CIS 6.2.3.4 | audit | debian_12 common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_2_3_4_time_change/audit.yml}
+  vars:
+    cis_linux_common_control_id: '6.2.3.4'
+    cis_linux_common_platform: debian_12
+    cis_linux_common_config_line: '-a always,exit -F arch=b64 -S adjtimex,settimeofday -k time-change'
+    cis_linux_common_config_line_regexp: '^-a\ always,exit\ -F\ arch=b64\ -S\ adjtimex,settimeofday\ -k\ time-change$'
+    cis_linux_common_config_line_path: /etc/audit/rules.d/cis_6_2_3_4.rules
+    cis_linux_common_config_line_package: auditd

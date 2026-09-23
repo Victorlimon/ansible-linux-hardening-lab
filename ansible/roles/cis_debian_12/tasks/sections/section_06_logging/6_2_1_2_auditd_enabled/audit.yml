@@ -1,0 +1,4 @@
+---
+- name: CIS 6.2.1.2 | Audit | Debian common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_2_1_2_auditd_enabled/audit.yml}
+  vars: {cis_linux_common_control_id: '6.2.1.2', cis_linux_common_platform: debian_12, cis_linux_common_service_package: auditd, cis_linux_common_service_name: auditd.service}

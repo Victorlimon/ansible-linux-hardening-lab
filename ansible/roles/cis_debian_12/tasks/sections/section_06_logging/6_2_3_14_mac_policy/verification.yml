@@ -1,0 +1,10 @@
+---
+- name: CIS 6.2.3.14 | verification | debian_12 common route
+  ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_2_3_14_mac_policy/verification.yml}
+  vars:
+    cis_linux_common_control_id: '6.2.3.14'
+    cis_linux_common_platform: debian_12
+    cis_linux_common_config_line: '-w /etc/apparmor -p wa -k MAC-policy'
+    cis_linux_common_config_line_regexp: '^-w\ /etc/apparmor\ -p\ wa\ -k\ MAC-policy$'
+    cis_linux_common_config_line_path: /etc/audit/rules.d/cis_6_2_3_14.rules
+    cis_linux_common_config_line_package: auditd

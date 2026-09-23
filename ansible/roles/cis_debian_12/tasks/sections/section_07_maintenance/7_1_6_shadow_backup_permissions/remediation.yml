@@ -1,0 +1,18 @@
+---
+- name: CIS 7.1.6 | Remediation | Use the common fixed-file mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_07_maintenance/7_1_6_shadow_backup_permissions/remediation.yml
+  vars:
+    cis_linux_common_control_id: "7.1.6"
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0
+    cis_linux_common_fixed_file_path: /etc/shadow-
+    cis_linux_common_fixed_file_owner: root
+    cis_linux_common_fixed_file_group: shadow
+    cis_linux_common_fixed_file_remediation_mode: 'u-x,g-wx,o-rwx'
+    cis_linux_common_fixed_file_expected_mode_description: >-
+      0640 or more restrictive without execute bits
+    cis_linux_common_fixed_file_allowed_owner_digits: ['0', '2', '4', '6']
+    cis_linux_common_fixed_file_allowed_group_digits: ['0', '4']
+    cis_linux_common_fixed_file_allowed_other_digits: ['0']
