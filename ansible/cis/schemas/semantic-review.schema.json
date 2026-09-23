@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:cis:semantic-review:v1",
+  "type": "object",
+  "required": ["schema_version", "review_id", "ledger_digest", "reviews"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "review_id": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "ledger_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "reviews": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["control", "platforms", "classification", "proofs", "reviewer_id"],
+        "additionalProperties": false,
+        "properties": {
+          "control": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+          "platforms": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_-]+(?:\\.[a-z0-9_-]+)*$"}},
+          "classification": {"enum": ["semantic-common", "mechanism-common", "platform-specific", "insufficient-evidence"]},
+          "proofs": {
+            "type": "object",
+            "required": ["objective", "applicability", "accepted_state", "audit", "remediation", "exceptions", "side_effects"],
+            "additionalProperties": false,
+            "properties": {
+              "objective": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+              "applicability": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+              "accepted_state": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+              "audit": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+              "remediation": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+              "exceptions": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+              "side_effects": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+            }
+          },
+          "reviewer_id": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}
