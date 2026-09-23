@@ -1,0 +1,18 @@
+# Normalize all text files to LF (matches .editorconfig end_of_line=lf).
+# Prevents CRLF drift between Windows hosts and the Linux ansible-control VM.
+* text=auto eol=lf
+
+# Explicitly binary files are never line-ending normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.tgz binary
+*.box binary
+*.vmdk binary
+*.vdi binary
