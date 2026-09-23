@@ -58,9 +58,10 @@ git checkout -b docs/update-readme-examples
 # En el host: no ejecutar Ansible
 ./scripts/check_host.sh
 
-# Dentro de ansible-control
-./scripts/check_control.sh
-./scripts/test_contracts.sh
+# Dentro de ansible-control: validar el catálogo y calificar rutas/contratos
+python3 ansible/scripts/validate_cis_catalog.py --root ansible --catalog cis/catalog/disposition-matrix.yml
+python3 ansible/scripts/qualify_cis_profile.py --root ansible --routing-only \
+  --catalog cis/catalog/disposition-matrix.yml --ledger cis/catalog/control-ledger.yml
 
 # Probar un control: check, dos aplicaciones reales y verificación funcional
 ansible-playbook -i inventories/local/hosts.yml PLAYBOOK \
