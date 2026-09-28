@@ -2585,3 +2585,21 @@
   ansible.builtin.import_tasks: sections/section_02_services/2_2_6_ftp_client/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_2_2_6_ftp_client | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_2_2_6, package_absent, gated_unsafe]
+- ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_2_passwd_backup_permissions/audit.yml
+
+- ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_2_passwd_backup_permissions/remediation.yml
+
+- ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_2_passwd_backup_permissions/verification.yml
+
+- ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_3_group_backup_permissions/audit.yml
+
+- ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_3_group_backup_permissions/remediation.yml
+
+- ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_3_group_backup_permissions/verification.yml
+
+- ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/audit.yml
+
+- ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/remediation.yml
+
+- ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/verification.yml
+

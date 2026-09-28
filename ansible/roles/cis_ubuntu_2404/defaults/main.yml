@@ -384,3 +384,12 @@ cis_ubuntu_2404_2_2_5_ldap_client: true
 cis_ubuntu_2404_2_2_5_ldap_client_remediate: false
 cis_ubuntu_2404_2_2_6_ftp_client: true
 cis_ubuntu_2404_2_2_6_ftp_client_remediate: false
+cis_ubuntu_2404_7_1_2_passwd_backup_permissions: true
+cis_ubuntu_2404_7_1_2_passwd_backup_permissions_remediate: false
+
+cis_ubuntu_2404_7_1_3_group_backup_permissions: true
+cis_ubuntu_2404_7_1_3_group_backup_permissions_remediate: false
+
+cis_ubuntu_2404_7_1_5_shadow_permissions: true
+cis_ubuntu_2404_7_1_5_shadow_permissions_remediate: false
+
