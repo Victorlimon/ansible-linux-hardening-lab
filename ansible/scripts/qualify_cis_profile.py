@@ -158,7 +158,7 @@ def qualify_schema_contracts(root: Path, schemas_arg: str, documents_arg: str) -
     require((aggregate["status"] == "qualified") == (aggregate["failed"] == aggregate["unsupported"] == 0), "SCHEMA_AGGREGATE_INCOHERENT")
     print("SCHEMA_CONTRACTS_VALID schemas=4 documents=4")
     return 0
-def normalize_catalog(value: Any) -> set[tuple[str, str, str, str]]:
+def normalize_catalog(value: Any) -> set[tuple[str, str, str]]:
     require(isinstance(value, dict))
     if value.get("schema_version") == 2:
         corpora = value.get("corpora")
@@ -166,7 +166,7 @@ def normalize_catalog(value: Any) -> set[tuple[str, str, str, str]]:
     else:
         corpora = [value]
 
-    expected: set[tuple[str, str, str, str]] = set()
+    expected: set[tuple[str, str, str]] = set()
     for corpus in corpora:
         require(isinstance(corpus, dict))
         platform = nonempty_string(corpus.get("platform"))
@@ -176,7 +176,7 @@ def normalize_catalog(value: Any) -> set[tuple[str, str, str, str]]:
         for control in controls:
             require(isinstance(control, dict))
             control_id = nonempty_string(control.get("id"))
-            key = (platform, version, control_id, "remediation")
+            key = (platform, version, control_id)
             require(key not in expected)
             expected.add(key)
     return expected
@@ -184,21 +184,20 @@ def normalize_catalog(value: Any) -> set[tuple[str, str, str, str]]:
 
 def normalize_routes(
     value: Any,
-) -> dict[tuple[str, str, str, str], list[tuple[str, str]]]:
+) -> dict[tuple[str, str, str], list[tuple[str, str]]]:
     require(isinstance(value, dict) and value.get("schema_version") == 1)
-    routes = value.get("routes")
+    routes = value.get("controls")
     require(isinstance(routes, list))
-    grouped: dict[tuple[str, str, str, str], list[tuple[str, str]]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str], list[tuple[str, str]]] = defaultdict(list)
     for route in routes:
         require(isinstance(route, dict))
         key = (
             nonempty_string(route.get("platform")),
             nonempty_string(route.get("version")),
             nonempty_string(route.get("control")),
-            nonempty_string(route.get("mode")),
         )
-        owner = nonempty_string(route.get("route_owner"))
-        route_class = nonempty_string(route.get("route_class"))
+        owner = nonempty_string(route.get("route").get("route_owner"))
+        route_class = nonempty_string(route.get("route").get("route_class"))
         require(route_class in {"legacy", "new"})
         grouped[key].append((owner, route_class))
     return grouped
@@ -215,7 +214,8 @@ def qualify_routes(catalog: Any, ledger: Any) -> int:
             fail("ROUTING_LEGACY_NEW_CONFLICT")
 
     for key in sorted(grouped):
-        if len(grouped[key]) != 1:
+        owners = {owner for owner, _ in grouped[key]}
+        if len(owners) != 1:
             fail("ROUTING_DUPLICATE_OWNER")
 
     if any(key not in grouped for key in sorted(expected)):
