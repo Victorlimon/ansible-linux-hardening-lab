@@ -163,6 +163,7 @@ MECHANISM_RULES = [
     ("5.4.1.5", "account_integrity"),
     ("5.4.1.6", "account_integrity"),
     ("5.4.2.", "account_integrity"),
+    ("5.4.3.1", "line_absent"),
     ("5.4.3.", "config_line"),
     ("6.1.1.1", "service_enabled"),
     ("6.1.1.4", "service_disabled"),

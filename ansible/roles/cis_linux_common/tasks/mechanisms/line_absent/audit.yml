@@ -1,0 +1,15 @@
+---
+- name: Common absent line | Read configuration
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_config_line_path }}"
+  register: cis_linux_common_config_line_content
+  failed_when: false
+
+- name: Common absent line | Report line state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if (cis_linux_common_config_line_content.content | default('') | b64decode) is not search(cis_linux_common_config_line_regexp, multiline=True) else 'FAIL' }}
+      changed_target: false

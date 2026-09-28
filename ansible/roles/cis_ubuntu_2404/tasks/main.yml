@@ -2603,3 +2603,34 @@
 
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/verification.yml
 
+
+- name: Audit Ubuntu 2404 CIS 5.4.3.1
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_1_nologin_shells/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_4_3_1_nologin_shells | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_3_1, line_absent, gated_unsafe]
+- name: Remediate Ubuntu 2404 CIS 5.4.3.1
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_1_nologin_shells/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_5_4_3_1_nologin_shells | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_3_1, line_absent, gated_unsafe]
+- name: Verify Ubuntu 2404 CIS 5.4.3.1
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_1_nologin_shells/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_4_3_1_nologin_shells | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_3_1, line_absent, gated_unsafe]
+
+- name: Audit Ubuntu 2404 CIS 5.4.1.2
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_2_min_password_days/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_4_1_2_min_password_days | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_1_2, config_line, manual]
+- name: Verify Ubuntu 2404 CIS 5.4.1.2
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_2_min_password_days/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_4_1_2_min_password_days | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_1_2, config_line, manual]
+
+- name: Audit Ubuntu 2404 CIS 5.1.4
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_4_sshd_access/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_1_4_sshd_access | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_4, config_line, manual]
+- name: Verify Ubuntu 2404 CIS 5.1.4
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_4_sshd_access/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_1_4_sshd_access | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_4, config_line, manual]

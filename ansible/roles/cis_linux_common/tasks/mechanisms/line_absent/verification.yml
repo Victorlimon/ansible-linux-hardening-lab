@@ -1,0 +1,12 @@
+---
+- name: Common absent line | Read configuration
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_config_line_path }}"
+  register: cis_linux_common_config_line_content
+  failed_when: false
+
+- name: Common absent line | Verify forbidden line absent
+  ansible.builtin.assert:
+    that: (cis_linux_common_config_line_content.content | default('') | b64decode) is not search(cis_linux_common_config_line_regexp, multiline=True)
+    fail_msg: The forbidden line is still present.
+    success_msg: Forbidden line absence verified.

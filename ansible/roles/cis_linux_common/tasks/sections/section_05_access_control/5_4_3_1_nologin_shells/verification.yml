@@ -1,0 +1,3 @@
+---
+- name: line_absent verification | Delegate to mechanism
+  ansible.builtin.import_tasks: mechanisms/line_absent/verification.yml

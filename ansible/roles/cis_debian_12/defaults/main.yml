@@ -400,3 +400,8 @@ cis_debian_12_2_2_5_ldap_client: true
 cis_debian_12_2_2_5_ldap_client_remediate: false
 cis_debian_12_2_2_6_ftp_client: true
 cis_debian_12_2_2_6_ftp_client_remediate: false
+cis_debian_12_5_4_3_1_nologin_shells: true
+cis_debian_12_5_4_3_1_nologin_shells_remediate: false
+cis_debian_12_5_4_1_2_min_password_days: true
+cis_debian_12_5_1_4_sshd_access: true
+

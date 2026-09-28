@@ -1,0 +1,6 @@
+---
+- name: Common absent line | Remove forbidden line
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_config_line_path }}"
+    regexp: "{{ cis_linux_common_config_line_regexp }}"
+    state: absent
