@@ -2786,3 +2786,81 @@
   ansible.builtin.import_tasks: sections/section_06_logging/6_1_3_8_logrotate_configured/verification.yml
   when: [cis_debian_12_execution_mode == 'verification']
   tags: [cis_debian_12, cis_debian_12_verification, cis_6_1_3_8, manual]
+
+- name: Audit Debian 12 CIS 2.2.1
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_1_nis_client/audit.yml
+  when: [cis_debian_12_execution_mode == 'audit', cis_debian_12_2_2_1_nis_client | bool]
+  tags: [cis_debian_12, cis_debian_12_audit, cis_2_2_1, package_absent, gated_unsafe]
+- name: Remediate Debian 12 CIS 2.2.1
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_1_nis_client/remediation.yml
+  when: [cis_debian_12_execution_mode == 'remediation', cis_debian_12_2_2_1_nis_client | bool]
+  tags: [cis_debian_12, cis_debian_12_remediation, cis_2_2_1, package_absent, gated_unsafe]
+- name: Verify Debian 12 CIS 2.2.1
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_1_nis_client/verification.yml
+  when: [cis_debian_12_execution_mode == 'verification', cis_debian_12_2_2_1_nis_client | bool]
+  tags: [cis_debian_12, cis_debian_12_verification, cis_2_2_1, package_absent, gated_unsafe]
+
+- name: Audit Debian 12 CIS 2.2.2
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_2_rsh_client/audit.yml
+  when: [cis_debian_12_execution_mode == 'audit', cis_debian_12_2_2_2_rsh_client | bool]
+  tags: [cis_debian_12, cis_debian_12_audit, cis_2_2_2, package_absent, gated_unsafe]
+- name: Remediate Debian 12 CIS 2.2.2
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_2_rsh_client/remediation.yml
+  when: [cis_debian_12_execution_mode == 'remediation', cis_debian_12_2_2_2_rsh_client | bool]
+  tags: [cis_debian_12, cis_debian_12_remediation, cis_2_2_2, package_absent, gated_unsafe]
+- name: Verify Debian 12 CIS 2.2.2
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_2_rsh_client/verification.yml
+  when: [cis_debian_12_execution_mode == 'verification', cis_debian_12_2_2_2_rsh_client | bool]
+  tags: [cis_debian_12, cis_debian_12_verification, cis_2_2_2, package_absent, gated_unsafe]
+
+- name: Audit Debian 12 CIS 2.2.3
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_3_talk_client/audit.yml
+  when: [cis_debian_12_execution_mode == 'audit', cis_debian_12_2_2_3_talk_client | bool]
+  tags: [cis_debian_12, cis_debian_12_audit, cis_2_2_3, package_absent, gated_unsafe]
+- name: Remediate Debian 12 CIS 2.2.3
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_3_talk_client/remediation.yml
+  when: [cis_debian_12_execution_mode == 'remediation', cis_debian_12_2_2_3_talk_client | bool]
+  tags: [cis_debian_12, cis_debian_12_remediation, cis_2_2_3, package_absent, gated_unsafe]
+- name: Verify Debian 12 CIS 2.2.3
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_3_talk_client/verification.yml
+  when: [cis_debian_12_execution_mode == 'verification', cis_debian_12_2_2_3_talk_client | bool]
+  tags: [cis_debian_12, cis_debian_12_verification, cis_2_2_3, package_absent, gated_unsafe]
+
+- name: Audit Debian 12 CIS 2.2.4
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_4_telnet_client/audit.yml
+  when: [cis_debian_12_execution_mode == 'audit', cis_debian_12_2_2_4_telnet_client | bool]
+  tags: [cis_debian_12, cis_debian_12_audit, cis_2_2_4, package_absent, gated_unsafe]
+- name: Remediate Debian 12 CIS 2.2.4
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_4_telnet_client/remediation.yml
+  when: [cis_debian_12_execution_mode == 'remediation', cis_debian_12_2_2_4_telnet_client | bool]
+  tags: [cis_debian_12, cis_debian_12_remediation, cis_2_2_4, package_absent, gated_unsafe]
+- name: Verify Debian 12 CIS 2.2.4
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_4_telnet_client/verification.yml
+  when: [cis_debian_12_execution_mode == 'verification', cis_debian_12_2_2_4_telnet_client | bool]
+  tags: [cis_debian_12, cis_debian_12_verification, cis_2_2_4, package_absent, gated_unsafe]
+
+- name: Audit Debian 12 CIS 2.2.5
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_5_ldap_client/audit.yml
+  when: [cis_debian_12_execution_mode == 'audit', cis_debian_12_2_2_5_ldap_client | bool]
+  tags: [cis_debian_12, cis_debian_12_audit, cis_2_2_5, package_absent, gated_unsafe]
+- name: Remediate Debian 12 CIS 2.2.5
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_5_ldap_client/remediation.yml
+  when: [cis_debian_12_execution_mode == 'remediation', cis_debian_12_2_2_5_ldap_client | bool]
+  tags: [cis_debian_12, cis_debian_12_remediation, cis_2_2_5, package_absent, gated_unsafe]
+- name: Verify Debian 12 CIS 2.2.5
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_5_ldap_client/verification.yml
+  when: [cis_debian_12_execution_mode == 'verification', cis_debian_12_2_2_5_ldap_client | bool]
+  tags: [cis_debian_12, cis_debian_12_verification, cis_2_2_5, package_absent, gated_unsafe]
+
+- name: Audit Debian 12 CIS 2.2.6
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_6_ftp_client/audit.yml
+  when: [cis_debian_12_execution_mode == 'audit', cis_debian_12_2_2_6_ftp_client | bool]
+  tags: [cis_debian_12, cis_debian_12_audit, cis_2_2_6, package_absent, gated_unsafe]
+- name: Remediate Debian 12 CIS 2.2.6
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_6_ftp_client/remediation.yml
+  when: [cis_debian_12_execution_mode == 'remediation', cis_debian_12_2_2_6_ftp_client | bool]
+  tags: [cis_debian_12, cis_debian_12_remediation, cis_2_2_6, package_absent, gated_unsafe]
+- name: Verify Debian 12 CIS 2.2.6
+  ansible.builtin.import_tasks: sections/section_02_services/2_2_6_ftp_client/verification.yml
+  when: [cis_debian_12_execution_mode == 'verification', cis_debian_12_2_2_6_ftp_client | bool]
+  tags: [cis_debian_12, cis_debian_12_verification, cis_2_2_6, package_absent, gated_unsafe]

@@ -388,3 +388,15 @@ cis_debian_12_6_1_2_1_2_journal_upload_auth: true
 cis_debian_12_6_1_3_5_rsyslog_logging: true
 cis_debian_12_6_1_3_6_rsyslog_remote_host: true
 cis_debian_12_6_1_3_8_logrotate_configured: true
+cis_debian_12_2_2_1_nis_client: true
+cis_debian_12_2_2_1_nis_client_remediate: false
+cis_debian_12_2_2_2_rsh_client: true
+cis_debian_12_2_2_2_rsh_client_remediate: false
+cis_debian_12_2_2_3_talk_client: true
+cis_debian_12_2_2_3_talk_client_remediate: false
+cis_debian_12_2_2_4_telnet_client: true
+cis_debian_12_2_2_4_telnet_client_remediate: false
+cis_debian_12_2_2_5_ldap_client: true
+cis_debian_12_2_2_5_ldap_client_remediate: false
+cis_debian_12_2_2_6_ftp_client: true
+cis_debian_12_2_2_6_ftp_client_remediate: false
