@@ -114,6 +114,7 @@ MECHANISM_RULES = [
     ("2.1.19", "service_disabled"),
     ("2.1.20", "service_disabled"),
     ("2.1.21", "config_line"),
+    ("2.2.", "package_absent"),
     ("2.3.1.1", "single_daemon"),
     ("2.3.2.1", "config_line"),
     ("2.3.2.2", "service_enabled"),
