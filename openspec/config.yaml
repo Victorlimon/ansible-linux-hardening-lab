@@ -1,0 +1,6 @@
+# Gentle AI SDD control-plane declaration (minimal).
+# Declares Engram as the authoritative artifact store WITHOUT authorizing any
+# OpenSpec change artifacts. Native `sdd-status`/`sdd-continue` resolve
+# `artifactStore: engram` from this file.
+sdd:
+  artifact_store: engram

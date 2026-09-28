@@ -104,6 +104,10 @@ docs/ansible-documentation/
 /docs/CIS_Debian_Linux_12_Benchmark_v*.md
 docs/cis-ubuntu-benchmark/
 
+# Private build input: raw CIS recommendation titles (licensed). The body-free
+# ledger/semantic-review outputs are committed; this matrix is regenerated locally.
+ansible/cis/catalog/disposition-matrix.yml
+
 # --- Secrets ---
 # NEVER commit these
 lab/vagrant/ssh/
