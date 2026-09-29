@@ -1,0 +1,21 @@
+---
+- name: Common manual observation | Inspect target
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_manual_path }}"
+  register: cis_linux_common_manual_stat
+
+- name: Common manual observation | Report manual state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      benchmark: "{{ cis_linux_common_benchmark }}"
+      classification: MANUAL
+      target: "{{ cis_linux_common_manual_path }}"
+      observed:
+        exists: "{{ cis_linux_common_manual_stat.stat.exists | default(false) }}"
+        is_directory: "{{ cis_linux_common_manual_stat.stat.isdir | default(false) }}"
+        owner: "{{ cis_linux_common_manual_stat.stat.pw_name | default('unavailable') }}"
+        group: "{{ cis_linux_common_manual_stat.stat.gr_name | default('unavailable') }}"
+        mode: "{{ cis_linux_common_manual_stat.stat.mode | default('unavailable') }}"
+      changed_target: false

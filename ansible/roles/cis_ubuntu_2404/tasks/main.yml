@@ -2634,3 +2634,345 @@
   ansible.builtin.import_tasks: sections/section_05_access_control/5_1_4_sshd_access/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_1_4_sshd_access | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_4, config_line, manual]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.1.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_partition/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_1_tmp_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_1, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.1.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_partition/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_1_tmp_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_1, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.1.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nodev/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_1_tmp_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_2, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.1.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nodev/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_1_tmp_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_2, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.1.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nosuid/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_1_tmp_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_3, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.1.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nosuid/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_1_tmp_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_3, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.1.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_noexec/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_1_tmp_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_4, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.1.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_noexec/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_1_tmp_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_4, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.2.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_partition/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_2_dev_shm_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_1, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.2.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_partition/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_2_dev_shm_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_1, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.2.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nodev/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_2_dev_shm_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_2, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.2.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nodev/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_2_dev_shm_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_2, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.2.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nosuid/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_2_dev_shm_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_3, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.2.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nosuid/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_2_dev_shm_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_3, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.2.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_noexec/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_2_dev_shm_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_4, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.2.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_noexec/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_2_dev_shm_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_4, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.3.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_partition/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_3_home_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_1, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.3.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_partition/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_3_home_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_1, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.3.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_nodev/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_3_home_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_2, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.3.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_nodev/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_3_home_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_2, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.3.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_nosuid/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_3_home_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_3, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.3.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_nosuid/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_3_home_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_3, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.3.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_noexec/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_3_home_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_4, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.3.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_noexec/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_3_home_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_4, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.4.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_partition/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_4_var_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_1, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.4.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_partition/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_4_var_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_1, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.4.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_nodev/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_4_var_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_2, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.4.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_nodev/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_4_var_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_2, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.4.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_nosuid/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_4_var_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_3, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.4.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_nosuid/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_4_var_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_3, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.4.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_noexec/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_4_var_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_4, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.4.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_noexec/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_4_var_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_4, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.5.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_partition/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_5_var_tmp_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_1, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.5.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_partition/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_5_var_tmp_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_1, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.5.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nodev/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_5_var_tmp_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_2, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.5.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nodev/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_5_var_tmp_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_2, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.5.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nosuid/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_5_var_tmp_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_3, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.5.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nosuid/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_5_var_tmp_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_3, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.5.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_noexec/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_5_var_tmp_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_4, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.5.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_noexec/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_5_var_tmp_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_4, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.6.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_partition/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_6_var_log_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_1, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.6.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_partition/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_6_var_log_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_1, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.6.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_nodev/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_6_var_log_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_2, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.6.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_nodev/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_6_var_log_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_2, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.6.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_nosuid/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_6_var_log_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_3, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.6.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_nosuid/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_6_var_log_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_3, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.6.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_noexec/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_6_var_log_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_4, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.6.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_noexec/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_6_var_log_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_4, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.7.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_partition/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_7_var_log_audit_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_1, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.7.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_partition/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_7_var_log_audit_partition | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_1, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.7.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_nodev/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_7_var_log_audit_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_2, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.7.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_nodev/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_7_var_log_audit_nodev | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_2, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.7.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_nosuid/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_7_var_log_audit_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_3, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.7.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_nosuid/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_7_var_log_audit_nosuid | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_3, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.1.2.7.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_noexec/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_7_var_log_audit_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_4, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.1.2.7.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_noexec/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_7_var_log_audit_noexec | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_4, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_1_motd/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_1_motd | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_1, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_1_motd/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_1_motd | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_1, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_2_issue/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_2_issue | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_2, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_2_issue/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_2_issue | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_2, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_3_issue_net/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_3_issue_net | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_3, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_3_issue_net/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_3_issue_net | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_3, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_4_motd_permissions/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_4_motd_permissions | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_4, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_4_motd_permissions/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_4_motd_permissions | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_4, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.5
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_5_issue_permissions/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_5_issue_permissions | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_5, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.5
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_5_issue_permissions/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_5_issue_permissions | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_5, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.6
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_6_issue_net_permissions/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_6_issue_net_permissions | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_6, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.6
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_6_issue_net_permissions/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_6_issue_net_permissions | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_6, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.7
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_7_gdm_banner/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_7_gdm_banner | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_7, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.7
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_7_gdm_banner/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_7_gdm_banner | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_7, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.8
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_8_gdm_user_list/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_8_gdm_user_list | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_8, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.8
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_8_gdm_user_list/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_8_gdm_user_list | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_8, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.9
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_9_gdm_xdmcp/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_9_gdm_xdmcp | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_9, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.9
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_9_gdm_xdmcp/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_9_gdm_xdmcp | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_9, manual_observation, na]
+
+- name: Audit Ubuntu 2404 CIS 1.7.10
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_10_gdm_xdmcp2/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_10_gdm_xdmcp2 | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_10, manual_observation, na]
+- name: Verify Ubuntu 2404 CIS 1.7.10
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_10_gdm_xdmcp2/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_10_gdm_xdmcp2 | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_10, manual_observation, na]

@@ -76,6 +76,7 @@ def sha256(text: str) -> str:
 # carries a semantic-common review and stays a shared cross-platform control.
 MECHANISM_RULES = [
     ("1.1.1.", "config_line"),
+    ("1.1.2.", "manual_observation"),
     ("1.3.1.1", "package_installed"),
     ("1.3.1.2", "grub_boot_parameter"),
     ("1.3.1.3", "apparmor_enforcing"),
@@ -93,6 +94,7 @@ MECHANISM_RULES = [
     ("1.6.4", "fixed_file_permissions"),
     ("1.6.5", "fixed_file_permissions"),
     ("1.6.6", "fixed_file_permissions"),
+    ("1.7.", "manual_observation"),
     ("2.1.1", "service_disabled"),
     ("2.1.2", "service_disabled"),
     ("2.1.3", "service_disabled"),
