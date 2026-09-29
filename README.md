@@ -7,13 +7,14 @@ states, exclusions, and claim boundaries.
 
 ## Alcance real
 
-- Public Ubuntu entry point:
-  `ansible/playbooks/cis_ubuntu_2404_hardening.yml`.
-- Internal imported implementation:
-  `ansible/playbooks/hardening/cis_ubuntu_2404.yml`.
-- Compatibilidad Ubuntu: `ansible/playbooks/cis_hardening.yml`.
-- Debian: `cis_debian_12_preflight.yml`, `cis_debian_12_audit.yml` y
-  `cis_debian_12_hardening.yml`.
+- Puntos de entrada canónicos Ubuntu:
+  `ansible/playbooks/audit/cis_ubuntu_2404.yml`,
+  `ansible/playbooks/hardening/cis_ubuntu_2404.yml` y
+  `ansible/playbooks/verify/cis_ubuntu_2404.yml`.
+- Puntos de entrada canónicos Debian: `ansible/playbooks/cis_debian_12_preflight.yml`,
+  `ansible/playbooks/audit/cis_debian_12.yml`,
+  `ansible/playbooks/hardening/cis_debian_12.yml` y
+  `ansible/playbooks/verify/cis_debian_12.yml`.
 - Adaptadores: `cis_ubuntu_2404` y `cis_debian_12`.
 - Implementación Ubuntu histórica: `ansible/roles/cis_benchmark/`.
 - Destino del play: grupo de inventario `ubuntu`.
@@ -90,23 +91,23 @@ ejecutan expresamente con `check_mode: false`; revise siempre la salida.
 
 ```bash
 # Validaciones sin cambios
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --syntax-check
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --list-hosts --limit ubuntu24
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --list-tags --limit ubuntu24
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml --syntax-check
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml --list-hosts --limit ubuntu24
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml --list-tags --limit ubuntu24
 
 # Vista previa de una sección
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec1 --check --diff \
   -e cis_ubuntu_2404_remediation_enabled=true
 
 # Aplicación de la sección y segunda aplicación real para idempotencia
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec1 \
   -e cis_ubuntu_2404_remediation_enabled=true
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec1 \
   -e cis_ubuntu_2404_remediation_enabled=true
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec1 --check --diff \
   -e cis_ubuntu_2404_remediation_enabled=true
 ```
@@ -117,9 +118,9 @@ uniforme histórica: por ejemplo, SSH usa `cis_5.1.4`, UFW usa `cis_4_2_6` y
 auditd usa `cis_6_2_3_1`. Antes de ejecutar un control, obtenga el nombre real:
 
 ```bash
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec5 --list-tasks
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags 'cis_5.1.4' --check --diff \
   -e cis_ubuntu_2404_remediation_enabled=true
 ```

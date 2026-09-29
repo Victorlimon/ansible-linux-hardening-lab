@@ -1,4 +1,0 @@
----
-# Compatibility wrapper for the incremental root-level playbook interface.
-- name: Import the canonical Debian 12 verification playbook
-  ansible.builtin.import_playbook: verify/cis_debian_12.yml

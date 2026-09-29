@@ -223,13 +223,13 @@ done
 ansible_cmd ansible --version >/dev/null || fail "ansible-version" "$?"
 ansible_cmd python3 -c 'import ansible.release as r,sys; v=tuple(map(int,r.__version__.split(".")[:2])); sys.exit(v < (2,16))' >/dev/null || fail "ansible-core-minimum" "$?"
 
-capture_ansible "inventory-preflight" ansible-playbook -i inventories/local/hosts.yml playbooks/cis_ubuntu_2404_hardening.yml --limit ubuntu24 --list-hosts
+capture_ansible "inventory-preflight" ansible-playbook -i inventories/local/hosts.yml playbooks/hardening/cis_ubuntu_2404.yml --limit ubuntu24 --list-hosts
 inventory_is_exact_ubuntu "$OUTPUT" || fail "inventory-preflight-exact-host" 65
 
 capture_ansible "initial-ping" ansible ubuntu24 -i inventories/local/hosts.yml --limit ubuntu24 -m ansible.builtin.ping
 require_text "initial ping" '"ping": "pong"'
 
-capture_ansible "public-wrapper-host-scope" ansible-playbook -i inventories/local/hosts.yml playbooks/cis_ubuntu_2404_hardening.yml --limit ubuntu24 --list-hosts
+capture_ansible "public-wrapper-host-scope" ansible-playbook -i inventories/local/hosts.yml playbooks/hardening/cis_ubuntu_2404.yml --limit ubuntu24 --list-hosts
 require_text "public wrapper host scope" "ubuntu24"
 [[ "$OUTPUT" != *"debian12"* ]] || fail "public wrapper scope included Debian."
 
@@ -256,11 +256,11 @@ for route in \
     verification_entry="Gather packages for verification applicability"
   fi
   qualify_task_route "$control" "$tag" audit playbooks/audit/cis_ubuntu_2404.yml "$prefix | $audit_entry"
-  qualify_task_route "$control" "$tag" remediation playbooks/cis_ubuntu_2404_hardening.yml "$prefix | $remediation_entry"
+  qualify_task_route "$control" "$tag" remediation playbooks/hardening/cis_ubuntu_2404.yml "$prefix | $remediation_entry"
   qualify_task_route "$control" "$tag" verification playbooks/verify/cis_ubuntu_2404.yml "$prefix | $verification_entry"
 done
 
-if capture_output ansible_cmd ansible-playbook -i inventories/local/hosts.yml playbooks/cis_ubuntu_2404_hardening.yml --limit ubuntu24 --tags cis_ubuntu24_characterization_bogus_tag --list-tasks; then
+if capture_output ansible_cmd ansible-playbook -i inventories/local/hosts.yml playbooks/hardening/cis_ubuntu_2404.yml --limit ubuntu24 --tags cis_ubuntu24_characterization_bogus_tag --list-tasks; then
   if route_reaches_mode_entry "$OUTPUT" 'this entry must never exist'; then
     fail "bogus-tag-selection" 65
   fi
@@ -293,7 +293,7 @@ qualify_control() {
   valid_tag "$tag" || fail "$control-invalid-tag" 64
   remediation_args=(
     ansible-playbook -i inventories/local/hosts.yml
-    playbooks/cis_ubuntu_2404_hardening.yml --limit ubuntu24 --tags "$tag"
+    playbooks/hardening/cis_ubuntu_2404.yml --limit ubuntu24 --tags "$tag"
     -e cis_ubuntu_2404_remediation_enabled=true
   )
   for gate in "$@"; do

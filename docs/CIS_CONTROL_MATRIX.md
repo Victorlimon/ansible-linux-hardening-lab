@@ -43,7 +43,7 @@ Los tags de control mezclan formatos, por ejemplo `cis_5.1.4`, `cis_4_2_6` y
 `cis_6_2_3_1`. Liste las tareas antes de ejecutar:
 
 ```bash
-ansible-playbook playbooks/cis_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec6 --list-tasks
 ```
 

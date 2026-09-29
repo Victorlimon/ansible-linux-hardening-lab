@@ -1,4 +1,0 @@
----
-# Compatibility wrapper. New automation should use playbooks/audit/cis_debian_12.yml.
-- name: Import the canonical Debian 12 audit playbook
-  ansible.builtin.import_playbook: audit/cis_debian_12.yml

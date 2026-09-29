@@ -8,7 +8,7 @@ evidence boundaries.
 
 ## Required gates
 
-Use the public entry point `ansible/playbooks/cis_debian_12_hardening.yml` and a
+Use the public entry point `ansible/playbooks/hardening/cis_debian_12.yml` and a
 single reviewed Debian 12 x86_64 lab canary. Before remediation:
 
 1. Copy `inventories/production/group_vars/debian_12.yml.example` to the real,
@@ -33,11 +33,11 @@ metadata.
 
 ```bash
 ansible-playbook -i inventories/production/hosts.yml \
-  playbooks/cis_debian_12_hardening.yml --limit debian-canary --list-hosts
+  playbooks/hardening/cis_debian_12.yml --limit debian-canary --list-hosts
 ansible-playbook -i inventories/production/hosts.yml \
-  playbooks/cis_debian_12_hardening.yml --limit debian-canary --list-tags
+  playbooks/hardening/cis_debian_12.yml --limit debian-canary --list-tags
 ansible-playbook -i inventories/production/hosts.yml \
-  playbooks/cis_debian_12_hardening.yml --limit debian-canary \
+  playbooks/hardening/cis_debian_12.yml --limit debian-canary \
   --tags cis_3_3_10 --check --diff \
   -e cis_debian_12_remediation_enabled=true \
   -e cis_debian_12_canary_confirmed=true

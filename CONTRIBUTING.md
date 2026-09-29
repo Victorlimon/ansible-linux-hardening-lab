@@ -196,13 +196,13 @@ Antes de enviar un PR, asegúrate de:
 ### 1. Validación de Sintaxis
 
 ```bash
-ansible-playbook playbooks/cis_hardening.yml --syntax-check
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml --syntax-check
 ```
 
 ### 2. Ansible Lint
 
 ```bash
-ansible-lint playbooks/cis_hardening.yml
+ansible-lint playbooks/hardening/cis_ubuntu_2404.yml
 # Debe pasar sin errores críticos
 ```
 
@@ -210,11 +210,11 @@ ansible-lint playbooks/cis_hardening.yml
 
 ```bash
 # Vista previa
-ansible-playbook -i inventories/local/hosts.yml playbooks/cis_hardening.yml --limit ubuntu24 --check --diff --tags cis_X.Y
+ansible-playbook -i inventories/local/hosts.yml playbooks/hardening/cis_ubuntu_2404.yml --limit ubuntu24 --check --diff --tags cis_X.Y
 
 # Primera aplicación y segunda aplicación real
-ansible-playbook -i inventories/local/hosts.yml playbooks/cis_hardening.yml --limit ubuntu24 --tags cis_X.Y
-ansible-playbook -i inventories/local/hosts.yml playbooks/cis_hardening.yml --limit ubuntu24 --tags cis_X.Y
+ansible-playbook -i inventories/local/hosts.yml playbooks/hardening/cis_ubuntu_2404.yml --limit ubuntu24 --tags cis_X.Y
+ansible-playbook -i inventories/local/hosts.yml playbooks/hardening/cis_ubuntu_2404.yml --limit ubuntu24 --tags cis_X.Y
 ```
 
 ### 4. Prueba en Laboratorio
@@ -224,7 +224,7 @@ ansible-playbook -i inventories/local/hosts.yml playbooks/cis_hardening.yml --li
 make up
 
 # Ejecutar contra VM de prueba
-ansible-playbook -i inventories/local/hosts.yml playbooks/cis_hardening.yml --limit ubuntu24 --tags cis_X.Y
+ansible-playbook -i inventories/local/hosts.yml playbooks/hardening/cis_ubuntu_2404.yml --limit ubuntu24 --tags cis_X.Y
 
 # Verificar resultado manual
 vagrant ssh ubuntu24 -c "sshd -T | grep permitrootlogin"

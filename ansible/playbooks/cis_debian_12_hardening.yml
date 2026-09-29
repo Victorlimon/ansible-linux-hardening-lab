@@ -1,5 +1,0 @@
----
-# Compatibility wrapper. New automation should use
-# playbooks/hardening/cis_debian_12.yml.
-- name: Import the canonical Debian 12 hardening playbook
-  ansible.builtin.import_playbook: hardening/cis_debian_12.yml

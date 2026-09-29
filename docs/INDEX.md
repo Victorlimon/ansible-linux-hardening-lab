@@ -35,8 +35,9 @@ in another page.
 
 Para validar que la documentación sigue correspondiendo al código, revise:
 
-- `ansible/playbooks/cis_ubuntu_2404_hardening.yml` y los entry points Debian
-  para los patrones de hosts; `cis_hardening.yml` es compatibilidad Ubuntu.
+- `ansible/playbooks/audit/cis_ubuntu_2404.yml`, `ansible/playbooks/hardening/cis_ubuntu_2404.yml`
+  y `ansible/playbooks/verify/cis_ubuntu_2404.yml`, junto con los entry points
+  Debian, para los patrones de hosts.
 - `ansible/roles/cis_ubuntu_2404/tasks/main.yml` para la orquestación canónica
   Ubuntu y `ansible/roles/cis_benchmark/tasks/_section_*.yml` para las entradas
   internas de compatibilidad.

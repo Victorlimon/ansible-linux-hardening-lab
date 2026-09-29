@@ -2,7 +2,7 @@
 
 This current operator guide covers only Ubuntu 24.04 x86_64 released for the
 qualified subset defined by [SUPPORT.md](SUPPORT.md). Use the public entry point
-`ansible/playbooks/cis_ubuntu_2404_hardening.yml`; it imports the internal
+`ansible/playbooks/hardening/cis_ubuntu_2404.yml`; it imports the internal
 implementation `ansible/playbooks/hardening/cis_ubuntu_2404.yml`. This guide
 does not provide automatic rollback.
 
@@ -101,7 +101,7 @@ en `known_hosts` y no copie `ansible_ssh_common_args` del inventario local.
 ```bash
 ansible-inventory -i inventories/production/hosts.yml --graph
 ansible-playbook -i inventories/production/hosts.yml \
-  playbooks/cis_ubuntu_2404_hardening.yml \
+  playbooks/hardening/cis_ubuntu_2404.yml \
   --limit servidor-canario --tags cis_sec1 --list-hosts
 ```
 
@@ -255,8 +255,8 @@ backup y ventana independiente.
 Descubra tags y tareas; no presuponga la notación del tag de control:
 
 ```bash
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml --limit ubuntu24 --list-tags
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml --limit ubuntu24 --list-tags
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec1 --list-tasks
 ```
 
@@ -264,22 +264,22 @@ Para cada sección:
 
 ```bash
 # 1. Vista previa
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec1 --check --diff \
   -e cis_ubuntu_2404_remediation_enabled=true
 
 # 2. Aplicación controlada
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec1 \
   -e cis_ubuntu_2404_remediation_enabled=true
 
 # 3. Segunda aplicación real para idempotencia
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec1 \
   -e cis_ubuntu_2404_remediation_enabled=true
 
 # 4. Comprobación final sin cambios
-ansible-playbook playbooks/cis_ubuntu_2404_hardening.yml \
+ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml \
   --limit ubuntu24 --tags cis_sec1 --check --diff \
   -e cis_ubuntu_2404_remediation_enabled=true
 ```

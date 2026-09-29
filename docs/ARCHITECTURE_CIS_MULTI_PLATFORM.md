@@ -98,11 +98,13 @@ La política de plataforma reside en `group_vars/ubuntu_2404.yml` o
 
 ## Entry points
 
-- `cis_ubuntu_2404_hardening.yml`: entry point canónico Ubuntu.
-- `cis_hardening.yml`: shim compatible que importa el playbook canónico.
+- `audit/cis_ubuntu_2404.yml`, `hardening/cis_ubuntu_2404.yml` y
+  `verify/cis_ubuntu_2404.yml`: entry points canónicos Ubuntu (solo lectura,
+  remediación y verificación).
 - `cis_debian_12_preflight.yml`: validación de plataforma Debian.
-- `cis_debian_12_audit.yml`: controles Debian de solo lectura.
-- `cis_debian_12_hardening.yml`: canarios Debian con gates explícitos.
+- `audit/cis_debian_12.yml`: controles Debian de solo lectura.
+- `hardening/cis_debian_12.yml`: canarios Debian con gates explícitos.
+- `verify/cis_debian_12.yml`: verificación Debian.
 
 La remediación Ubuntu requiere `cis_ubuntu_2404_remediation_enabled=true` y
 tags explícitos. Este master gate es adicional y nunca reemplaza los gates de
