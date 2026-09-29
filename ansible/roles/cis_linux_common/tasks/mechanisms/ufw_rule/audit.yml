@@ -11,5 +11,5 @@
     msg:
       control: "{{ cis_linux_common_control_id }}"
       platform: "{{ cis_linux_common_platform }}"
-      classification: "{{ 'PASS' if cis_linux_common_ufw_rule_status.stdout is search(cis_linux_common_ufw_rule_match) else 'FAIL' }}"
+      classification: "{{ 'PASS' if (cis_linux_common_ufw_rule_status.stdout | default('')) is search(cis_linux_common_ufw_rule_match) else 'FAIL' }}"
       changed_target: false

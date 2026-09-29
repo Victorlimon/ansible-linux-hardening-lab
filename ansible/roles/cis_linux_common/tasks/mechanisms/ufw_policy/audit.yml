@@ -13,5 +13,5 @@
       platform: "{{ cis_linux_common_platform }}"
       classification: >-
         {{ 'PASS' if cis_linux_common_ufw_policy_status.rc == 0 and
-           (cis_linux_common_ufw_policy_status.stdout is search(cis_linux_common_ufw_policy_match)) else 'FAIL' }}
+           ((cis_linux_common_ufw_policy_status.stdout | default('')) is search(cis_linux_common_ufw_policy_match)) else 'FAIL' }}
       changed_target: false
