@@ -1,11 +1,11 @@
 ---
-- name: Kernel module rds | Add install rule
+- name: CIS 3.2.3 | Remediation | Add rds install rule
   ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
   vars:
-    cis_linux_common_config_line: "install rds /bin/true"
-    cis_linux_common_config_line_regexp: "^install rds /bin/true$"
-- name: Kernel module rds | Add blacklist rule
+    cis_linux_common_config_line: "install {{ cis_linux_common_kernel_module }} /bin/true"
+    cis_linux_common_config_line_regexp: "^install {{ cis_linux_common_kernel_module }} /bin/true$"
+- name: CIS 3.2.3 | Remediation | Add rds blacklist rule
   ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
   vars:
-    cis_linux_common_config_line: "blacklist rds"
-    cis_linux_common_config_line_regexp: "^blacklist rds$"
+    cis_linux_common_config_line: "blacklist {{ cis_linux_common_kernel_module }}"
+    cis_linux_common_config_line_regexp: "^blacklist {{ cis_linux_common_kernel_module }}$"

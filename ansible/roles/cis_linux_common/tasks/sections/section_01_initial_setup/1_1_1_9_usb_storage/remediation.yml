@@ -1,11 +1,11 @@
 ---
-- name: Kernel module usb-storage | Add install rule
+- name: CIS 1.1.1.9 | Remediation | Add usb-storage install rule
   ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
   vars:
-    cis_linux_common_config_line: "install usb-storage /bin/true"
-    cis_linux_common_config_line_regexp: "^install usb-storage /bin/true$"
-- name: Kernel module usb-storage | Add blacklist rule
+    cis_linux_common_config_line: "install {{ cis_linux_common_kernel_module }} /bin/true"
+    cis_linux_common_config_line_regexp: "^install {{ cis_linux_common_kernel_module }} /bin/true$"
+- name: CIS 1.1.1.9 | Remediation | Add usb-storage blacklist rule
   ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
   vars:
-    cis_linux_common_config_line: "blacklist usb-storage"
-    cis_linux_common_config_line_regexp: "^blacklist usb-storage$"
+    cis_linux_common_config_line: "blacklist {{ cis_linux_common_kernel_module }}"
+    cis_linux_common_config_line_regexp: "^blacklist {{ cis_linux_common_kernel_module }}$"

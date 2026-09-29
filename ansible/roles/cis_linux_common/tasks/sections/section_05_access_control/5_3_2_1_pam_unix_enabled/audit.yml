@@ -1,3 +1,6 @@
 ---
 - name: Config line audit | Delegate to config_line
   ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+  vars:
+    cis_linux_common_config_line: 'auth [success=1 default=ignore] pam_unix.so nullok'
+    cis_linux_common_config_line_regexp: '^auth\s+\[success=1 default=ignore\]\s+pam_unix\.so'

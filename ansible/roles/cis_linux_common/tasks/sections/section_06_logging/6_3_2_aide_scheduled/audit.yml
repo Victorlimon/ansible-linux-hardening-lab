@@ -1,3 +1,6 @@
 ---
 - name: Config line audit | Delegate to config_line
   ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+  vars:
+    cis_linux_common_config_line: '0 5 * * * root /usr/bin/aide.wrapper --check'
+    cis_linux_common_config_line_regexp: 'aide\.wrapper'

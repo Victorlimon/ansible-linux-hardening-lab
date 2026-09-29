@@ -1,3 +1,6 @@
 ---
 - name: Config line audit | Delegate to config_line
   ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+  vars:
+    cis_linux_common_config_line: 'PASS_MAX_DAYS 365'
+    cis_linux_common_config_line_regexp: '^PASS_MAX_DAYS\s+365'

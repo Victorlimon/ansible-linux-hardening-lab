@@ -1,3 +1,6 @@
 ---
 - name: Config line verification | Delegate to config_line
   ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
+  vars:
+    cis_linux_common_config_line: 'deny = 5'
+    cis_linux_common_config_line_regexp: '^deny\s*=\s*5'

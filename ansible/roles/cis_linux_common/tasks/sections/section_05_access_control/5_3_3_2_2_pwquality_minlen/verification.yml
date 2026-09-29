@@ -1,3 +1,6 @@
 ---
 - name: Config line verification | Delegate to config_line
   ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
+  vars:
+    cis_linux_common_config_line: 'minlen = 14'
+    cis_linux_common_config_line_regexp: '^minlen\s*=\s*14'

@@ -1,3 +1,6 @@
 ---
 - name: Config line audit | Delegate to config_line
   ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+  vars:
+    cis_linux_common_config_line: 'password requisite pam_pwquality.so retry=3'
+    cis_linux_common_config_line_regexp: '^password\s+requisite\s+pam_pwquality\.so'
