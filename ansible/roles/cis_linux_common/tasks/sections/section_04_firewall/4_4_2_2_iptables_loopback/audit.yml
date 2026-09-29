@@ -1,0 +1,2 @@
+---
+- ansible.builtin.import_tasks: mechanisms/manual_observation/audit.yml

@@ -1,0 +1,6 @@
+---
+- name: CIS 6.2.3.6 | Audit | Run common manual_observation mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_06_logging/6_2_3_6_privileged_commands/audit.yml
+  vars: {cis_linux_common_control_id: '6.2.3.6', cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_manual_path: /etc/audit/rules.d/audit.rules}
