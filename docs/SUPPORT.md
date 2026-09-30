@@ -8,7 +8,7 @@ this page, use this page and treat the conflict as a documentation defect.
 
 | Platform | Architecture | State | Qualified scope | Evidence and version | Tested commit | Access/test date | Verification dimensions |
 |---|---|---|---|---|---|---|---|
-| Ubuntu 24.04 Server | `x86_64` | **Released for the qualified subset** | Controls 2.4.1.2, 3.1.1 (`MANUAL` observation), 3.3.10, and 7.1.1 only, with their cumulative gates; see the [control matrix](CIS_CONTROL_MATRIX.md) | Project convergence records; official CIS catalog lists Ubuntu 24.04 LTS Benchmark 2.0.0, but no authorized recommendation body was used for current exact metadata | `dc2da95bf67b42925e2b4737c39c75c3c9a99acf` | 2026-09-04 | Exact OS/architecture preflight, syntax and task/tag discovery, bounded check-mode preview, real convergence, second-run idempotency, assertions, access, services, and reboot-sensitive checks where recorded |
+| Ubuntu 24.04 Server | `x86_64` | **Released for the qualified subset** | Controls 2.4.1.2, 3.1.1 (`MANUAL` observation), 3.3.10, and 7.1.1 only, with their cumulative gates; see [USAGE.md](USAGE.md) | Project convergence records; official CIS catalog lists Ubuntu 24.04 LTS Benchmark 2.0.0, but no authorized recommendation body was used for current exact metadata | `dc2da95bf67b42925e2b4737c39c75c3c9a99acf` | 2026-09-04 | Exact OS/architecture preflight, syntax and task/tag discovery, bounded check-mode preview, real convergence, second-run idempotency, assertions, access, services, and reboot-sensitive checks where recorded |
 | Debian 12 Server | `x86_64` | **Canary** | Explicitly selected controls only; remediation requires the Debian global and canary gates | Private, non-redistributable Debian 12 Benchmark 1.1.0 evidence for selected controls; official CIS catalog currently lists 2.0.0 | `dc2da95bf67b42925e2b4737c39c75c3c9a99acf` | 2026-09-04 | Exact OS/architecture preflight, audit/remediation/verification separation, negative gates, check mode, convergence, second-run idempotency, assertions, and connectivity |
 | Docker hosts, daemon/runtime, images, and running containers | — | **Unsupported** | No project execution path is admitted | Responsibility boundaries researched only; no pinned Engine/backend test matrix | — | 2026-09-04 | None admitted |
 | Ubuntu 22.04 | — | **Unsupported** | No project execution path is admitted | Official benchmark availability does not establish project support | — | 2026-09-04 | None admitted |
@@ -105,12 +105,13 @@ Domain ownership is intentionally narrow:
 
 - this page owns support states, taxonomy, evidence semantics, admission, and
   claim boundaries;
-- [PRODUCTION_UBUNTU24.md](PRODUCTION_UBUNTU24.md) owns execution and recovery;
+- [ROLLOUT.md](ROLLOUT.md) owns execution and recovery;
 - [SECURITY.md](../SECURITY.md) owns vulnerability reporting and secret response;
 - [CHANGELOG.md](../CHANGELOG.md), execution logs, and session records own dated
   history only;
 - migration plans own future intent only;
-- control matrices are reference inventories and do not establish support.
+- implementation guides ([USAGE.md](USAGE.md), [ROLLOUT.md](ROLLOUT.md)) are
+  reference material and do not establish support.
 
 Public indexes should link here for support questions rather than restating a
 competing support matrix.
