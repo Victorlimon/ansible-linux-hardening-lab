@@ -1,0 +1,84 @@
+---
+# Delta | AppArmor enforcing posture — Wazuh 35538/35539 (Ubuntu, CIS
+# 1.3.1.3/1.3.1.4). Rules require: >0 loaded, >0 enforcing, 0 kill-mode,
+# 0 unconfined-mode, 0 complain-mode, 0 unconfined processes.
+#
+# Ubuntu 24.04's apparmor 4 packaging leaves kernel-created transition stubs
+# ("busybox (unconfined)", "nautilus (unconfined)") that have NO backing file
+# under /etc/apparmor.d, no sysfs mode object, and reject aa-enforce /
+# aa-remove-unknown (verified on the lab node). They are recorded here as a
+# documented mismatch (MAPPING.md); only FILE-BACKED profiles are enforced,
+# which also keeps the task idempotent (no futile aa-enforce churn per run).
+
+- name: Delta apparmor | Read current profile modes
+  ansible.builtin.command: aa-status --json
+  register: wazuh_delta_apparmor_status
+  changed_when: false
+  check_mode: false
+
+- name: Delta apparmor | Resolve profiles not in enforce mode
+  ansible.builtin.set_fact:
+    wazuh_delta_apparmor_not_enforcing: >-
+      {{ (wazuh_delta_apparmor_status.stdout | from_json).profiles
+         | dict2items
+         | rejectattr('value', 'equalto', 'enforce')
+         | map(attribute='key') | list }}
+
+- name: Delta apparmor | Locate the backing file of each non-enforcing profile
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      n='{{ item }}'
+      if [ -e "/etc/apparmor.d/$n" ] || [ -e "/etc/apparmor.d/${n//\//.}" ]; then
+        echo "FILEBACKED"
+      else
+        echo "STUB"
+      fi
+  register: wazuh_delta_aa_classified
+  changed_when: false
+  loop: "{{ wazuh_delta_apparmor_not_enforcing }}"
+
+- name: Delta apparmor | Enforce file-backed profiles outside enforce mode
+  ansible.builtin.command: "aa-enforce {{ item.item }}"
+  changed_when: true
+  loop: "{{ wazuh_delta_aa_classified.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stdout == 'FILEBACKED'
+
+- name: Delta apparmor | Re-read profile modes after enforcement
+  ansible.builtin.command: aa-status --json
+  register: wazuh_delta_apparmor_after
+  changed_when: false
+  check_mode: false
+
+- name: Delta apparmor | Assert the file-backed profile set is fully enforcing
+  # Kernel transition stubs (unbacked profiles) are accepted — apparmor 4 on
+  # Ubuntu 24.04 refuses to enforce or remove them from userspace, so Wazuh
+  # 35538/35539 stay failed because of them. Documented mismatch: MAPPING.md.
+  ansible.builtin.assert:
+    that:
+      - >-
+        (wazuh_delta_apparmor_after.stdout | from_json).profiles
+        | dict2items
+        | rejectattr('value', 'equalto', 'enforce')
+        | map(attribute='key')
+        | difference(wazuh_delta_apparmor_not_enforcing
+                     | zip(wazuh_delta_aa_classified.results | default([]))
+                     | selectattr('1.stdout', 'equalto', 'STUB')
+                     | map(attribute='0') | list)
+        | list | length == 0
+      - >-
+        (wazuh_delta_apparmor_after.stdout | from_json).profiles | length > 0
+    fail_msg: >-
+      File-backed profiles still outside enforce mode after aa-enforce:
+      {{ (wazuh_delta_apparmor_after.stdout | from_json).profiles
+         | dict2items | rejectattr('value', 'equalto', 'enforce')
+         | map(attribute='key') | list }}
+    success_msg: >-
+      All file-backed AppArmor profiles enforce.
+      Accepted kernel stubs:
+      {{ wazuh_delta_apparmor_not_enforcing
+         | zip(wazuh_delta_aa_classified.results | default([]))
+         | selectattr('1.stdout', 'equalto', 'STUB')
+         | map(attribute='0') | list }}

@@ -1,0 +1,47 @@
+---
+# Platform data for Debian 12 against Wazuh SCA policy cis_debian12
+# ("Center for Internet Security Debian Family Linux Benchmark v1.0.0").
+#
+# Wazuh cis_debian12 module rules require:
+#   c:modprobe -n -v <mod> -> r:install /bin/true
+# so the install directive target is /bin/true (matches CIS Debian v1.1.0 and
+# the ansible/ repo mechanism kernel_module_disabled).
+wazuh_delta_platform_supported_controls:
+  - kernel_modules
+  - ssh_forwarding
+  - single_user_auth
+  - legacy_clients
+  - rsyslog
+  - logrotate
+
+# /bin/true on Debian; the Ubuntu policy demands /bin/false. See MAPPING.md.
+wazuh_delta_kernel_module_install_target: /bin/true
+
+# Literal module names exactly as the Wazuh policy queries them. Files are
+# force-created even when the .ko does not exist on the kernel (the Wazuh v1.0.0
+# checks fail unless `modprobe -n -v <mod>` reports the install directive).
+wazuh_delta_kernel_modules:
+  - cramfs        # Wazuh 33000 (CIS 1.1.1.1)
+  - freevxfs      # Wazuh 33001 (CIS 1.1.1.2)
+  - jffs2         # Wazuh 33002 (CIS 1.1.1.3)
+  - hfs           # Wazuh 33003 (CIS 1.1.1.4)
+  - hfsplus       # Wazuh 33004 (CIS 1.1.1.5)
+  - squashfs      # Wazuh 33005 (CIS 1.1.1.6)
+  - udf           # Wazuh 33006 (CIS 1.1.1.7)
+  - usb-storage   # Wazuh 33024 (CIS 1.1.23)
+  - dccp          # Wazuh 33078 (CIS 3.5.1)
+  - sctp          # Wazuh 33079 (CIS 3.5.2)
+  - rds           # Wazuh 33080 (CIS 3.5.3)
+  - tipc          # Wazuh 33081 (CIS 3.5.4)
+
+# CIS Debian 12 requires journald to forward to rsyslog (Wazuh 33125).
+wazuh_delta_journald_forward_to_syslog: "yes"
+
+# Real telnet/ftp binaries on Debian come from inetutils; remove them all
+# (the Wazuh Debian telnet rule only inspects the `telnet` package, but the
+# inetutils binary is the actual gap the user flagged).
+wazuh_delta_legacy_client_packages:
+  - telnet
+  - inetutils-telnet
+  - ftp
+  - inetutils-ftp

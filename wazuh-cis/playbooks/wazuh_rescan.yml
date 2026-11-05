@@ -1,0 +1,30 @@
+---
+# Trigger an immediate Wazuh SCA rescan: the agent runs its first scan at
+# startup, so restarting wazuh-agent forces fresh policy results without
+# waiting for the 12h interval. Read-only otherwise.
+- name: Restart wazuh-agent to force a fresh SCA scan
+  hosts: wazuh_delta_targets
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Rescan | Restart the wazuh-agent service
+      ansible.builtin.service:
+        name: wazuh-agent
+        state: restarted
+
+    - name: Rescan | Wait for the agent to report active
+      ansible.builtin.command: systemctl is-active wazuh-agent
+      register: wazuh_delta_agent_state
+      changed_when: false
+      until: wazuh_delta_agent_state.stdout == 'active'
+      retries: 12
+      delay: 5
+
+    - name: Rescan | Assert the agent is active
+      ansible.builtin.assert:
+        that:
+          - wazuh_delta_agent_state.stdout == 'active'
+        fail_msg: "wazuh-agent did not come back active on {{ inventory_hostname }}"
+        success_msg: "wazuh-agent active on {{ inventory_hostname }} — SCA rescan in progress"

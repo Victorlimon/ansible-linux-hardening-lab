@@ -1,0 +1,68 @@
+---
+# Delta | SSH forwarding — Wazuh 33142 (X11Forwarding no) and 33157
+# (AllowTcpForwarding no) on Debian; hardened identically on Ubuntu (already
+# passing there, kept consistent for production posture).
+# sshd applies FIRST-MATCH semantics, so both the drop-in and the main config
+# line are pinned to `no`; whichever is parsed first yields `no` either way.
+
+- name: Delta ssh | Ensure sshd_config.d directory exists
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Delta ssh | Write the delta drop-in with forwarding disabled
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-wazuh-cis-delta.conf
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      # Managed by wazuh-cis/roles/wazuh_sca_delta. Do not edit manually.
+      # Closes Wazuh SCA 33142/33157 (Debian): X11 and TCP forwarding off.
+      X11Forwarding no
+      AllowTcpForwarding no
+  notify:
+    - Delta | Validate sshd configuration
+    - Delta | Restart sshd
+
+- name: Delta ssh | Pin X11Forwarding in the main sshd_config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^\s*#?\s*X11Forwarding\b'
+    line: "X11Forwarding no"
+  notify:
+    - Delta | Validate sshd configuration
+    - Delta | Restart sshd
+
+- name: Delta ssh | Pin AllowTcpForwarding in the main sshd_config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^\s*#?\s*AllowTcpForwarding\b'
+    line: "AllowTcpForwarding no"
+  notify:
+    - Delta | Validate sshd configuration
+    - Delta | Restart sshd
+
+- name: Delta ssh | Flush restart handler before validating the live daemon
+  ansible.builtin.meta: flush_handlers
+
+- name: Delta ssh | Read effective sshd configuration
+  ansible.builtin.shell:
+    cmd: sshd -T | grep -Ei '^(x11forwarding|allowtcpforwarding)'
+  register: wazuh_delta_sshd_effective
+  changed_when: false
+  check_mode: false
+
+- name: Delta ssh | Assert forwarding is disabled in the running daemon
+  ansible.builtin.assert:
+    that:
+      - wazuh_delta_sshd_effective.stdout is search('(?i)^x11forwarding no', multiline=True)
+      - wazuh_delta_sshd_effective.stdout is search('(?i)^allowtcpforwarding no', multiline=True)
+    fail_msg: >-
+      sshd -T still reports forwarding enabled: {{ wazuh_delta_sshd_effective.stdout
+      | regex_replace('\n', ' | ') }}. A conflicting drop-in or earlier directive
+      is winning first-match; resolve it before trusting the SCA result.
+    success_msg: "X11Forwarding no and AllowTcpForwarding no are effective"

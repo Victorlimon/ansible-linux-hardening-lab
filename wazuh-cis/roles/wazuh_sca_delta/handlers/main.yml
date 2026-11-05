@@ -1,0 +1,24 @@
+---
+# Handlers run in definition order. sshd syntax validation therefore executes
+# before the restart: a malformed drop-in fails the play while the running
+# daemon (and the open SSH session) is left untouched — no lockout path.
+- name: Delta | Validate sshd configuration
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+
+- name: Delta | Restart sshd
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+
+- name: Delta | Restart rsyslog
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+
+# journald holds its own runtime data; restarting the socket-backed service is
+# non-disruptive to SSH sessions and applies journald.conf changes immediately.
+- name: Delta | Restart journald
+  ansible.builtin.systemd:
+    name: systemd-journald
+    state: restarted

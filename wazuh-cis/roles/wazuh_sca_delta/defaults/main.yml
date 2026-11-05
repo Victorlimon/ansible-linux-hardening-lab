@@ -1,0 +1,32 @@
+---
+# wazuh-cis delta role — remediation gates.
+# Repo convention (ansible/): every remediation gate defaults to false and
+# must be enabled explicitly by the invoking playbook. No gate is true here.
+
+# Platform selector. Must be one of: debian_12 | ubuntu_2404.
+# Drives vars/<platform>.yml (module lists, install targets, supported set).
+wazuh_delta_platform: ""
+
+# --- Gate per delta control area -------------------------------------------
+wazuh_delta_kernel_modules_enforce_all_enabled: false
+wazuh_delta_ssh_forwarding_disabled_enabled: false
+wazuh_delta_single_user_auth_enabled: false
+wazuh_delta_legacy_clients_removed_enabled: false
+wazuh_delta_rsyslog_enabled: false
+wazuh_delta_journald_rotation_enabled: false
+wazuh_delta_logrotate_permissions_enabled: false
+wazuh_delta_apparmor_enforce_all_enabled: false
+
+# --- Inputs ---------------------------------------------------------------
+# crypt(3) password hash ($6$...) written as root's shadow entry so that
+# single-user mode (sulogin) requires authentication. In production this MUST
+# come from ansible-vault / a secret store; there is no safe default.
+wazuh_delta_root_password_hash: ""
+
+# Fallbacks used when vars/<platform>.yml is missing (deliberately inert).
+wazuh_delta_kernel_module_install_target: /bin/true
+wazuh_delta_kernel_modules: []
+wazuh_delta_platform_supported_controls: []
+wazuh_delta_legacy_client_packages: []
+wazuh_delta_journald_forward_to_syslog: "yes"
+wazuh_delta_journald_rotation_settings: []

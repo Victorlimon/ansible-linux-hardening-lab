@@ -1,0 +1,77 @@
+---
+# Platform data for Ubuntu 24.04 against Wazuh SCA policy cis_ubuntu24-04
+# ("CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0").
+#
+# Wazuh cis_ubuntu24-04 module rules require:
+#   c:modprobe -n -v <mod> -> r:^install /bin/false
+# so the install directive target is /bin/false. NOTE: the ansible/ repo
+# (CIS Ubuntu v1.1.0) writes /bin/true for the same files — the delta must be
+# applied AFTER the repo role or the repo re-run will regress these checks.
+# See wazuh-cis/MAPPING.md and docs/PRODUCCION.md.
+wazuh_delta_platform_supported_controls:
+  - kernel_modules
+  - ssh_forwarding
+  - legacy_clients
+  - rsyslog
+  - journald_rotation
+  - apparmor_enforce_all
+
+# /bin/false on Ubuntu (policy regex ^install /bin/false); Debian uses /bin/true.
+wazuh_delta_kernel_module_install_target: /bin/false
+
+# Literal module names exactly as the Wazuh policy queries them, force-created
+# even where the .ko is absent. Wazuh 35505 literally probes "overlayfs"
+# (the real module is "overlay"), so the policy's literal spelling is used.
+wazuh_delta_kernel_modules:
+  - cramfs           # Wazuh 35500 (CIS 1.1.1.1)
+  - freevxfs         # Wazuh 35501 (CIS 1.1.1.2)
+  - hfs              # Wazuh 35502 (CIS 1.1.1.3)
+  - hfsplus          # Wazuh 35503 (CIS 1.1.1.4)
+  - jffs2            # Wazuh 35504 (CIS 1.1.1.5)
+  - overlayfs        # Wazuh 35505 (CIS 1.1.1.6)
+  - squashfs         # Wazuh 35506 (CIS 1.1.1.7)  (snapd present: no snaps
+                     # configured on these nodes; see PREPRODUCCION caveat)
+  - udf              # Wazuh 35507 (CIS 1.1.1.8)
+  - usb-storage      # Wazuh 35508 (CIS 1.1.1.9)
+  - afs              # Wazuh 35509 (CIS 1.1.1.10, compound check)
+  - ceph             # Wazuh 35509
+  - cifs             # Wazuh 35509
+  - exfat            # Wazuh 35509
+  - ext              # Wazuh 35509
+  - fat              # Wazuh 35509  (no vfat/EFI mounts on these nodes)
+  - fscache          # Wazuh 35509
+  - fuse             # Wazuh 35509
+  - gfs2             # Wazuh 35509
+  - nfs_common       # Wazuh 35509
+  - nfsd             # Wazuh 35509
+  - smbfs_common     # Wazuh 35509
+  - dccp             # Wazuh 35604 (CIS 3.2.1)
+  - tipc             # Wazuh 35605 (CIS 3.2.2)
+  - rds              # Wazuh 35606 (CIS 3.2.3)
+  - sctp             # Wazuh 35607 (CIS 3.2.4)
+
+# Wazuh 35713 requires ForwardToSyslog to be NOT set to yes on Ubuntu;
+# rsyslog is enabled separately (35717) and the "journald to rsyslog" check
+# (35718) is satisfied any-of by journald+rsyslog being loaded/active.
+wazuh_delta_journald_forward_to_syslog: "no"
+
+# Wazuh 35708 (CIS 6.1.1.3): journald rotation keys as PLAIN INTEGERS
+# (regex ^SystemMaxUse\s*=\s*\d+ etc.) in /etc/systemd/journald.conf.
+wazuh_delta_journald_rotation_settings:
+  - name: SystemMaxUse
+    value: 536870912     # 512 MiB
+  - name: SystemKeepFree
+    value: 1073741824    # 1 GiB
+  - name: RuntimeMaxUse
+    value: 134217728     # 128 MiB
+  - name: RuntimeKeepFree
+    value: 268435456     # 256 MiB
+  - name: MaxFileSec
+    value: 86400         # 1 day (seconds)
+
+wazuh_delta_legacy_client_packages:
+  - telnet
+  - inetutils-telnet
+  - ftp
+  - tnftp
+  - inetutils-ftp

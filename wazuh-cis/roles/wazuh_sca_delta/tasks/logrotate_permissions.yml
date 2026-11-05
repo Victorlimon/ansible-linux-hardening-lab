@@ -1,0 +1,25 @@
+---
+# Delta | logrotate permissions — Wazuh 33128 (Debian, CIS 4.4):
+# `f:/etc/logrotate.conf -> r:create 0640`. The stock file carries a bare
+# `create` directive, which never matches the policy regex.
+
+- name: Delta logrotate | Pin the create directive to 0640
+  ansible.builtin.lineinfile:
+    path: /etc/logrotate.conf
+    regexp: '^\s*create\b.*$'
+    line: "create 0640"
+    create: false
+
+- name: Delta logrotate | Verify the directive matches the policy regex
+  ansible.builtin.command: grep -E '^create 0640' /etc/logrotate.conf
+  register: wazuh_delta_logrotate_grep
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Delta logrotate | Assert create 0640 is present
+  ansible.builtin.assert:
+    that:
+      - wazuh_delta_logrotate_grep.rc == 0
+    fail_msg: "/etc/logrotate.conf does not contain the exact 'create 0640' line"
+    success_msg: "logrotate create mode is 0640 (Wazuh 33128)"

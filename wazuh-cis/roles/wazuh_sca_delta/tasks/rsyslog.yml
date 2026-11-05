@@ -1,0 +1,67 @@
+---
+# Delta | rsyslog — Wazuh 33122/33123 (Debian: install + enable) and 35717
+# (Ubuntu: enabled + active; the unit ships masked, so unmask first) plus the
+# $FileCreateMode rule 35719/33124. CIS Debian additionally wants journald to
+# forward to rsyslog (33125 ForwardToSyslog=yes); the Ubuntu policy is the
+# opposite (35713 forbids ForwardToSyslog=yes) and relies on journald's own
+# rotation — hence the per-platform wazuh_delta_journald_forward_to_syslog.
+
+- name: Delta rsyslog | Install rsyslog
+  ansible.builtin.apt:
+    name: rsyslog
+    state: present
+
+- name: Delta rsyslog | Unmask, enable and start rsyslog
+  ansible.builtin.systemd:
+    name: rsyslog
+    masked: false
+    enabled: true
+    state: started
+  notify: Delta | Restart rsyslog
+
+- name: Delta rsyslog | Pin $FileCreateMode 0640 in /etc/rsyslog.conf
+  ansible.builtin.lineinfile:
+    path: /etc/rsyslog.conf
+    regexp: '^\s*\$FileCreateMode\b'
+    line: "$FileCreateMode 0640"
+    create: false
+  notify: Delta | Restart rsyslog
+
+- name: Delta rsyslog | Drop in a file-creation-mode fragment for rsyslog.d
+  # Wazuh 35719 evaluates d:/etc/rsyslog.d *.conf for $FileCreateMode; the
+  # fragment satisfies that path without rewriting distro-owned files.
+  ansible.builtin.copy:
+    dest: /etc/rsyslog.d/99-wazuh-cis-delta.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by wazuh-cis/roles/wazuh_sca_delta. Do not edit manually.
+      $FileCreateMode 0640
+  notify: Delta | Restart rsyslog
+
+- name: Delta rsyslog | Pin journald forwarding to the platform-expected value
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/journald.conf
+    regexp: '^\s*#?\s*ForwardToSyslog\b'
+    line: "ForwardToSyslog={{ wazuh_delta_journald_forward_to_syslog }}"
+    create: false
+  notify: Delta | Restart journald
+
+- name: Delta rsyslog | Flush handlers before validating the services
+  ansible.builtin.meta: flush_handlers
+
+- name: Delta rsyslog | Verify service state
+  ansible.builtin.shell:
+    cmd: systemctl is-enabled rsyslog && systemctl is-active rsyslog
+  register: wazuh_delta_rsyslog_state
+  changed_when: false
+  check_mode: false
+
+- name: Delta rsyslog | Assert rsyslog is enabled and active
+  ansible.builtin.assert:
+    that:
+      - wazuh_delta_rsyslog_state.stdout_lines[0] == 'enabled'
+      - wazuh_delta_rsyslog_state.stdout_lines[1] == 'active'
+    fail_msg: "rsyslog state unexpected: {{ wazuh_delta_rsyslog_state.stdout | regex_replace('\n', ' | ') }}"
+    success_msg: "rsyslog enabled and active (Wazuh 33123 / 35717)"

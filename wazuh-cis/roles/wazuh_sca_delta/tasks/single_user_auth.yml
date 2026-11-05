@@ -1,0 +1,75 @@
+---
+# Delta | Single-user mode authentication — Wazuh 33032 (Debian, CIS 1.5.3).
+# The check rule is `f:/etc/shadow -> r:^root:\$\w`: the root shadow field must
+# begin with a password hash identifier ($6$...), i.e. sulogin at the single
+# user console must be able to authenticate the root account. The lab root
+# account is locked (`!*`), so it can never satisfy this check until a real
+# password hash is set.
+#
+# SECURITY: the hash is an input, never a baked default. Production supplies
+# it from ansible-vault. Setting the hash also switches root from L (locked)
+# to P — permitted by every other in-scope check (Ubuntu has no counterpart
+# check and is excluded via supported controls).
+
+- name: Delta single-user | Require a non-empty root password hash
+  ansible.builtin.assert:
+    that:
+      - wazuh_delta_root_password_hash | length > 0
+      - wazuh_delta_root_password_hash is match('^\\$')
+    fail_msg: >-
+      wazuh_delta_root_password_hash is empty or not a crypt(3) hash. Supply a
+      $6$ (or stronger) hash from ansible-vault in production; never commit a
+      real hash. The ansible/ AGENTS.md secret rules apply.
+    success_msg: "Root password hash provided"
+
+- name: Delta single-user | Set the root password hash (sulogin authentication)
+  ansible.builtin.user:
+    name: root
+    password: "{{ wazuh_delta_root_password_hash }}"
+  no_log: true
+
+# Regression guard: once root has a real hash (not '!*'), the shadow row enters
+# the numeric scope of Wazuh 33164 (password expiration <= 365) and its
+# maxdays=99999 would newly FAIL that previously passing check. Pinning
+# maxdays to 365 keeps 33164 green as a side effect of enabling 33032.
+- name: Delta single-user | Read current root maximum age
+  ansible.builtin.shell:
+    cmd: "chage --list root | awk -F: '/Maximum/ {gsub(/[[:space:]]/,\"\",$2); print $2}'"
+  register: wazuh_delta_maxdays_before
+  changed_when: false
+  check_mode: false
+
+- name: Delta single-user | Cap root password maximum age at 365 days
+  ansible.builtin.command: chage --maxdays 365 root
+  when: wazuh_delta_maxdays_before.stdout | int != 365
+
+- name: Delta single-user | Re-read root maximum age
+  ansible.builtin.shell:
+    cmd: "chage --list root | awk -F: '/Maximum/ {gsub(/[[:space:]]/,\"\",$2); print $2}'"
+  register: wazuh_delta_maxdays_after
+  changed_when: false
+  check_mode: false
+
+- name: Delta single-user | Assert Wazuh 33164 stays satisfied for root
+  ansible.builtin.assert:
+    that:
+      - wazuh_delta_maxdays_after.stdout | int <= 365
+      - wazuh_delta_maxdays_after.stdout | int > 0
+    fail_msg: "root maxdays is {{ wazuh_delta_maxdays_after.stdout }}; Wazuh 33164 would fail"
+    success_msg: "root maxdays={{ wazuh_delta_maxdays_after.stdout }} (Wazuh 33164 scoped value is in range)"
+
+- name: Delta single-user | Read the root shadow field
+  ansible.builtin.shell:
+    cmd: "awk -F: '/^root:/ {print substr($2,1,2)}' /etc/shadow"
+  register: wazuh_delta_root_shadow_prefix
+  changed_when: false
+  check_mode: false
+
+- name: Delta single-user | Assert the shadow field satisfies Wazuh 33032
+  ansible.builtin.assert:
+    that:
+      - wazuh_delta_root_shadow_prefix.stdout is match('^\\$[A-Za-z0-9]')
+    fail_msg: >-
+      /etc/shadow root field starts with '{{ wazuh_delta_root_shadow_prefix.stdout }}'
+      and would not match the policy regex ^root:\$\w.
+    success_msg: "root shadow field matches ^root:\\$\\w (Wazuh 33032)"

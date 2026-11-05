@@ -1,0 +1,77 @@
+---
+# Delta role: closes Wazuh SCA (CIS v1.0.0) findings that the ansible/ repo
+# (CIS v1.1.0) leaves open. Reuses the repo's file-level conventions:
+# one /etc/modprobe.d/<mod>.conf per module, lineinfile-managed config lines,
+# default-false remediation gates. NEVER modifies roles under ansible/.
+
+- name: Delta | Require a supported platform selector
+  ansible.builtin.assert:
+    that:
+      - wazuh_delta_platform in ['debian_12', 'ubuntu_2404']
+    fail_msg: >-
+      wazuh_delta_platform must be 'debian_12' or 'ubuntu_2404 (got
+      '{{ wazuh_delta_platform | default('') }}'). Platform vars define the
+      module lists, install targets and supported control set; running without
+      them would apply the wrong benchmark semantics.
+    quiet: true
+  tags: [always, wazuh_delta_safety]
+
+- name: Delta | Load platform variables
+  ansible.builtin.include_vars: "{{ role_path }}/vars/{{ wazuh_delta_platform }}.yml"
+  tags: [always]
+
+- name: Delta | Kernel modules — force install/blacklist for every policy module
+  ansible.builtin.import_tasks: kernel_modules.yml
+  when:
+    - wazuh_delta_kernel_modules_enforce_all_enabled | bool
+    - "'kernel_modules' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_kernel_modules]
+
+- name: Delta | SSH — disable X11 and TCP forwarding
+  ansible.builtin.import_tasks: ssh_forwarding.yml
+  when:
+    - wazuh_delta_ssh_forwarding_disabled_enabled | bool
+    - "'ssh_forwarding' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_ssh]
+
+- name: Delta | Single-user mode — require root authentication (sulogin)
+  ansible.builtin.import_tasks: single_user_auth.yml
+  when:
+    - wazuh_delta_single_user_auth_enabled | bool
+    - "'single_user_auth' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_single_user]
+
+- name: Delta | Remove legacy cleartext clients (telnet/ftp)
+  ansible.builtin.import_tasks: legacy_clients.yml
+  when:
+    - wazuh_delta_legacy_clients_removed_enabled | bool
+    - "'legacy_clients' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_legacy_clients]
+
+- name: Delta | Logging — rsyslog install/enable and journald/forwarding policy
+  ansible.builtin.import_tasks: rsyslog.yml
+  when:
+    - wazuh_delta_rsyslog_enabled | bool
+    - "'rsyslog' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_rsyslog]
+
+- name: Delta | Logging — journald log file rotation (Ubuntu 35708)
+  ansible.builtin.import_tasks: journald_rotation.yml
+  when:
+    - wazuh_delta_journald_rotation_enabled | bool
+    - "'journald_rotation' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_journald_rotation]
+
+- name: Delta | logrotate — create 0640
+  ansible.builtin.import_tasks: logrotate_permissions.yml
+  when:
+    - wazuh_delta_logrotate_permissions_enabled | bool
+    - "'logrotate' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_logrotate]
+
+- name: Delta | AppArmor — all profiles enforcing (Ubuntu 35538/35539)
+  ansible.builtin.import_tasks: apparmor.yml
+  when:
+    - wazuh_delta_apparmor_enforce_all_enabled | bool
+    - "'apparmor_enforce_all' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_apparmor]

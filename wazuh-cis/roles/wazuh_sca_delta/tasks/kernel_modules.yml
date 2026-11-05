@@ -1,0 +1,98 @@
+---
+# Delta | Kernel modules — Wazuh v1.0.0 semantics.
+# Wazuh checks `modprobe -n -v <mod>` reports "install /bin/<target>" for EVERY
+# listed module, even when the .ko is absent from the kernel. The ansible/ repo
+# (CIS v1.1.0 kernel_module_disabled mechanism) intentionally skips modules that
+# are not loadable, leaving those checks failed. This force-creates
+# /etc/modprobe.d/<mod>.conf with the exact install+blacklist pair.
+# Idempotent via copy content (checksum). Platform install target comes from
+# vars/<platform>.yml: /bin/true on Debian (33000-series rules), /bin/false on
+# Ubuntu (35500-series rules require ^install /bin/false).
+
+- name: Delta kernel modules | Ensure install+blacklist file for every policy module
+  ansible.builtin.copy:
+    dest: "/etc/modprobe.d/{{ item }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      install {{ item }} {{ wazuh_delta_kernel_module_install_target }}
+      blacklist {{ item }}
+  loop: "{{ wazuh_delta_kernel_modules }}"
+  loop_control:
+    label: "{{ item }} -> {{ wazuh_delta_kernel_module_install_target }}"
+
+- name: Delta kernel modules | Probe loaded modules
+  ansible.builtin.command: lsmod
+  register: wazuh_delta_lsmod
+  changed_when: false
+  check_mode: false
+
+- name: Delta kernel modules | Detect modules built into the kernel
+  # Built-in (CONFIG_*=y) modules make `modprobe -n -v <mod>` print NOTHING:
+  # there is no loadable object to intercept, so the Wazuh regex
+  # (^install /bin/<target>) can never match even though the install+blacklist
+  # file is the benchmark-prescribed remediation. Those modules are recorded
+  # and excluded from the hard assert; MAPPING.md classifies the affected Wazuh
+  # checks as documented mismatches (Ubuntu 24.04: squashfs, fat, fuse).
+  ansible.builtin.command: "grep -oE '[A-Za-z0-9_]+\\.ko(\\.zst|\\.xz)?$' /lib/modules/{{ ansible_kernel }}/modules.builtin"
+  register: wazuh_delta_builtin_raw
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Delta kernel modules | Normalize the built-in module name list
+  ansible.builtin.set_fact:
+    wazuh_delta_builtin_modules: >-
+      {{ wazuh_delta_builtin_raw.stdout_lines
+         | map('regex_replace', '\.ko(\.zst|\.xz)?$', '')
+         | map('regex_replace', '-', '_')
+         | list }}
+
+- name: Delta kernel modules | Resolve the underscore module name for each target
+  ansible.builtin.command: "modprobe -R {{ item }}"
+  register: wazuh_delta_canonical
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  loop: "{{ wazuh_delta_kernel_modules }}"
+
+- name: Delta kernel modules | Unload any target module still loaded
+  ansible.builtin.modprobe:
+    name: "{{ item.1.stdout | trim | default(item.0, true) }}"
+    state: absent
+  when:
+    - (item.1.stdout | trim) in (wazuh_delta_lsmod.stdout_lines | map('regex_replace', '^(\S+).*$', '\1') | list)
+  loop: "{{ wazuh_delta_kernel_modules | zip(wazuh_delta_canonical.results) | list }}"
+  loop_control:
+    label: "{{ item.0 }}"
+
+- name: Delta kernel modules | Verify modprobe reports the install directive
+  ansible.builtin.command: "modprobe -n -v {{ item }}"
+  register: wazuh_delta_verify
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  loop: "{{ wazuh_delta_kernel_modules }}"
+
+- name: Delta kernel modules | Assert every non-builtin module reports the install target
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - >-
+        ('install ' ~ wazuh_delta_kernel_module_install_target) in item.stdout
+        or (item.item | replace('-', '_')) in wazuh_delta_builtin_modules
+    success_msg: >-
+      {{ item.item }}:
+      {{ 'builtin kernel module (documented mismatch, see MAPPING.md)'
+         if (item.item | replace('-', '_')) in wazuh_delta_builtin_modules
+         else 'modprobe reports install ' ~ wazuh_delta_kernel_module_install_target }}
+    fail_msg: >-
+      modprobe does not report the install directive for {{ item.item }} even
+      though /etc/modprobe.d/{{ item.item }}.conf was written (stdout:
+      {{ item.stdout | default('') | regex_replace('\n', ' | ') }}) and the
+      module is not built into the kernel. Inspect the file and modprobe.d
+      precedence on this host before trusting the SCA result.
+  loop: "{{ wazuh_delta_verify.results }}"
+  loop_control:
+    label: "{{ item.item }}"

@@ -1,0 +1,48 @@
+---
+# Delta | Legacy cleartext clients — Wazuh 35585/35587 (Ubuntu) and the real
+# inetutils binaries on Debian. The Ubuntu rules query
+# `dpkg-query -s telnet inetutils-telnet` / `... ftp tnftp`, so the actual
+# carrier packages (inetutils-telnet, tnftp) are the gap. Only packages that
+# are actually installed are removed, which keeps the task idempotent and
+# avoids apt "Unable to locate package" failures on the other platform.
+
+- name: Delta legacy clients | Collect installed package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Delta legacy clients | Compute the installed subset of candidate packages
+  ansible.builtin.set_fact:
+    wazuh_delta_legacy_clients_installed: >-
+      {{ wazuh_delta_legacy_client_packages
+         | intersect(ansible_facts.packages.keys() | list) }}
+
+- name: Delta legacy clients | Remove installed telnet/ftp client packages
+  ansible.builtin.apt:
+    name: "{{ wazuh_delta_legacy_clients_installed }}"
+    state: absent
+    autoremove: false
+  when: wazuh_delta_legacy_clients_installed | length > 0
+
+- name: Delta legacy clients | Confirm no telnet/ftp client package remains installed
+  ansible.builtin.command: dpkg-query -W -f '${Package} ${db:Status-Abbrev}\n' {{ item }}
+  register: wazuh_delta_legacy_clients_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  loop: "{{ wazuh_delta_legacy_client_packages }}"
+
+- name: Delta legacy clients | Assert removal took effect
+  ansible.builtin.assert:
+    that:
+      - >-
+        wazuh_delta_legacy_clients_probe.results
+        | map(attribute='stdout')
+        | select('search', '^\\S+\\s+ii')
+        | list | length == 0
+    fail_msg: >-
+      A legacy client package still reports installed:
+      {{ wazuh_delta_legacy_clients_probe.results
+         | map(attribute='stdout')
+         | select('search', '^\\S+\\s+ii')
+         | list }}
+    success_msg: "No telnet/ftp client packages remain installed"

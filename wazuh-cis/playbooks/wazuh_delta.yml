@@ -1,0 +1,21 @@
+---
+# Wazuh SCA (CIS v1.0.0) delta on top of the validated CIS v1.1.0 hardening in
+# ansible/. This playbook is the explicit opt-in point: the role's gates all
+# default to false (repo convention), and only the gates listed here run.
+- name: Apply the Wazuh SCA delta (CIS v1.0.0 gaps closed over v1.1.0 hardening)
+  hosts: wazuh_delta_targets
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  vars:
+    wazuh_delta_kernel_modules_enforce_all_enabled: true
+    wazuh_delta_ssh_forwarding_disabled_enabled: true
+    wazuh_delta_single_user_auth_enabled: true
+    wazuh_delta_legacy_clients_removed_enabled: true
+    wazuh_delta_rsyslog_enabled: true
+    wazuh_delta_journald_rotation_enabled: true
+    wazuh_delta_logrotate_permissions_enabled: true
+    wazuh_delta_apparmor_enforce_all_enabled: true
+  roles:
+    - role: wazuh_sca_delta
