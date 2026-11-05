@@ -1,0 +1,92 @@
+---
+- name: Common kernel module disabled | Inspect effective module state
+  ansible.builtin.import_tasks: mechanisms/kernel_module_disabled/inspect.yml
+
+- name: Common kernel module disabled | Inspect the managed modprobe.d file
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_config_line_path }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: cis_linux_common_kernel_module_config_stat
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+# Mirrors the benchmark remediation: append an entry only when the effective
+# modprobe configuration lacks it and the module really is loadable. Hosts
+# where the module is absent or built into the kernel need no configuration,
+# and already-effective entries are left untouched, so re-runs stay idempotent.
+- name: Common kernel module disabled | Write install rule
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_config_line_path }}"
+    regexp: '^install\s+{{ cis_linux_common_kernel_module }}(\s|$)'
+    line: "install {{ cis_linux_common_kernel_module }} /bin/true"
+    create: true
+    owner: root
+    group: root
+    mode: "{{ omit if cis_linux_common_kernel_module_config_stat.stat.exists else '0644' }}"
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_kernel_module_probes_ok == 'yes'
+    - cis_linux_common_kernel_module_loadable == 'yes'
+    - cis_linux_common_kernel_module_effective_install == 'no'
+
+- name: Common kernel module disabled | Write blacklist rule
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_config_line_path }}"
+    regexp: '^blacklist\s+{{ cis_linux_common_kernel_module }}(\s|$)'
+    line: "blacklist {{ cis_linux_common_kernel_module }}"
+    create: true
+    owner: root
+    group: root
+    mode: "{{ omit if cis_linux_common_kernel_module_config_stat.stat.exists else '0644' }}"
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_kernel_module_probes_ok == 'yes'
+    - cis_linux_common_kernel_module_loadable == 'yes'
+    - cis_linux_common_kernel_module_effective_blacklist == 'no'
+
+# Guarded unload: only when lsmod proved the module loaded. modprobe refuses to
+# remove an in-use module; that outcome is surfaced by the controlled assert
+# below instead of silently passing or force-killing dependent workloads.
+- name: Common kernel module disabled | Unload the running module
+  ansible.builtin.command:
+    cmd: modprobe -r {{ cis_linux_common_kernel_module }}
+  register: cis_linux_common_kernel_module_unload
+  changed_when: true
+  failed_when: false
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_kernel_module_loaded == 'yes'
+
+- name: Common kernel module disabled | Re-read loaded kernel modules after unload
+  ansible.builtin.command:
+    cmd: lsmod
+  register: cis_linux_common_kernel_module_post_unload_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_kernel_module_loaded == 'yes'
+    - not (cis_linux_common_kernel_module_unload | default({})).skipped | default(false)
+
+- name: Common kernel module disabled | Confirm the module was unloaded
+  ansible.builtin.assert:
+    that:
+      - >-
+        (cis_linux_common_kernel_module_post_unload_probe | default({})).rc | default(1) == 0
+      - >-
+        ((cis_linux_common_kernel_module_post_unload_probe
+          | default({})).stdout | default(''))
+        is not search('^' ~ cis_linux_common_kernel_module_under ~ '\s', multiline=True)
+    fail_msg: >-
+      Kernel module "{{ cis_linux_common_kernel_module }}" is still loaded after
+      `modprobe -r`: it is in use by active workloads and needs a controlled
+      maintenance window. Remediation cannot certify this control as compliant.
+    success_msg: >-
+      Kernel module "{{ cis_linux_common_kernel_module }}" was unloaded by the guarded
+      modprobe -r run.
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_kernel_module_loaded == 'yes'
+    - not (cis_linux_common_kernel_module_unload | default({})).skipped | default(false)

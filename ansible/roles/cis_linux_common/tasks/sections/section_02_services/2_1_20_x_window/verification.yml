@@ -1,3 +1,3 @@
 ---
-- name: CIS 2.1.20 | Verification | Delegate to disabled-service mechanism
-  ansible.builtin.import_tasks: mechanisms/service_disabled/verification.yml
+- name: CIS 2.1.20 | Verification | Delegate to absent-package mechanism (benchmark audits dpkg xserver-common)
+  ansible.builtin.import_tasks: mechanisms/package_absent/verification.yml

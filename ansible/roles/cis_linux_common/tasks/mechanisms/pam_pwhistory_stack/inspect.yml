@@ -1,0 +1,130 @@
+---
+# Shared read-only inspection for the CIS pam_pwhistory family (5.3.2.4 and
+# 5.3.3.3.1-.3). Missing, unreadable, duplicated, misordered, or inline
+# variant pam_pwhistory evidence is reported as data so audit and
+# verification can controlled-FAIL. Nothing here ever writes PAM files; the
+# generated /etc/pam.d/common-password file and every /usr/share/pam-configs
+# profile are only read and compared.
+#
+# Ownership model (identical discipline to the corrected pam_faillock
+# family): /usr/share/pam-configs/pwhistory is the single owned source for
+# the module line, and pam-auth-update renders it into the
+# pam-auth-update-managed /etc/pam.d/common-password. The benchmark audits
+# (CIS Debian 12 v1.1.0 and CIS Ubuntu 24.04 v1.0.0, controls 5.3.2.4 and
+# 5.3.3.3.1-.3) grep the rendered common-password line, so verification
+# reads the rendered output, never the profile as a substitute.
+
+- name: Common pam_pwhistory stack | Reset the per-inspection accumulators
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_override_files: []
+
+- name: Common pam_pwhistory stack | Discover PAM configuration files
+  ansible.builtin.find:
+    paths: "{{ item }}"
+    file_type: file
+    hidden: false
+    recurse: false
+  loop:
+    - /etc/pam.d
+    - /usr/share/pam-configs
+  register: cis_linux_common_pwhistory_find
+
+- name: Common pam_pwhistory stack | Read every discovered configuration file
+  ansible.builtin.slurp:
+    src: "{{ item.1.path }}"
+  loop: >-
+    {{ cis_linux_common_pwhistory_find.results
+       | subelements('files', skip_missing=true) }}
+  loop_control:
+    label: "{{ item.1.path }}"
+  failed_when: false
+  register: cis_linux_common_pwhistory_scan
+
+- name: Common pam_pwhistory stack | Derive scan bookkeeping facts
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_discovered_files: >-
+      {{ cis_linux_common_pwhistory_find.results
+         | subelements('files', skip_missing=true)
+         | map(attribute='1.path') | list }}
+    cis_linux_common_pwhistory_read_files: >-
+      {{ cis_linux_common_pwhistory_scan.results
+         | default([], true)
+         | selectattr('content', 'defined')
+         | map(attribute='source') | unique | list }}
+
+- name: Common pam_pwhistory stack | Derive uninspectable evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_unreadable_files: >-
+      {{ cis_linux_common_pwhistory_discovered_files
+         | difference(cis_linux_common_pwhistory_read_files) }}
+
+- name: Common pam_pwhistory stack | Flag files with non-canonical pam_pwhistory lines
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_override_files: >-
+      {{ cis_linux_common_pwhistory_override_files
+         + [item.source]
+         if (item.content | b64decode) is search(cis_linux_common_pwhistory_override_regex)
+         else cis_linux_common_pwhistory_override_files }}
+  loop: >-
+    {{ cis_linux_common_pwhistory_scan.results
+       | default([], true)
+       | selectattr('content', 'defined')
+       | list }}
+  loop_control:
+    label: "{{ item.source }}"
+  vars:
+    # Any non-comment line mentioning pam_pwhistory.so is an override unless
+    # it is exactly the canonical benchmark line, in either its rendered
+    # form (password ... requisite pam_pwhistory.so remember=24
+    # enforce_for_root try_first_pass use_authtok) inside /etc/pam.d or its
+    # profile form (requisite pam_pwhistory.so ...) inside
+    # /usr/share/pam-configs. Duplicated, reordered, or argument-variant
+    # lines are all rejected.
+    cis_linux_common_pwhistory_override_regex: >-
+      (?m)^(?!\s*#)(?=.*\bpam_pwhistory\.so\b)(?!\s*(?:password\s+)?requisite\s+pam_pwhistory\.so\s+remember=24\s+enforce_for_root\s+try_first_pass\s+use_authtok\s*$)
+
+- name: Common pam_pwhistory stack | Decode the generated password file
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_password_text: >-
+      {{ (cis_linux_common_pwhistory_scan.results
+          | default([], true)
+          | selectattr('content', 'defined')
+          | selectattr('source', 'equalto', '/etc/pam.d/common-password')
+          | map(attribute='content') | first | default('', true) | b64decode) }}
+
+- name: Common pam_pwhistory stack | Split the generated password file into lines
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_password_lines: >-
+      {{ cis_linux_common_pwhistory_password_text | regex_findall('(?m)^.*$') }}
+
+- name: Common pam_pwhistory stack | Derive the effective stack evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_canonical_count: >-
+      {{ cis_linux_common_pwhistory_password_lines
+         | select('match', '^\s*password\s+requisite\s+pam_pwhistory\.so\s+remember=24\s+enforce_for_root\s+try_first_pass\s+use_authtok\s*$')
+         | list | count }}
+    cis_linux_common_pwhistory_line_total: >-
+      {{ cis_linux_common_pwhistory_password_lines
+         | select('match', '^\s*password\s+')
+         | select('search', '\bpam_pwhistory\.so\b') | list | count }}
+    cis_linux_common_pwhistory_unix_password_count: >-
+      {{ cis_linux_common_pwhistory_password_lines
+         | select('match', '^\s*password\s+')
+         | select('search', '\bpam_unix\.so\b') | list | count }}
+    cis_linux_common_pwhistory_password_signature: >-
+      {{ cis_linux_common_pwhistory_password_lines
+         | select('match', '^\s*password\s+')
+         | select('search', '\bpam_pwquality\.so\b|\bpam_pwhistory\.so\b|\bpam_unix\.so\b')
+         | map('regex_findall', 'pam_pwquality\.so|pam_pwhistory\.so|\bpam_unix\.so\b')
+         | map('last') | list }}
+
+- name: Common pam_pwhistory stack | Aggregate the stack verdict
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_stack_ok: >-
+      {{ cis_linux_common_pwhistory_unreadable_files | length == 0
+         and cis_linux_common_pwhistory_override_files | length == 0
+         and cis_linux_common_pwhistory_canonical_count == 1
+         and cis_linux_common_pwhistory_line_total == 1
+         and cis_linux_common_pwhistory_unix_password_count >= 1
+         and cis_linux_common_pwhistory_password_signature
+            == ['pam_pwquality.so', 'pam_pwhistory.so', 'pam_unix.so'] }}

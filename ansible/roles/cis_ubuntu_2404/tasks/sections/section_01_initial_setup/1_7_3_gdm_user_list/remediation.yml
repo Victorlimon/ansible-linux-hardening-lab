@@ -1,0 +1,12 @@
+---
+- name: CIS 1.7.3 | Remediation | Run common GDM configuration mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_01_initial_setup/1_7_3_gdm_user_list/remediation.yml
+  vars:
+    cis_linux_common_control_id: '1.7.3'
+    cis_linux_common_platform: ubuntu_2404
+    cis_linux_common_benchmark: 'CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0'
+    cis_linux_common_gdm_gate_package: gdm3
+    cis_linux_common_gdm_checks:
+      - 'gsettings|org.gnome.login-screen|disable-user-list|^true$'

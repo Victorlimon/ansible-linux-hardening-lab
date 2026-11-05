@@ -1,0 +1,38 @@
+---
+- name: Common faillock parameter | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common faillock parameter | Delegate to shared stack inspection
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/inspect.yml
+
+- name: Common faillock parameter | Compute parameter evidence
+  ansible.builtin.import_tasks: mechanisms/faillock_parameter/evaluate.yml
+
+- name: Common faillock parameter | Verify the managed parameter
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_faillock_package not in ansible_facts.packages or
+        cis_linux_common_faillock_parameter_ok
+    fail_msg: >-
+      {{ cis_linux_common_faillock_param }} is not owned by
+      {{ cis_linux_common_faillock_conf_path }} as required:
+      {% if cis_linux_common_faillock_kind == 'numeric' %}
+      name_lines={{ cis_linux_common_faillock_name_count }},
+      compliant_lines={{ cis_linux_common_faillock_value_count }}
+      (a numeric parameter must appear exactly once and that single line must
+      equal '{{ cis_linux_common_faillock_line }}'),
+      {% else %}
+      named_lines={{ cis_linux_common_faillock_name_count }},
+      bare_token_lines={{ cis_linux_common_faillock_value_count }},
+      root_unlock_time_lines={{ cis_linux_common_faillock_root_unlock_total }},
+      root_unlock_time_values={{ cis_linux_common_faillock_root_unlock_values }}
+      (even_deny_root passes with at least one bare token line, or with an
+      explicit root_unlock_time line; named_lines must equal bare_token_lines
+      so every even_deny_root line stays argument-free, and every
+      root_unlock_time line must parse to a value of at least 60 seconds),
+      {% endif %}
+      inline_override_files={{ cis_linux_common_faillock_override_files }}
+      (inline pam_faillock.so arguments override the configuration file and
+      are rejected), unreadable_files={{ cis_linux_common_faillock_unreadable_files }}.
+    success_msg: "Faillock parameter verification passed: {{ cis_linux_common_faillock_line }}"

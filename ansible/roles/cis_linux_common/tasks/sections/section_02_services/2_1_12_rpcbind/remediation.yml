@@ -1,3 +1,15 @@
 ---
-- name: CIS 2.1.12 | Remediation | Delegate to disabled-service mechanism
-  ansible.builtin.import_tasks: mechanisms/service_disabled/remediation.yml
+- name: CIS 2.1.12 | Remediation | Gather installed packages
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: CIS 2.1.12 | Remediation | Stop and mask rpcbind socket and service
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop:
+    - rpcbind.socket
+    - rpcbind.service
+  when: "'rpcbind' in ansible_facts.packages"

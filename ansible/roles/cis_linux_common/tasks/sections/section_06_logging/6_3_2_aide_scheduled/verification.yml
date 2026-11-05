@@ -1,6 +1,38 @@
 ---
-- name: Config line verification | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
-  vars:
-    cis_linux_common_config_line: '0 5 * * * root /usr/bin/aide.wrapper --check'
-    cis_linux_common_config_line_regexp: 'aide\.wrapper'
+- name: Common AIDE scheduled | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common AIDE scheduled | Check timer enablement
+  ansible.builtin.command:
+    argv: [systemctl, is-enabled, --quiet, dailyaidecheck.timer]
+  register: cis_linux_common_aide_timer_enabled
+  changed_when: false
+  failed_when: false
+  when: '"aide-common" in ansible_facts.packages'
+
+- name: Common AIDE scheduled | Check timer activity
+  ansible.builtin.command:
+    argv: [systemctl, is-active, --quiet, dailyaidecheck.timer]
+  register: cis_linux_common_aide_timer_active
+  changed_when: false
+  failed_when: false
+  when: '"aide-common" in ansible_facts.packages'
+
+- name: Common AIDE scheduled | Check service enablement
+  ansible.builtin.command:
+    argv: [systemctl, is-enabled, --quiet, dailyaidecheck.service]
+  register: cis_linux_common_aide_service_enabled
+  changed_when: false
+  failed_when: false
+  when: '"aide-common" in ansible_facts.packages'
+
+- name: Common AIDE scheduled | Verify the AIDE schedule
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.packages['aide-common'] is not defined or
+        (cis_linux_common_aide_timer_enabled.rc == 0
+         and cis_linux_common_aide_timer_active.rc == 0
+         and cis_linux_common_aide_service_enabled.rc == 0)
+    fail_msg: The AIDE filesystem integrity check timer is not enabled and active.
+    success_msg: The AIDE schedule verification passed.

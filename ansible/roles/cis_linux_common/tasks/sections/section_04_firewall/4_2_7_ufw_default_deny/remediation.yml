@@ -1,2 +1,9 @@
 ---
+- name: Common UFW default deny | Prepare approved inbound rules before activation
+  ansible.builtin.import_tasks: sections/section_04_firewall/4_2_6_ufw_rules_for_open_ports/remediation.yml
+
 - ansible.builtin.import_tasks: mechanisms/ufw_policy/remediation.yml
+
+- name: Common UFW default deny | Activate reviewed policy
+  community.general.ufw:
+    state: enabled

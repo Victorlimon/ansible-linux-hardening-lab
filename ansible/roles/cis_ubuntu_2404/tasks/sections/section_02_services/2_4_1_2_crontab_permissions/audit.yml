@@ -14,9 +14,7 @@
     cis_linux_common_fixed_file_remediation_mode: '0600'
     cis_linux_common_fixed_file_expected_mode_description: >-
       0600 or more restrictive without execute bits
-    cis_linux_common_fixed_file_allowed_owner_digits: ['0', '2', '4', '6']
-    cis_linux_common_fixed_file_allowed_group_digits: ['0']
-    cis_linux_common_fixed_file_allowed_other_digits: ['0']
+    cis_linux_common_fixed_file_max_mode: '0600'
   when:
     - cis_ubuntu_2404_execution_mode == 'audit'
     - cis_ubuntu_2404_2_4_1_2_crontab_permissions | bool

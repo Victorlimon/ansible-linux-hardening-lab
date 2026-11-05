@@ -1,6 +1,13 @@
 ---
+# Benchmark account-integrity audits run as root (for example CIS 5.4.2.4's
+# `passwd -S root`, which a normal user cannot query), so the check always
+# escalates. When cis_linux_common_account_status_regex is non-empty, PASS
+# requires the second whitespace-separated token of stdout (the password
+# status field of `passwd -S`) to match that regex; otherwise the historical
+# "empty output means compliant" semantics apply.
 - name: Common account integrity | Run parameterized check
   ansible.builtin.shell: "{{ cis_linux_common_account_command }}"
+  become: true
   register: cis_acct
   changed_when: false
   failed_when: false
@@ -11,5 +18,11 @@
       control: "{{ cis_linux_common_control_id }}"
       platform: "{{ cis_linux_common_platform }}"
       check: "{{ cis_linux_common_account_check }}"
-      classification: "{{ 'PASS' if (cis_acct.stdout | trim) == '' else 'FAIL' }}"
+      classification: >-
+        {{ 'PASS'
+           if (((cis_linux_common_account_status_regex | default('')) != ''
+                and ((cis_acct.stdout | trim).split() + ['', ''])[1] is match(cis_linux_common_account_status_regex | default('')))
+               or ((cis_linux_common_account_status_regex | default('')) == ''
+                   and (cis_acct.stdout | trim) == ''))
+           else 'FAIL' }}
       changed_target: false

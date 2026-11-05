@@ -30,6 +30,7 @@
 
 - name: Load Ubuntu CIS 3.3.10 remediation adapter
   ansible.builtin.import_tasks: sections/section_03_network/3_3_10_tcp_syncookies/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_3_3_10_tcp_syncookies | bool]
 
 - name: Load Ubuntu CIS 3.3.10 verification adapter
   ansible.builtin.import_tasks: sections/section_03_network/3_3_10_tcp_syncookies/verification.yml
@@ -42,12 +43,14 @@
 
 - name: Load Ubuntu CIS 2.4.1.2 remediation adapter
   ansible.builtin.import_tasks: sections/section_02_services/2_4_1_2_crontab_permissions/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_2_4_1_2_crontab_permissions | bool]
 
 - name: Load Ubuntu CIS 2.4.1.2 verification adapter
   ansible.builtin.import_tasks: sections/section_02_services/2_4_1_2_crontab_permissions/verification.yml
 
 - name: Load Ubuntu CIS 7.1.1 remediation adapter
   ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_1_passwd_permissions/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_7_1_1_passwd_permissions | bool]
 
 - name: Audit Ubuntu 24.04 CIS 2.4.1.3
   ansible.builtin.import_tasks: sections/section_02_services/2_4_1_3_cron_hourly/audit.yml
@@ -713,66 +716,154 @@
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_6_1_4_1_logfile_permissions | bool]
   tags: [cis_6_1_4_1]
 
-- name: Audit Ubuntu 24.04 CIS 5.1.1-5.1.11
-  ansible.builtin.include_tasks:
-    file: "sections/section_05_access_control/{{ cis_ssh_control.dir }}/audit.yml"
-    apply:
-      tags: [cis_5_1_1, cis_5_1_2, cis_5_1_3, cis_5_1_5, cis_5_1_6, cis_5_1_7, cis_5_1_8, cis_5_1_9, cis_5_1_10, cis_5_1_11]
-  loop:
-    - {id: '5.1.1', dir: 5_1_1_sshd_config_permissions}
-    - {id: '5.1.2', dir: 5_1_2_ssh_private_host_key_permissions}
-    - {id: '5.1.3', dir: 5_1_3_ssh_public_host_key_permissions}
-    - {id: '5.1.5', dir: 5_1_5_ssh_banner}
-    - {id: '5.1.6', dir: 5_1_6_ssh_ciphers}
-    - {id: '5.1.7', dir: 5_1_7_ssh_client_alive}
-    - {id: '5.1.8', dir: 5_1_8_ssh_disable_forwarding}
-    - {id: '5.1.9', dir: 5_1_9_ssh_gssapi_authentication}
-    - {id: '5.1.10', dir: 5_1_10_ssh_hostbased_authentication}
-    - {id: '5.1.11', dir: 5_1_11_ssh_ignore_rhosts}
-  loop_control: {label: "{{ cis_ssh_control.id }}", loop_var: cis_ssh_control}
+- name: Audit Ubuntu 24.04 CIS 5.1.1
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_1_sshd_config_permissions/audit.yml
   when: cis_ubuntu_2404_execution_mode == 'audit'
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_1, cis_5_1_2, cis_5_1_3, cis_5_1_5, cis_5_1_6, cis_5_1_7, cis_5_1_8, cis_5_1_9, cis_5_1_10, cis_5_1_11, sshd]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_1, sshd]
 
-- name: Remediate Ubuntu 24.04 CIS 5.1.1-5.1.11
-  ansible.builtin.include_tasks:
-    file: "sections/section_05_access_control/{{ cis_ssh_control.dir }}/remediation.yml"
-    apply:
-      tags: [cis_5_1_1, cis_5_1_2, cis_5_1_3, cis_5_1_5, cis_5_1_6, cis_5_1_7, cis_5_1_8, cis_5_1_9, cis_5_1_10, cis_5_1_11]
-  loop:
-    - {id: '5.1.1', dir: 5_1_1_sshd_config_permissions}
-    - {id: '5.1.2', dir: 5_1_2_ssh_private_host_key_permissions}
-    - {id: '5.1.3', dir: 5_1_3_ssh_public_host_key_permissions}
-    - {id: '5.1.5', dir: 5_1_5_ssh_banner}
-    - {id: '5.1.6', dir: 5_1_6_ssh_ciphers}
-    - {id: '5.1.7', dir: 5_1_7_ssh_client_alive}
-    - {id: '5.1.8', dir: 5_1_8_ssh_disable_forwarding}
-    - {id: '5.1.9', dir: 5_1_9_ssh_gssapi_authentication}
-    - {id: '5.1.10', dir: 5_1_10_ssh_hostbased_authentication}
-    - {id: '5.1.11', dir: 5_1_11_ssh_ignore_rhosts}
-  loop_control: {label: "{{ cis_ssh_control.id }}", loop_var: cis_ssh_control}
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_1, cis_5_1_2, cis_5_1_3, cis_5_1_5, cis_5_1_6, cis_5_1_7, cis_5_1_8, cis_5_1_9, cis_5_1_10, cis_5_1_11, sshd]
+- name: Audit Ubuntu 24.04 CIS 5.1.2
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_2_ssh_private_host_key_permissions/audit.yml
+  when: cis_ubuntu_2404_execution_mode == 'audit'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_2, sshd]
 
-- name: Verify Ubuntu 24.04 CIS 5.1.1-5.1.11
-  ansible.builtin.include_tasks:
-    file: "sections/section_05_access_control/{{ cis_ssh_control.dir }}/verification.yml"
-    apply:
-      tags: [cis_5_1_1, cis_5_1_2, cis_5_1_3, cis_5_1_5, cis_5_1_6, cis_5_1_7, cis_5_1_8, cis_5_1_9, cis_5_1_10, cis_5_1_11]
-  loop:
-    - {id: '5.1.1', dir: 5_1_1_sshd_config_permissions}
-    - {id: '5.1.2', dir: 5_1_2_ssh_private_host_key_permissions}
-    - {id: '5.1.3', dir: 5_1_3_ssh_public_host_key_permissions}
-    - {id: '5.1.5', dir: 5_1_5_ssh_banner}
-    - {id: '5.1.6', dir: 5_1_6_ssh_ciphers}
-    - {id: '5.1.7', dir: 5_1_7_ssh_client_alive}
-    - {id: '5.1.8', dir: 5_1_8_ssh_disable_forwarding}
-    - {id: '5.1.9', dir: 5_1_9_ssh_gssapi_authentication}
-    - {id: '5.1.10', dir: 5_1_10_ssh_hostbased_authentication}
-    - {id: '5.1.11', dir: 5_1_11_ssh_ignore_rhosts}
-  loop_control: {label: "{{ cis_ssh_control.id }}", loop_var: cis_ssh_control}
+- name: Audit Ubuntu 24.04 CIS 5.1.3
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_3_ssh_public_host_key_permissions/audit.yml
+  when: cis_ubuntu_2404_execution_mode == 'audit'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_3, sshd]
+
+- name: Audit Ubuntu 24.04 CIS 5.1.5
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_5_ssh_banner/audit.yml
+  when: cis_ubuntu_2404_execution_mode == 'audit'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_5, sshd]
+
+- name: Audit Ubuntu 24.04 CIS 5.1.6
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_6_ssh_ciphers/audit.yml
+  when: cis_ubuntu_2404_execution_mode == 'audit'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_6, sshd]
+
+- name: Audit Ubuntu 24.04 CIS 5.1.7
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_7_ssh_client_alive/audit.yml
+  when: cis_ubuntu_2404_execution_mode == 'audit'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_7, sshd]
+
+- name: Audit Ubuntu 24.04 CIS 5.1.8
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_8_ssh_disable_forwarding/audit.yml
+  when: cis_ubuntu_2404_execution_mode == 'audit'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_8, sshd]
+
+- name: Audit Ubuntu 24.04 CIS 5.1.9
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_9_ssh_gssapi_authentication/audit.yml
+  when: cis_ubuntu_2404_execution_mode == 'audit'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_9, sshd]
+
+- name: Audit Ubuntu 24.04 CIS 5.1.10
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_10_ssh_hostbased_authentication/audit.yml
+  when: cis_ubuntu_2404_execution_mode == 'audit'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_10, sshd]
+
+- name: Audit Ubuntu 24.04 CIS 5.1.11
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_11_ssh_ignore_rhosts/audit.yml
+  when: cis_ubuntu_2404_execution_mode == 'audit'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_11, sshd]
+- name: Remediate Ubuntu 24.04 CIS 5.1.1
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_1_sshd_config_permissions/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_1_sshd_config_permissions | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_1, sshd]
+
+- name: Remediate Ubuntu 24.04 CIS 5.1.2
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_2_ssh_private_host_key_permissions/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_2_ssh_private_host_key_permissions | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_2, sshd]
+
+- name: Remediate Ubuntu 24.04 CIS 5.1.3
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_3_ssh_public_host_key_permissions/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_3_ssh_public_host_key_permissions | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_3, sshd]
+
+- name: Remediate Ubuntu 24.04 CIS 5.1.5
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_5_ssh_banner/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_5_ssh_banner | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_5, sshd]
+
+- name: Remediate Ubuntu 24.04 CIS 5.1.6
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_6_ssh_ciphers/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_6_ssh_ciphers | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_6, sshd]
+
+- name: Remediate Ubuntu 24.04 CIS 5.1.7
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_7_ssh_client_alive/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_7_ssh_client_alive | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_7, sshd]
+
+- name: Remediate Ubuntu 24.04 CIS 5.1.8
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_8_ssh_disable_forwarding/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_8_ssh_disable_forwarding | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_8, sshd]
+
+- name: Remediate Ubuntu 24.04 CIS 5.1.9
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_9_ssh_gssapi_authentication/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_9_ssh_gssapi_authentication | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_9, sshd]
+
+- name: Remediate Ubuntu 24.04 CIS 5.1.10
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_10_ssh_hostbased_authentication/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_10_ssh_hostbased_authentication | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_10, sshd]
+
+- name: Remediate Ubuntu 24.04 CIS 5.1.11
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_11_ssh_ignore_rhosts/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_11_ssh_ignore_rhosts | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_11, sshd]
+
+- name: Verify Ubuntu 24.04 CIS 5.1.1
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_1_sshd_config_permissions/verification.yml
   when: cis_ubuntu_2404_execution_mode == 'verification'
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_1, cis_5_1_2, cis_5_1_3, cis_5_1_5, cis_5_1_6, cis_5_1_7, cis_5_1_8, cis_5_1_9, cis_5_1_10, cis_5_1_11, sshd]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_1, sshd]
 
+- name: Verify Ubuntu 24.04 CIS 5.1.2
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_2_ssh_private_host_key_permissions/verification.yml
+  when: cis_ubuntu_2404_execution_mode == 'verification'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_2, sshd]
+
+- name: Verify Ubuntu 24.04 CIS 5.1.3
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_3_ssh_public_host_key_permissions/verification.yml
+  when: cis_ubuntu_2404_execution_mode == 'verification'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_3, sshd]
+
+- name: Verify Ubuntu 24.04 CIS 5.1.5
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_5_ssh_banner/verification.yml
+  when: cis_ubuntu_2404_execution_mode == 'verification'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_5, sshd]
+
+- name: Verify Ubuntu 24.04 CIS 5.1.6
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_6_ssh_ciphers/verification.yml
+  when: cis_ubuntu_2404_execution_mode == 'verification'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_6, sshd]
+
+- name: Verify Ubuntu 24.04 CIS 5.1.7
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_7_ssh_client_alive/verification.yml
+  when: cis_ubuntu_2404_execution_mode == 'verification'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_7, sshd]
+
+- name: Verify Ubuntu 24.04 CIS 5.1.8
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_8_ssh_disable_forwarding/verification.yml
+  when: cis_ubuntu_2404_execution_mode == 'verification'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_8, sshd]
+
+- name: Verify Ubuntu 24.04 CIS 5.1.9
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_9_ssh_gssapi_authentication/verification.yml
+  when: cis_ubuntu_2404_execution_mode == 'verification'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_9, sshd]
+
+- name: Verify Ubuntu 24.04 CIS 5.1.10
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_10_ssh_hostbased_authentication/verification.yml
+  when: cis_ubuntu_2404_execution_mode == 'verification'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_10, sshd]
+
+- name: Verify Ubuntu 24.04 CIS 5.1.11
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_11_ssh_ignore_rhosts/verification.yml
+  when: cis_ubuntu_2404_execution_mode == 'verification'
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_11, sshd]
 - {name: 'Audit Ubuntu CIS 5.1.12', ansible.builtin.import_tasks: sections/section_05_access_control/5_1_12_ssh_kex_algorithms/audit.yml, when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_1_12_ssh_kex_algorithms | bool], tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_12, sshd]}
 - {name: 'Remediate Ubuntu CIS 5.1.12', ansible.builtin.import_tasks: sections/section_05_access_control/5_1_12_ssh_kex_algorithms/remediation.yml, when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_12_ssh_kex_algorithms | bool], tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_12, sshd]}
 - {name: 'Verify Ubuntu CIS 5.1.12', ansible.builtin.import_tasks: sections/section_05_access_control/5_1_12_ssh_kex_algorithms/verification.yml, when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_1_12_ssh_kex_algorithms | bool], tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_1_12, sshd]}
@@ -1008,7 +1099,7 @@
   tags: [cis_6_2_3_1]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.1
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_1_sudoers_scope/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_1_sudoers_scope | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_1_sudoers_scope | bool]
   tags: [cis_6_2_3_1]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.1
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_1_sudoers_scope/verification.yml
@@ -1020,7 +1111,7 @@
   tags: [cis_6_2_3_2]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.2
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_2_user_emulation/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_2_user_emulation | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_2_user_emulation | bool]
   tags: [cis_6_2_3_2]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.2
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_2_user_emulation/verification.yml
@@ -1032,7 +1123,7 @@
   tags: [cis_6_2_3_3]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.3
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_3_sudo_log/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_3_sudo_log | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_3_sudo_log | bool]
   tags: [cis_6_2_3_3]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.3
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_3_sudo_log/verification.yml
@@ -1044,7 +1135,7 @@
   tags: [cis_6_2_3_4]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.4
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_4_time_change/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_4_time_change | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_4_time_change | bool]
   tags: [cis_6_2_3_4]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.4
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_4_time_change/verification.yml
@@ -1056,19 +1147,31 @@
   tags: [cis_6_2_3_5]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.5
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_5_network_environment/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_5_network_environment | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_5_network_environment | bool]
   tags: [cis_6_2_3_5]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.5
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_5_network_environment/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_6_2_3_5_network_environment | bool]
   tags: [cis_6_2_3_5]
+- name: Audit Ubuntu 24.04 CIS 6.2.3.6
+  ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_6_privileged_commands/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_6_2_3_6_privileged_commands | bool]
+  tags: [cis_6_2_3_6]
+- name: Remediate Ubuntu 24.04 CIS 6.2.3.6
+  ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_6_privileged_commands/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_6_privileged_commands | bool, cis_ubuntu_2404_6_2_3_6_privileged_commands_remediate | bool]
+  tags: [cis_6_2_3_6]
+- name: Verify Ubuntu 24.04 CIS 6.2.3.6
+  ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_6_privileged_commands/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_6_2_3_6_privileged_commands | bool]
+  tags: [cis_6_2_3_6]
 - name: Audit Ubuntu 24.04 CIS 6.2.3.7
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_7_file_access/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_6_2_3_7_file_access | bool]
   tags: [cis_6_2_3_7]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.7
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_7_file_access/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_7_file_access | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_7_file_access | bool]
   tags: [cis_6_2_3_7]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.7
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_7_file_access/verification.yml
@@ -1080,7 +1183,7 @@
   tags: [cis_6_2_3_8]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.8
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_8_identity/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_8_identity | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_8_identity | bool]
   tags: [cis_6_2_3_8]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.8
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_8_identity/verification.yml
@@ -1092,7 +1195,7 @@
   tags: [cis_6_2_3_9]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.9
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_9_perm_mod/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_9_perm_mod | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_9_perm_mod | bool]
   tags: [cis_6_2_3_9]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.9
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_9_perm_mod/verification.yml
@@ -1104,7 +1207,7 @@
   tags: [cis_6_2_3_10]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.10
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_10_mounts/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_10_mounts | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_10_mounts | bool]
   tags: [cis_6_2_3_10]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.10
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_10_mounts/verification.yml
@@ -1116,7 +1219,7 @@
   tags: [cis_6_2_3_11]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.11
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_11_session/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_11_session | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_11_session | bool]
   tags: [cis_6_2_3_11]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.11
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_11_session/verification.yml
@@ -1128,7 +1231,7 @@
   tags: [cis_6_2_3_12]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.12
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_12_logins/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_12_logins | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_12_logins | bool]
   tags: [cis_6_2_3_12]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.12
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_12_logins/verification.yml
@@ -1140,7 +1243,7 @@
   tags: [cis_6_2_3_13]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.13
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_13_delete/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_13_delete | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_13_delete | bool]
   tags: [cis_6_2_3_13]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.13
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_13_delete/verification.yml
@@ -1152,7 +1255,7 @@
   tags: [cis_6_2_3_14]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.14
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_14_mac_policy/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_14_mac_policy | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_14_mac_policy | bool]
   tags: [cis_6_2_3_14]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.14
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_14_mac_policy/verification.yml
@@ -1164,7 +1267,7 @@
   tags: [cis_6_2_3_15]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.15
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_15_chcon/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_15_chcon | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_15_chcon | bool]
   tags: [cis_6_2_3_15]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.15
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_15_chcon/verification.yml
@@ -1176,7 +1279,7 @@
   tags: [cis_6_2_3_16]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.16
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_16_setfacl/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_16_setfacl | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_16_setfacl | bool]
   tags: [cis_6_2_3_16]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.16
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_16_setfacl/verification.yml
@@ -1188,7 +1291,7 @@
   tags: [cis_6_2_3_17]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.17
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_17_chacl/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_17_chacl | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_17_chacl | bool]
   tags: [cis_6_2_3_17]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.17
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_17_chacl/verification.yml
@@ -1200,7 +1303,7 @@
   tags: [cis_6_2_3_18]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.18
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_18_usermod/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_18_usermod | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_18_usermod | bool]
   tags: [cis_6_2_3_18]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.18
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_18_usermod/verification.yml
@@ -1212,7 +1315,7 @@
   tags: [cis_6_2_3_19]
 - name: Remediate Ubuntu 24.04 CIS 6.2.3.19
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_19_kernel_modules/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_3_19_kernel_modules | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_3_19_kernel_modules | bool]
   tags: [cis_6_2_3_19]
 - name: Verify Ubuntu 24.04 CIS 6.2.3.19
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_3_19_kernel_modules/verification.yml
@@ -1224,7 +1327,7 @@
   tags: [cis_6_2_4_1]
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.1
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_1_audit_log_file_mode/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_1_audit_log_file_mode | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_1_audit_log_file_mode | bool]
   tags: [cis_6_2_4_1]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.1
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_1_audit_log_file_mode/verification.yml
@@ -1236,7 +1339,7 @@
   tags: [cis_6_2_4_2]
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.2
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_2_audit_log_file_owner/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_2_audit_log_file_owner | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_2_audit_log_file_owner | bool]
   tags: [cis_6_2_4_2]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.2
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_2_audit_log_file_owner/verification.yml
@@ -1248,7 +1351,7 @@
   tags: [cis_6_2_4_3]
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.3
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_3_audit_log_file_group/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_3_audit_log_file_group | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_3_audit_log_file_group | bool]
   tags: [cis_6_2_4_3]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.3
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_3_audit_log_file_group/verification.yml
@@ -1260,7 +1363,7 @@
   tags: [cis_6_2_4_4]
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.4
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_4_audit_log_directory_mode/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_4_audit_log_directory_mode | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_4_audit_log_directory_mode | bool]
   tags: [cis_6_2_4_4]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.4
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_4_audit_log_directory_mode/verification.yml
@@ -1272,7 +1375,7 @@
   tags: [cis_6_2_4_5]
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.5
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_5_audit_config_file_mode/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_5_audit_config_file_mode | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_5_audit_config_file_mode | bool]
   tags: [cis_6_2_4_5]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.5
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_5_audit_config_file_mode/verification.yml
@@ -1284,7 +1387,7 @@
   tags: [cis_6_2_4_6]
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.6
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_6_audit_config_file_owner/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_6_audit_config_file_owner | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_6_audit_config_file_owner | bool]
   tags: [cis_6_2_4_6]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.6
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_6_audit_config_file_owner/verification.yml
@@ -1296,7 +1399,7 @@
   tags: [cis_6_2_4_7]
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.7
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_7_audit_config_file_group/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_7_audit_config_file_group | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_7_audit_config_file_group | bool]
   tags: [cis_6_2_4_7]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.7
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_7_audit_config_file_group/verification.yml
@@ -1308,7 +1411,7 @@
   tags: [cis_6_2_4_8]
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.8
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_8_audit_tool_mode/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_8_audit_tool_mode | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_8_audit_tool_mode | bool]
   tags: [cis_6_2_4_8]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.8
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_8_audit_tool_mode/verification.yml
@@ -1320,7 +1423,7 @@
   tags: [cis_6_2_4_9]
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.9
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_9_audit_tool_owner/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_9_audit_tool_owner | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_9_audit_tool_owner | bool]
   tags: [cis_6_2_4_9]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.9
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_9_audit_tool_owner/verification.yml
@@ -1357,7 +1460,7 @@
 - {name: 'Verify Ubuntu CIS 1.4.2', ansible.builtin.import_tasks: sections/section_01_initial_setup/1_4_2_grub_permissions/verification.yml, when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_4_2_grub_permissions | bool], tags: [cis_1_4_2]}
 - name: Remediate Ubuntu 24.04 CIS 6.2.4.10
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_10_audit_tool_group/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_6_2_4_10_audit_tool_group | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_6_2_4_10_audit_tool_group | bool]
   tags: [cis_6_2_4_10]
 - name: Verify Ubuntu 24.04 CIS 6.2.4.10
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_4_10_audit_tool_group/verification.yml
@@ -1596,15 +1699,15 @@
 - name: Audit Ubuntu 24.04 CIS 2.1.20
   ansible.builtin.import_tasks: sections/section_02_services/2_1_20_x_window/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_2_1_20_x_window | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_2_1_20, services, service_disabled, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_2_1_20, services, package_absent, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 2.1.20
   ansible.builtin.import_tasks: sections/section_02_services/2_1_20_x_window/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_2_1_20_x_window | bool, cis_ubuntu_2404_2_1_20_x_window_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_2_1_20, services, service_disabled, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_2_1_20, services, package_absent, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 2.1.20
   ansible.builtin.import_tasks: sections/section_02_services/2_1_20_x_window/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_2_1_20_x_window | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_2_1_20, services, service_disabled, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_2_1_20, services, package_absent, gated_unsafe]
 
 # --- gated_unsafe + manual controls (batches 2-6, generated) ---
 - name: Audit Ubuntu 24.04 CIS 1.1.1.6
@@ -1802,87 +1905,95 @@
 - name: Audit Ubuntu 24.04 CIS 5.3.3.2.1
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_1_pwquality_difok/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_3_3_2_1_pwquality_difok | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_1, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_1, pwquality_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.3.3.2.1
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_1_pwquality_difok/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_3_3_2_1_pwquality_difok | bool, cis_ubuntu_2404_5_3_3_2_1_pwquality_difok_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_1, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_1, pwquality_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.3.3.2.1
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_1_pwquality_difok/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_3_3_2_1_pwquality_difok | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_1, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_1, pwquality_parameter, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.3.3.2.2
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_2_pwquality_minlen/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_3_3_2_2_pwquality_minlen | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_2, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_2, pwquality_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.3.3.2.2
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_2_pwquality_minlen/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_3_3_2_2_pwquality_minlen | bool, cis_ubuntu_2404_5_3_3_2_2_pwquality_minlen_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_2, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_2, pwquality_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.3.3.2.2
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_2_pwquality_minlen/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_3_3_2_2_pwquality_minlen | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_2, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_2, pwquality_parameter, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.3.3.2.4
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_4_pwquality_maxrepeat/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_3_3_2_4_pwquality_maxrepeat | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_4, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_4, pwquality_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.3.3.2.4
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_4_pwquality_maxrepeat/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_3_3_2_4_pwquality_maxrepeat | bool, cis_ubuntu_2404_5_3_3_2_4_pwquality_maxrepeat_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_4, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_4, pwquality_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.3.3.2.4
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_4_pwquality_maxrepeat/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_3_3_2_4_pwquality_maxrepeat | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_4, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_4, pwquality_parameter, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.3.3.2.5
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_5_pwquality_maxsequence/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_3_3_2_5_pwquality_maxsequence | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_5, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_5, pwquality_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.3.3.2.5
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_5_pwquality_maxsequence/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_3_3_2_5_pwquality_maxsequence | bool, cis_ubuntu_2404_5_3_3_2_5_pwquality_maxsequence_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_5, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_5, pwquality_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.3.3.2.5
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_5_pwquality_maxsequence/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_3_3_2_5_pwquality_maxsequence | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_5, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_5, pwquality_parameter, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.3.3.2.6
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_6_pwquality_dictcheck/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_3_3_2_6_pwquality_dictcheck | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_6, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_6, pwquality_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.3.3.2.6
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_6_pwquality_dictcheck/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_3_3_2_6_pwquality_dictcheck | bool, cis_ubuntu_2404_5_3_3_2_6_pwquality_dictcheck_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_6, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_6, pwquality_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.3.3.2.6
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_6_pwquality_dictcheck/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_3_3_2_6_pwquality_dictcheck | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_6, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_6, pwquality_parameter, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.3.3.2.7
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_7_pwquality_enforcing/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_3_3_2_7_pwquality_enforcing | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_7, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_7, pwquality_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.3.3.2.7
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_7_pwquality_enforcing/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_3_3_2_7_pwquality_enforcing | bool, cis_ubuntu_2404_5_3_3_2_7_pwquality_enforcing_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_7, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_7, pwquality_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.3.3.2.7
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_7_pwquality_enforcing/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_3_3_2_7_pwquality_enforcing | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_7, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_7, pwquality_parameter, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.3.3.2.8
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_8_pwquality_enforce_root/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_3_3_2_8_pwquality_enforce_root | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_8, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_8, pwquality_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.3.3.2.8
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_8_pwquality_enforce_root/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_3_3_2_8_pwquality_enforce_root | bool, cis_ubuntu_2404_5_3_3_2_8_pwquality_enforce_root_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_8, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_3_3_2_8, pwquality_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.3.3.2.8
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_8_pwquality_enforce_root/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_3_3_2_8_pwquality_enforce_root | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_8, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_8, pwquality_parameter, gated_unsafe]
+- name: Audit Ubuntu 24.04 CIS 5.3.3.2.3 (manual)
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_3_pwquality_complexity/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_3_3_2_3_pwquality_complexity | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_3_3_2_3, manual_observation]
+- name: Verify Ubuntu 24.04 CIS 5.3.3.2.3 (manual)
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_2_3_pwquality_complexity/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_3_3_2_3_pwquality_complexity | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_3_3_2_3, manual_observation]
 - name: Audit Ubuntu 24.04 CIS 5.3.3.3.1
   ansible.builtin.import_tasks: sections/section_05_access_control/5_3_3_3_1_pwhistory_remember/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_3_3_3_1_pwhistory_remember | bool]
@@ -1922,63 +2033,63 @@
 - name: Audit Ubuntu 24.04 CIS 5.4.1.1
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_1_pass_max_days/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_4_1_1_pass_max_days | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_1_1, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_1_1, login_defs_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.4.1.1
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_1_pass_max_days/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_4_1_1_pass_max_days | bool, cis_ubuntu_2404_5_4_1_1_pass_max_days_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_1_1, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_1_1, login_defs_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.4.1.1
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_1_pass_max_days/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_4_1_1_pass_max_days | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_1_1, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_1_1, login_defs_parameter, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.4.1.3
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_3_pass_warn_age/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_4_1_3_pass_warn_age | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_1_3, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_1_3, login_defs_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.4.1.3
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_3_pass_warn_age/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_4_1_3_pass_warn_age | bool, cis_ubuntu_2404_5_4_1_3_pass_warn_age_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_1_3, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_1_3, login_defs_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.4.1.3
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_3_pass_warn_age/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_4_1_3_pass_warn_age | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_1_3, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_1_3, login_defs_parameter, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.4.1.4
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_4_encrypt_method/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_4_1_4_encrypt_method | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_1_4, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_1_4, login_defs_parameter, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.4.1.4
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_4_encrypt_method/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_4_1_4_encrypt_method | bool, cis_ubuntu_2404_5_4_1_4_encrypt_method_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_1_4, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_1_4, login_defs_parameter, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.4.1.4
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_4_encrypt_method/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_4_1_4_encrypt_method | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_1_4, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_1_4, login_defs_parameter, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.4.3.2
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_2_shell_timeout/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_4_3_2_shell_timeout | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_3_2, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_3_2, script_line, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.4.3.2
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_2_shell_timeout/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_4_3_2_shell_timeout | bool, cis_ubuntu_2404_5_4_3_2_shell_timeout_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_3_2, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_3_2, script_line, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.4.3.2
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_2_shell_timeout/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_4_3_2_shell_timeout | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_3_2, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_3_2, script_line, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 5.4.3.3
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_3_default_umask/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_4_3_3_default_umask | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_3_3, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_3_3, script_line, gated_unsafe]
 - name: Remediate Ubuntu 24.04 CIS 5.4.3.3
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_3_default_umask/remediation.yml
   when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_4_3_3_default_umask | bool, cis_ubuntu_2404_5_4_3_3_default_umask_remediate | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_3_3, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_3_3, script_line, gated_unsafe]
 - name: Verify Ubuntu 24.04 CIS 5.4.3.3
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_3_default_umask/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_4_3_3_default_umask | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_3_3, config_line, gated_unsafe]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_3_3, script_line, gated_unsafe]
 - name: Audit Ubuntu 24.04 CIS 6.2.2.3
   ansible.builtin.import_tasks: sections/section_06_logging/6_2_2_3_auditd_full_action/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_6_2_2_3_auditd_full_action | bool]
@@ -2514,7 +2625,7 @@
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_2_2_1, package_absent, gated_unsafe]
 - name: Remediate Ubuntu 2404 CIS 2.2.1
   ansible.builtin.import_tasks: sections/section_02_services/2_2_1_nis_client/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_2_2_1_nis_client | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_2_2_1_nis_client | bool, cis_ubuntu_2404_2_2_1_nis_client_remediate | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_2_2_1, package_absent, gated_unsafe]
 - name: Verify Ubuntu 2404 CIS 2.2.1
   ansible.builtin.import_tasks: sections/section_02_services/2_2_1_nis_client/verification.yml
@@ -2527,7 +2638,7 @@
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_2_2_2, package_absent, gated_unsafe]
 - name: Remediate Ubuntu 2404 CIS 2.2.2
   ansible.builtin.import_tasks: sections/section_02_services/2_2_2_rsh_client/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_2_2_2_rsh_client | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_2_2_2_rsh_client | bool, cis_ubuntu_2404_2_2_2_rsh_client_remediate | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_2_2_2, package_absent, gated_unsafe]
 - name: Verify Ubuntu 2404 CIS 2.2.2
   ansible.builtin.import_tasks: sections/section_02_services/2_2_2_rsh_client/verification.yml
@@ -2540,7 +2651,7 @@
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_2_2_3, package_absent, gated_unsafe]
 - name: Remediate Ubuntu 2404 CIS 2.2.3
   ansible.builtin.import_tasks: sections/section_02_services/2_2_3_talk_client/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_2_2_3_talk_client | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_2_2_3_talk_client | bool, cis_ubuntu_2404_2_2_3_talk_client_remediate | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_2_2_3, package_absent, gated_unsafe]
 - name: Verify Ubuntu 2404 CIS 2.2.3
   ansible.builtin.import_tasks: sections/section_02_services/2_2_3_talk_client/verification.yml
@@ -2553,7 +2664,7 @@
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_2_2_4, package_absent, gated_unsafe]
 - name: Remediate Ubuntu 2404 CIS 2.2.4
   ansible.builtin.import_tasks: sections/section_02_services/2_2_4_telnet_client/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_2_2_4_telnet_client | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_2_2_4_telnet_client | bool, cis_ubuntu_2404_2_2_4_telnet_client_remediate | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_2_2_4, package_absent, gated_unsafe]
 - name: Verify Ubuntu 2404 CIS 2.2.4
   ansible.builtin.import_tasks: sections/section_02_services/2_2_4_telnet_client/verification.yml
@@ -2566,7 +2677,7 @@
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_2_2_5, package_absent, gated_unsafe]
 - name: Remediate Ubuntu 2404 CIS 2.2.5
   ansible.builtin.import_tasks: sections/section_02_services/2_2_5_ldap_client/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_2_2_5_ldap_client | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_2_2_5_ldap_client | bool, cis_ubuntu_2404_2_2_5_ldap_client_remediate | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_2_2_5, package_absent, gated_unsafe]
 - name: Verify Ubuntu 2404 CIS 2.2.5
   ansible.builtin.import_tasks: sections/section_02_services/2_2_5_ldap_client/verification.yml
@@ -2579,7 +2690,7 @@
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_2_2_6, package_absent, gated_unsafe]
 - name: Remediate Ubuntu 2404 CIS 2.2.6
   ansible.builtin.import_tasks: sections/section_02_services/2_2_6_ftp_client/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_2_2_6_ftp_client | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_2_2_6_ftp_client | bool, cis_ubuntu_2404_2_2_6_ftp_client_remediate | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_2_2_6, package_absent, gated_unsafe]
 - name: Verify Ubuntu 2404 CIS 2.2.6
   ansible.builtin.import_tasks: sections/section_02_services/2_2_6_ftp_client/verification.yml
@@ -2588,18 +2699,21 @@
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_2_passwd_backup_permissions/audit.yml
 
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_2_passwd_backup_permissions/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_7_1_2_passwd_backup_permissions | bool, cis_ubuntu_2404_7_1_2_passwd_backup_permissions_remediate | bool]
 
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_2_passwd_backup_permissions/verification.yml
 
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_3_group_backup_permissions/audit.yml
 
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_3_group_backup_permissions/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_7_1_3_group_backup_permissions | bool, cis_ubuntu_2404_7_1_3_group_backup_permissions_remediate | bool]
 
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_3_group_backup_permissions/verification.yml
 
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/audit.yml
 
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_7_1_5_shadow_permissions | bool, cis_ubuntu_2404_7_1_5_shadow_permissions_remediate | bool]
 
 - ansible.builtin.import_tasks: sections/section_07_maintenance/7_1_5_shadow_permissions/verification.yml
 
@@ -2610,7 +2724,7 @@
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_3_1, line_absent, gated_unsafe]
 - name: Remediate Ubuntu 2404 CIS 5.4.3.1
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_1_nologin_shells/remediation.yml
-  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_5_4_3_1_nologin_shells | bool]
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_4_3_1_nologin_shells | bool, cis_ubuntu_2404_5_4_3_1_nologin_shells_remediate | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_4_3_1, line_absent, gated_unsafe]
 - name: Verify Ubuntu 2404 CIS 5.4.3.1
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_3_1_nologin_shells/verification.yml
@@ -2620,16 +2734,20 @@
 - name: Audit Ubuntu 2404 CIS 5.4.1.2
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_2_min_password_days/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_4_1_2_min_password_days | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_1_2, config_line, manual]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_4_1_2, manual_observation, manual]
 - name: Verify Ubuntu 2404 CIS 5.4.1.2
   ansible.builtin.import_tasks: sections/section_05_access_control/5_4_1_2_min_password_days/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_4_1_2_min_password_days | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_1_2, config_line, manual]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_5_4_1_2, manual_observation, manual]
 
 - name: Audit Ubuntu 2404 CIS 5.1.4
   ansible.builtin.import_tasks: sections/section_05_access_control/5_1_4_sshd_access/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_5_1_4_sshd_access | bool]
   tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_5_1_4, config_line, manual]
+- name: Remediate Ubuntu 2404 CIS 5.1.4
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_1_4_sshd_access/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_5_1_4_sshd_access | bool, cis_ubuntu_2404_5_1_4_sshd_access_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_5_1_4, config_line, manual]
 - name: Verify Ubuntu 2404 CIS 5.1.4
   ansible.builtin.import_tasks: sections/section_05_access_control/5_1_4_sshd_access/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_5_1_4_sshd_access | bool]
@@ -2638,341 +2756,411 @@
 - name: Audit Ubuntu 2404 CIS 1.1.2.1.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_partition/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_1_tmp_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_1, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.1.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_partition/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_1_tmp_partition | bool, cis_ubuntu_2404_1_1_2_1_tmp_partition_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_1_1, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.1.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_partition/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_1_tmp_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_1, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.1.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nodev/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_1_tmp_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_2, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.1.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nodev/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_1_tmp_nodev | bool, cis_ubuntu_2404_1_1_2_1_tmp_nodev_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_1_2, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.1.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nodev/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_1_tmp_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_2, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.1.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nosuid/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_1_tmp_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_3, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.1.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nosuid/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_1_tmp_nosuid | bool, cis_ubuntu_2404_1_1_2_1_tmp_nosuid_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_1_3, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.1.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_nosuid/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_1_tmp_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_3, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.1.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_noexec/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_1_tmp_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_1_4, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.1.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_noexec/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_1_tmp_noexec | bool, cis_ubuntu_2404_1_1_2_1_tmp_noexec_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_1_4, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.1.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_1_tmp_noexec/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_1_tmp_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_1_4, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.2.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_partition/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_2_dev_shm_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_1, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.2.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_partition/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_2_dev_shm_partition | bool, cis_ubuntu_2404_1_1_2_2_dev_shm_partition_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_2_1, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.2.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_partition/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_2_dev_shm_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_1, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.2.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nodev/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_2_dev_shm_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_2, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.2.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nodev/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_2_dev_shm_nodev | bool, cis_ubuntu_2404_1_1_2_2_dev_shm_nodev_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_2_2, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.2.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nodev/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_2_dev_shm_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_2, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.2.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nosuid/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_2_dev_shm_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_3, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.2.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nosuid/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_2_dev_shm_nosuid | bool, cis_ubuntu_2404_1_1_2_2_dev_shm_nosuid_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_2_3, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.2.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_nosuid/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_2_dev_shm_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_3, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.2.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_noexec/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_2_dev_shm_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_2_4, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.2.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_noexec/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_2_dev_shm_noexec | bool, cis_ubuntu_2404_1_1_2_2_dev_shm_noexec_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_2_4, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.2.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_2_dev_shm_noexec/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_2_dev_shm_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_2_4, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.3.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_partition/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_3_home_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_1, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.3.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_partition/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_3_home_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_1, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.3.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_nodev/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_3_home_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_2, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.3.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_nodev/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_3_home_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_2, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.3.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_nosuid/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_3_home_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_3, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.3.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_nosuid/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_3_home_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_3, manual_observation, na]
-
-- name: Audit Ubuntu 2404 CIS 1.1.2.3.4
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_noexec/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_3_home_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_3_4, manual_observation, na]
-- name: Verify Ubuntu 2404 CIS 1.1.2.3.4
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_3_home_noexec/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_3_home_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_3_3, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.4.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_partition/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_4_var_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_1, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.4.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_partition/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_4_var_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_1, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.4.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_nodev/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_4_var_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_2, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.4.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_nodev/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_4_var_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_2, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.4.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_nosuid/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_4_var_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_3, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.4.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_nosuid/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_4_var_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_3, manual_observation, na]
-
-- name: Audit Ubuntu 2404 CIS 1.1.2.4.4
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_noexec/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_4_var_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_4_4, manual_observation, na]
-- name: Verify Ubuntu 2404 CIS 1.1.2.4.4
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_4_var_noexec/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_4_var_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_4_3, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.5.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_partition/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_5_var_tmp_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_1, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.5.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_partition/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_5_var_tmp_partition | bool, cis_ubuntu_2404_1_1_2_5_var_tmp_partition_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_5_1, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.5.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_partition/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_5_var_tmp_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_1, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.5.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nodev/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_5_var_tmp_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_2, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.5.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nodev/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_5_var_tmp_nodev | bool, cis_ubuntu_2404_1_1_2_5_var_tmp_nodev_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_5_2, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.5.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nodev/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_5_var_tmp_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_2, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.5.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nosuid/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_5_var_tmp_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_3, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.5.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nosuid/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_5_var_tmp_nosuid | bool, cis_ubuntu_2404_1_1_2_5_var_tmp_nosuid_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_5_3, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.5.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_nosuid/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_5_var_tmp_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_3, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.5.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_noexec/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_5_var_tmp_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_5_4, mount_options]
+- name: Remediate Ubuntu 2404 CIS 1.1.2.5.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_noexec/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_1_2_5_var_tmp_noexec | bool, cis_ubuntu_2404_1_1_2_5_var_tmp_noexec_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_1_2_5_4, mount_options]
 - name: Verify Ubuntu 2404 CIS 1.1.2.5.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_5_var_tmp_noexec/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_5_var_tmp_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_5_4, mount_options]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.6.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_partition/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_6_var_log_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_1, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.6.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_partition/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_6_var_log_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_1, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.6.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_nodev/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_6_var_log_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_2, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.6.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_nodev/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_6_var_log_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_2, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.6.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_nosuid/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_6_var_log_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_3, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.6.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_nosuid/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_6_var_log_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_3, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.6.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_noexec/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_6_var_log_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_6_4, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.6.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_6_var_log_noexec/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_6_var_log_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_6_4, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.7.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_partition/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_7_var_log_audit_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_1, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.7.1
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_partition/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_7_var_log_audit_partition | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_1, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_1, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.7.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_nodev/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_7_var_log_audit_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_2, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.7.2
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_nodev/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_7_var_log_audit_nodev | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_2, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_2, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.7.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_nosuid/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_7_var_log_audit_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_3, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.7.3
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_nosuid/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_7_var_log_audit_nosuid | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_3, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_3, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.1.2.7.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_noexec/audit.yml
   when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_1_2_7_var_log_audit_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_1_2_7_4, mount_options, manual]
 - name: Verify Ubuntu 2404 CIS 1.1.2.7.4
   ansible.builtin.import_tasks: sections/section_01_initial_setup/1_1_2_7_var_log_audit_noexec/verification.yml
   when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_1_2_7_var_log_audit_noexec | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_4, manual_observation, na]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_1_2_7_4, mount_options, manual]
 
 - name: Audit Ubuntu 2404 CIS 1.7.1
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_1_motd/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_1_motd | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_1, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_1_gdm_removed/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_1_gdm_removed | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_1, package_absent, gated_unsafe]
+- name: Remediate Ubuntu 2404 CIS 1.7.1
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_1_gdm_removed/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_1_gdm_removed | bool, cis_ubuntu_2404_1_7_1_gdm_removed_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_1, package_absent, gated_unsafe]
 - name: Verify Ubuntu 2404 CIS 1.7.1
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_1_motd/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_1_motd | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_1, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_1_gdm_removed/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_1_gdm_removed | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_1, package_absent, gated_unsafe]
 
 - name: Audit Ubuntu 2404 CIS 1.7.2
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_2_issue/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_2_issue | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_2, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_2_gdm_banner/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_2_gdm_banner | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_2, gdm, gdm_configuration]
+- name: Remediate Ubuntu 2404 CIS 1.7.2
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_2_gdm_banner/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_2_gdm_banner | bool, cis_ubuntu_2404_1_7_2_gdm_banner_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_2, gdm, gdm_configuration]
 - name: Verify Ubuntu 2404 CIS 1.7.2
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_2_issue/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_2_issue | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_2, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_2_gdm_banner/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_2_gdm_banner | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_2, gdm, gdm_configuration]
 
 - name: Audit Ubuntu 2404 CIS 1.7.3
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_3_issue_net/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_3_issue_net | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_3, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_3_gdm_user_list/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_3_gdm_user_list | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_3, gdm, gdm_configuration]
+- name: Remediate Ubuntu 2404 CIS 1.7.3
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_3_gdm_user_list/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_3_gdm_user_list | bool, cis_ubuntu_2404_1_7_3_gdm_user_list_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_3, gdm, gdm_configuration]
 - name: Verify Ubuntu 2404 CIS 1.7.3
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_3_issue_net/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_3_issue_net | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_3, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_3_gdm_user_list/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_3_gdm_user_list | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_3, gdm, gdm_configuration]
 
 - name: Audit Ubuntu 2404 CIS 1.7.4
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_4_motd_permissions/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_4_motd_permissions | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_4, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_4_gdm_screen_lock/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_4_gdm_screen_lock | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_4, gdm, gdm_configuration]
+- name: Remediate Ubuntu 2404 CIS 1.7.4
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_4_gdm_screen_lock/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_4_gdm_screen_lock | bool, cis_ubuntu_2404_1_7_4_gdm_screen_lock_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_4, gdm, gdm_configuration]
 - name: Verify Ubuntu 2404 CIS 1.7.4
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_4_motd_permissions/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_4_motd_permissions | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_4, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_4_gdm_screen_lock/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_4_gdm_screen_lock | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_4, gdm, gdm_configuration]
 
 - name: Audit Ubuntu 2404 CIS 1.7.5
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_5_issue_permissions/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_5_issue_permissions | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_5, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_5_gdm_screen_lock_lock/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_5_gdm_screen_lock_lock | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_5, gdm, gdm_configuration]
+- name: Remediate Ubuntu 2404 CIS 1.7.5
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_5_gdm_screen_lock_lock/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_5_gdm_screen_lock_lock | bool, cis_ubuntu_2404_1_7_5_gdm_screen_lock_lock_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_5, gdm, gdm_configuration]
 - name: Verify Ubuntu 2404 CIS 1.7.5
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_5_issue_permissions/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_5_issue_permissions | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_5, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_5_gdm_screen_lock_lock/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_5_gdm_screen_lock_lock | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_5, gdm, gdm_configuration]
 
 - name: Audit Ubuntu 2404 CIS 1.7.6
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_6_issue_net_permissions/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_6_issue_net_permissions | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_6, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_6_gdm_automount/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_6_gdm_automount | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_6, gdm, gdm_configuration]
+- name: Remediate Ubuntu 2404 CIS 1.7.6
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_6_gdm_automount/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_6_gdm_automount | bool, cis_ubuntu_2404_1_7_6_gdm_automount_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_6, gdm, gdm_configuration]
 - name: Verify Ubuntu 2404 CIS 1.7.6
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_6_issue_net_permissions/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_6_issue_net_permissions | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_6, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_6_gdm_automount/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_6_gdm_automount | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_6, gdm, gdm_configuration]
 
 - name: Audit Ubuntu 2404 CIS 1.7.7
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_7_gdm_banner/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_7_gdm_banner | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_7, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_7_gdm_automount_lock/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_7_gdm_automount_lock | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_7, gdm, gdm_configuration]
+- name: Remediate Ubuntu 2404 CIS 1.7.7
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_7_gdm_automount_lock/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_7_gdm_automount_lock | bool, cis_ubuntu_2404_1_7_7_gdm_automount_lock_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_7, gdm, gdm_configuration]
 - name: Verify Ubuntu 2404 CIS 1.7.7
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_7_gdm_banner/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_7_gdm_banner | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_7, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_7_gdm_automount_lock/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_7_gdm_automount_lock | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_7, gdm, gdm_configuration]
 
 - name: Audit Ubuntu 2404 CIS 1.7.8
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_8_gdm_user_list/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_8_gdm_user_list | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_8, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_8_gdm_autorun_never/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_8_gdm_autorun_never | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_8, gdm, gdm_configuration]
+- name: Remediate Ubuntu 2404 CIS 1.7.8
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_8_gdm_autorun_never/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_8_gdm_autorun_never | bool, cis_ubuntu_2404_1_7_8_gdm_autorun_never_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_8, gdm, gdm_configuration]
 - name: Verify Ubuntu 2404 CIS 1.7.8
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_8_gdm_user_list/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_8_gdm_user_list | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_8, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_8_gdm_autorun_never/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_8_gdm_autorun_never | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_8, gdm, gdm_configuration]
 
 - name: Audit Ubuntu 2404 CIS 1.7.9
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_9_gdm_xdmcp/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_9_gdm_xdmcp | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_9, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_9_gdm_autorun_never_lock/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_9_gdm_autorun_never_lock | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_9, gdm, gdm_configuration]
+- name: Remediate Ubuntu 2404 CIS 1.7.9
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_9_gdm_autorun_never_lock/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_9_gdm_autorun_never_lock | bool, cis_ubuntu_2404_1_7_9_gdm_autorun_never_lock_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_9, gdm, gdm_configuration]
 - name: Verify Ubuntu 2404 CIS 1.7.9
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_9_gdm_xdmcp/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_9_gdm_xdmcp | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_9, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_9_gdm_autorun_never_lock/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_9_gdm_autorun_never_lock | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_9, gdm, gdm_configuration]
 
 - name: Audit Ubuntu 2404 CIS 1.7.10
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_10_gdm_xdmcp2/audit.yml
-  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_10_gdm_xdmcp2 | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_10, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_10_gdm_xdmcp/audit.yml
+  when: [cis_ubuntu_2404_execution_mode == 'audit', cis_ubuntu_2404_1_7_10_gdm_xdmcp | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_audit, cis_1_7_10, gdm, gdm_configuration]
+- name: Remediate Ubuntu 2404 CIS 1.7.10
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_10_gdm_xdmcp/remediation.yml
+  when: [cis_ubuntu_2404_execution_mode == 'remediation', cis_ubuntu_2404_remediation_enabled | bool, cis_ubuntu_2404_1_7_10_gdm_xdmcp | bool, cis_ubuntu_2404_1_7_10_gdm_xdmcp_remediate | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_remediation, cis_1_7_10, gdm, gdm_configuration]
 - name: Verify Ubuntu 2404 CIS 1.7.10
-  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_10_gdm_xdmcp2/verification.yml
-  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_10_gdm_xdmcp2 | bool]
-  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_10, manual_observation, na]
+  ansible.builtin.import_tasks: sections/section_01_initial_setup/1_7_10_gdm_xdmcp/verification.yml
+  when: [cis_ubuntu_2404_execution_mode == 'verification', cis_ubuntu_2404_1_7_10_gdm_xdmcp | bool]
+  tags: [cis_ubuntu_2404, cis_ubuntu_2404_verification, cis_1_7_10, gdm, gdm_configuration]

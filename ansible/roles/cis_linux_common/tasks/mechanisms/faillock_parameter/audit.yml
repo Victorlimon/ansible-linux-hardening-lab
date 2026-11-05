@@ -1,0 +1,25 @@
+---
+- name: Common faillock parameter | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common faillock parameter | Delegate to shared stack inspection
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/inspect.yml
+
+- name: Common faillock parameter | Compute parameter evidence
+  ansible.builtin.import_tasks: mechanisms/faillock_parameter/evaluate.yml
+
+- name: Common faillock parameter | Report parameter state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'NOT_APPLICABLE' if cis_linux_common_faillock_package not in ansible_facts.packages else
+           ('PASS' if cis_linux_common_faillock_parameter_ok else 'FAIL') }}
+      changed_target: false
+      evidence:
+        name_lines: "{{ cis_linux_common_faillock_name_count }}"
+        compliant_lines: "{{ cis_linux_common_faillock_value_count }}"
+        inline_override_files: "{{ cis_linux_common_faillock_override_files }}"
+        unreadable_files: "{{ cis_linux_common_faillock_unreadable_files }}"

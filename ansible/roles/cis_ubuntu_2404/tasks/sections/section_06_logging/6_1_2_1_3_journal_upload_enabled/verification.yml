@@ -1,4 +1,4 @@
 ---
 - name: CIS 6.1.2.1.3 | Verification | Ubuntu common route
   ansible.builtin.import_role: {name: cis_linux_common, tasks_from: sections/section_06_logging/6_1_2_1_3_journal_upload_enabled/verification.yml}
-  vars: {cis_linux_common_control_id: "6.1.2.1.3", cis_linux_common_platform: ubuntu_2404, cis_linux_common_service_package: systemd-journal-remote, cis_linux_common_service_name: systemd-journal-upload.service}
+  vars: {cis_linux_common_control_id: "6.1.2.1.3", cis_linux_common_platform: ubuntu_2404, cis_linux_common_service_package: systemd-journal-remote, cis_linux_common_service_name: systemd-journal-upload.service, cis_linux_common_journal_upload_url: "{{ cis_ubuntu_2404_journal_upload_url }}"}

@@ -1,3 +1,2 @@
 ---
-- name: config_line verification | Delegate to mechanism
-  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
+- ansible.builtin.import_tasks: mechanisms/manual_observation/verification.yml

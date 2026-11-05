@@ -1,0 +1,20 @@
+---
+# CIS 1.7.6 remediation: benchmark local.d branch — 00-media-automount
+# keyfile disabling automount/automount-open, the local dconf user profile,
+# then dconf update (inside the shared mechanism). No-op while gdm3 is
+# absent; opt-in behind the cis_<platform>_1_7_6_gdm_automount_remediate gate
+# (default false).
+- name: CIS 1.7.6 | Remediation | Delegate the GDM automount dconf artifacts
+  ansible.builtin.import_tasks: mechanisms/gdm_configuration/remediation.yml
+  vars:
+    cis_linux_common_gdm_remediate_files:
+      - path: /etc/dconf/db/local.d/00-media-automount
+        content: |
+          [org/gnome/desktop/media-handling]
+          automount=false
+          automount-open=false
+    cis_linux_common_gdm_remediate_profiles:
+      - path: /etc/dconf/profile/user
+        lines:
+          - user-db:user
+          - system-db:local

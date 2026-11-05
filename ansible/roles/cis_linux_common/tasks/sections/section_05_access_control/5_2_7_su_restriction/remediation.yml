@@ -1,6 +1,28 @@
 ---
-- name: Config line remediation | Delegate to config_line
+# The group is created empty and never gains members through this role. If an
+# administrator populates it afterwards, verification fails on purpose; the
+# benchmark expects an empty site-policy group, and silently stripping NSS
+# membership from user accounts here would be a destructive surprise.
+- name: CIS 5.2.7 | Remediation | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: CIS 5.2.7 | Remediation | Ensure su-restriction group exists empty
+  ansible.builtin.group:
+    name: "{{ cis_linux_common_su_restriction_group }}"
+    state: present
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+- name: CIS 5.2.7 | Remediation | Remove legacy group-less managed pam_wheel line
+  ansible.builtin.import_tasks: mechanisms/line_absent/remediation.yml
+  vars:
+    cis_linux_common_config_line_regexp: '^auth\s+required\s+pam_wheel\.so\s+use_uid\s*$'
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+- name: CIS 5.2.7 | Remediation | Delegate to config_line
   ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
   vars:
-    cis_linux_common_config_line: 'auth required pam_wheel.so use_uid'
-    cis_linux_common_config_line_regexp: '^auth\s+required\s+pam_wheel\.so\s+use_uid'
+    cis_linux_common_config_line: "auth required pam_wheel.so use_uid group={{ cis_linux_common_su_restriction_group }}"
+    cis_linux_common_config_line_regexp: >-
+      ^auth\s+required\s+pam_wheel\.so\s+use_uid\s+group={{
+      cis_linux_common_su_restriction_group | regex_escape }}$

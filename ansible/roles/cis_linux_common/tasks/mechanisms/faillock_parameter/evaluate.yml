@@ -1,0 +1,89 @@
+---
+# Shared evidence computation for CIS 5.3.3.1.1-.3 (pam_faillock arguments in
+# /etc/security/faillock.conf). Requires mechanisms/pam_faillock_stack/inspect.yml
+# to have run first: the inline-override and unreadable-file facts come from
+# that shared scan of /etc/pam.d and /usr/share/pam-configs.
+#
+# Verdict semantics, deterministic by design:
+# - numeric (deny, unlock_time): PASS only when the parameter appears exactly
+#   once and that single line carries the exact benchmark value; a missing
+#   file, a second line, or any other value FAILs.
+# - flag (even_deny_root): PASS when the bare 'even_deny_root' token is set
+#   (root then inherits the benchmark-compliant unlock_time, so an absent
+#   root_unlock_time is the safe inherited-value case) OR when
+#   root_unlock_time is explicitly present with every parsed value >= 60
+#   seconds. Both absent FAILs; a malformed even_deny_root assignment or an
+#   unparseable/under-60 root_unlock_time FAILs.
+
+- name: Common faillock parameter | Inspect the configuration file
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_faillock_conf_path }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: cis_linux_common_faillock_conf_stat
+
+- name: Common faillock parameter | Read the configuration file
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_faillock_conf_path }}"
+  when:
+    - cis_linux_common_faillock_conf_stat.stat.exists | default(false)
+    - cis_linux_common_faillock_conf_stat.stat.isreg | default(false)
+    - cis_linux_common_faillock_conf_stat.stat.readable | default(false)
+  failed_when: false
+  register: cis_linux_common_faillock_conf_slurp
+
+- name: Common faillock parameter | Split the configuration file into lines
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_conf_text: >-
+      {{ cis_linux_common_faillock_conf_slurp.content | default('', true) | b64decode }}
+    cis_linux_common_faillock_conf_lines: >-
+      {{ (cis_linux_common_faillock_conf_slurp.content | default('', true) | b64decode)
+         | regex_findall('(?m)^.*$') }}
+
+- name: Common faillock parameter | Count parameter occurrences
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_name_count: >-
+      {{ cis_linux_common_faillock_conf_lines
+         | select('match', cis_linux_common_faillock_name_regex) | list | count }}
+    cis_linux_common_faillock_value_count: >-
+      {{ cis_linux_common_faillock_conf_lines
+         | select('match', cis_linux_common_faillock_value_regex) | list | count }}
+
+- name: Common faillock parameter | Inspect root_unlock_time semantics
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_root_unlock_total: >-
+      {{ cis_linux_common_faillock_conf_lines
+         | select('match', cis_linux_common_faillock_companion_name_regex) | list | count }}
+    cis_linux_common_faillock_root_unlock_values: >-
+      {{ cis_linux_common_faillock_conf_text
+         | regex_findall('(?m)^' ~ cis_linux_common_faillock_companion_value_regex) }}
+  when: cis_linux_common_faillock_kind == 'flag'
+
+- name: Common faillock parameter | Flag root_unlock_time values below 60 seconds
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_root_unlock_invalid: >-
+      {{ cis_linux_common_faillock_root_unlock_values
+         | map('int') | select('lt', 60) | list | length > 0 }}
+  when: cis_linux_common_faillock_kind == 'flag'
+
+- name: Common faillock parameter | Aggregate the parameter verdict
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_parameter_ok: >-
+      {{ cis_linux_common_faillock_unreadable_files | length == 0
+         and cis_linux_common_faillock_override_files | length == 0
+         and (
+              (cis_linux_common_faillock_name_count == 1
+               and cis_linux_common_faillock_value_count == 1)
+              if cis_linux_common_faillock_kind == 'numeric'
+              else (
+                (cis_linux_common_faillock_value_count >= 1
+                 or cis_linux_common_faillock_root_unlock_total >= 1)
+                and cis_linux_common_faillock_name_count
+                    == cis_linux_common_faillock_value_count
+                and cis_linux_common_faillock_root_unlock_total
+                    == (cis_linux_common_faillock_root_unlock_values | default([], true) | length)
+                and (cis_linux_common_faillock_root_unlock_values | default([], true)
+                     | map('int') | select('lt', 60) | list | length) == 0
+              )
+            ) }}

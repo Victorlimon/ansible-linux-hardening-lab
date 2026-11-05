@@ -1,0 +1,132 @@
+---
+# Shared evidence computation for the CIS pwquality parameter family
+# (5.3.3.2.1, .2, .4, .5, .6, .7, .8). Requires
+# mechanisms/pwquality_parameter/inspect.yml to have run first: the named
+# lines, inline-override files, and unreadable files come from that shared
+# scan of /etc/security/pwquality.conf, /etc/security/pwquality.conf.d,
+# /etc/pam.d, and /usr/share/pam-configs.
+#
+# Verdict semantics, deterministic by design, translated line-for-line from
+# the exact benchmark Audit greps (case-insensitive, bounded value sets):
+# - numeric_min (difok 2+, minlen 14+) and numeric_max (maxrepeat,
+#   maxsequence in 1..3, never 0): PASS only when the parameter appears
+#   exactly once across the whole corpus and that single line is
+#   benchmark-compliant; stricter site values inside the bounded set PASS
+#   and are never rewritten. A second line, a forbidden inline
+#   pam_pwquality.so argument, or an unreadable corpus file FAILs. The
+#   previous generic config_line pinned 'maxsequence = 4', outside the
+#   benchmark [1-3] set: a false-pass eliminated by construction here.
+# - not_zero (dictcheck, enforcing): the module default is compliant (both
+#   default to 1), so PASS means no active line sets the value to 0 and no
+#   forbidden inline argument exists; an absent parameter is compliant by
+#   default. Two or more named lines FAIL (single-location rule). This
+#   corrects the inverted config_line gate that demanded the literal
+#   'dictcheck = 1'/'enforcing = 1' lines and failed default-compliant
+#   systems.
+# - flag (enforce_for_root): default off, so PASS requires at least one
+#   named line; every named line must be the bare token or a truthy
+#   assignment (the bare token empirically enforces for root on both
+#   platforms). Falsy assignments ('=0', '=false', '=no') FAIL even though
+#   the literal benchmark token grep would match them, because they do not
+#   establish enforcement.
+
+- name: Common pwquality parameter | Reset the evaluation accumulators
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_forbidden_paths: []
+
+- name: Common pwquality parameter | Flatten the named-line evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_named_lines: >-
+      {{ cis_linux_common_pwq_named_by_source
+         | map(attribute='named') | flatten }}
+    cis_linux_common_pwq_named_paths: >-
+      {{ cis_linux_common_pwq_named_by_source
+         | selectattr('named', '!=', [])
+         | map(attribute='path') | list }}
+
+- name: Common pwquality parameter | Classify the named lines
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_name_count: >-
+      {{ cis_linux_common_pwq_named_lines | count }}
+    cis_linux_common_pwq_compliant_count: >-
+      {{ cis_linux_common_pwq_named_lines
+         | select('search', cis_linux_common_pwq_value_regex) | list | count }}
+    cis_linux_common_pwq_forbidden_count: >-
+      {{ (cis_linux_common_pwq_named_lines
+          | select('search', cis_linux_common_pwq_forbidden_regex)
+          | list | count)
+         if cis_linux_common_pwq_forbidden_regex != '' else 0 }}
+
+- name: Common pwquality parameter | Record the files carrying forbidden lines
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_forbidden_paths: >-
+      {{ cis_linux_common_pwq_forbidden_paths
+         + [item.path]
+         if (item.named
+             | select('search', cis_linux_common_pwq_forbidden_regex)
+             | list | count) > 0
+         else cis_linux_common_pwq_forbidden_paths }}
+  loop: "{{ cis_linux_common_pwq_named_by_source }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: cis_linux_common_pwq_forbidden_regex != ''
+
+- name: Common pwquality parameter | Derive the malformed-line count
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_malformed_count: >-
+      {{ [cis_linux_common_pwq_name_count
+          - cis_linux_common_pwq_compliant_count
+          - cis_linux_common_pwq_forbidden_count, 0] | max }}
+
+- name: Common pwquality parameter | Restrict auto-writes to owned corpus locations
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_writable_source: >-
+      {{ cis_linux_common_pwq_name_count == 1
+         and (cis_linux_common_pwq_named_paths | first)
+             in [cis_linux_common_pwq_main_file,
+                 cis_linux_common_pwq_managed_path] }}
+
+- name: Common pwquality parameter | Aggregate the parameter verdict
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_parameter_ok: >-
+      {{ cis_linux_common_pwq_unreadable_files | length == 0
+         and cis_linux_common_pwq_inline_override_files | length == 0
+         and (
+               ((cis_linux_common_pwq_kind == 'numeric_min'
+                 or cis_linux_common_pwq_kind == 'numeric_max')
+                and cis_linux_common_pwq_name_count == 1
+                and cis_linux_common_pwq_compliant_count == 1)
+               or (cis_linux_common_pwq_kind == 'not_zero'
+                   and cis_linux_common_pwq_name_count <= 1
+                   and cis_linux_common_pwq_forbidden_count == 0
+                   and cis_linux_common_pwq_malformed_count == 0)
+               or (cis_linux_common_pwq_kind == 'flag'
+                   and cis_linux_common_pwq_name_count >= 1
+                   and cis_linux_common_pwq_forbidden_count == 0
+                   and cis_linux_common_pwq_malformed_count == 0
+                   and cis_linux_common_pwq_compliant_count
+                      == cis_linux_common_pwq_name_count)
+             ) }}
+
+# The action depends on the verdict fact above. Ansible resolves every value
+# inside one set_fact against the facts as they existed BEFORE the task, so
+# defining both keys in the same task makes cis_linux_common_pwq_action read
+# cis_linux_common_pwq_parameter_ok while it is still undefined (the exact
+# crash recorded in the remaining-tail audits). It must be a separate task.
+- name: Common pwquality parameter | Derive the remediation action
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_action: >-
+      {{ 'none' if cis_linux_common_pwq_parameter_ok
+         else ('blocked'
+               if (cis_linux_common_pwq_unreadable_files | length > 0
+                   or cis_linux_common_pwq_inline_override_files | length > 0
+                   or cis_linux_common_pwq_name_count > 1
+                   or (cis_linux_common_pwq_name_count == 1
+                       and not cis_linux_common_pwq_writable_source))
+               else ('create'
+                     if cis_linux_common_pwq_name_count == 0
+                     else ('remove'
+                           if (cis_linux_common_pwq_kind == 'not_zero'
+                               and cis_linux_common_pwq_forbidden_count
+                                  == cis_linux_common_pwq_name_count)
+                           else 'replace'))) }}

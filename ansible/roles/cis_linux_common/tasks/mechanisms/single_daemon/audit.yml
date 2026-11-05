@@ -16,6 +16,6 @@
     msg:
       control: "{{ cis_linux_common_control_id }}"
       platform: "{{ cis_linux_common_platform }}"
-      classification: "{{ 'PASS' if cis_linux_common_time_daemon_count <= 1 else 'FAIL' }}"
+      classification: "{{ 'PASS' if cis_linux_common_time_daemon_count == 1 else 'FAIL' }}"
       active_daemons: "{{ cis_linux_common_time_daemon_count }}"
       changed_target: false

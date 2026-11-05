@@ -1,7 +1,9 @@
 ---
+# Verification mirrors the 6.2.2.4 benchmark audit accepted value sets, not
+# the single remediation value.
 - name: CIS 6.2.2.4 | Verification | Check space-left action
   ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
-  vars: {cis_linux_common_config_line_regexp: '^\s*space_left_action\s*=\s*email\s*$', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}
+  vars: {cis_linux_common_config_line_regexp: '^\s*space_left_action\s*=\s*(email|exec|single|halt)\b', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}
 - name: CIS 6.2.2.4 | Verification | Check admin-space-left action
   ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
-  vars: {cis_linux_common_config_line_regexp: '^\s*admin_space_left_action\s*=\s*halt\s*$', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}
+  vars: {cis_linux_common_config_line_regexp: '^\s*admin_space_left_action\s*=\s*(single|halt)\b', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}

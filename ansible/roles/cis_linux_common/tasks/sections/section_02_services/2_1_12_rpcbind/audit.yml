@@ -1,3 +1,29 @@
 ---
-- name: CIS 2.1.12 | Audit | Delegate to disabled-service mechanism
-  ansible.builtin.import_tasks: mechanisms/service_disabled/audit.yml
+- name: CIS 2.1.12 | Audit | Gather installed packages
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: CIS 2.1.12 | Audit | Read rpcbind unit activation states
+  ansible.builtin.command:
+    argv: [systemctl, "{{ item }}", rpcbind.socket, rpcbind.service]
+  loop: [is-enabled, is-active]
+  register: cis_linux_common_rpcbind_audit_states
+  check_mode: false
+  changed_when: false
+  failed_when: false
+  when: "'rpcbind' in ansible_facts.packages"
+
+- name: CIS 2.1.12 | Audit | Report package and unit states
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if 'rpcbind' not in ansible_facts.packages or
+           (cis_linux_common_rpcbind_audit_states.results | map(attribute='stdout_lines') |
+            map('length') | list == [2, 2] and
+            cis_linux_common_rpcbind_audit_states.results[0].stdout_lines |
+            select('match', '^enabled') | list | length == 0 and
+            cis_linux_common_rpcbind_audit_states.results[1].stdout_lines |
+            select('equalto', 'active') | list | length == 0) else 'FAIL' }}
+      changed_target: false

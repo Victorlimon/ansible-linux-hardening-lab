@@ -7,11 +7,18 @@
   failed_when: false
 
 - name: Common nftables | Verify ruleset
+  vars:
+    cis_linux_common_nftables_patterns_present: >-
+      {%- set matches = namespace(all=true) -%}
+      {%- for pattern in cis_linux_common_nftables_expected_patterns -%}
+        {%- if cis_linux_common_nftables_ruleset.stdout | default('') is not search(pattern) -%}
+          {%- set matches.all = false -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ matches.all }}
   ansible.builtin.assert:
     that:
       - cis_linux_common_nftables_ruleset.rc == 0
-      - >-
-        (cis_linux_common_nftables_expected_patterns | select('search', cis_linux_common_nftables_ruleset.stdout) | list | length)
-        == (cis_linux_common_nftables_expected_patterns | length)
+      - cis_linux_common_nftables_patterns_present | bool
     fail_msg: The required nftables ruleset is missing.
     success_msg: nftables configuration verification passed.

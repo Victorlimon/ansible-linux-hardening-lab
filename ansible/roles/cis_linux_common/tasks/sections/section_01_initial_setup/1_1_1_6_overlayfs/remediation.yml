@@ -1,11 +1,21 @@
 ---
-- name: CIS 1.1.1.6 | Remediation | Add overlayfs install rule
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
-  vars:
-    cis_linux_common_config_line: "install {{ cis_linux_common_kernel_module }} /bin/true"
-    cis_linux_common_config_line_regexp: "^install {{ cis_linux_common_kernel_module }} /bin/true$"
-- name: CIS 1.1.1.6 | Remediation | Add overlayfs blacklist rule
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
-  vars:
-    cis_linux_common_config_line: "blacklist {{ cis_linux_common_kernel_module }}"
-    cis_linux_common_config_line_regexp: "^blacklist {{ cis_linux_common_kernel_module }}$"
+- name: CIS 1.1.1.6 | Remediation | Disable the overlayfs module effectively
+  ansible.builtin.import_tasks: mechanisms/kernel_module_disabled/remediation.yml
+
+# The benchmark inspects/blocks the kernel module "overlay", not "overlayfs".
+# Retire only the exact managed lines this control previously wrote under the
+# wrong module name, so already-remediated hosts converge without touching
+# any other administrator configuration in the dedicated file.
+- name: CIS 1.1.1.6 | Remediation | Remove obsolete managed install line
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_config_line_path }}"
+    regexp: "^install overlayfs /bin/true$"
+    state: absent
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+- name: CIS 1.1.1.6 | Remediation | Remove obsolete managed blacklist line
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_config_line_path }}"
+    regexp: "^blacklist overlayfs$"
+    state: absent
+  when: cis_linux_common_config_line_package in ansible_facts.packages

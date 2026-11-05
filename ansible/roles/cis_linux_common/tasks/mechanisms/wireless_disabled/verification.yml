@@ -1,7 +1,6 @@
 ---
 - name: Common wireless disabled | Verify no enabled wireless
   ansible.builtin.shell: |
-    set -o pipefail
     nmcli radio wifi 2>/dev/null | grep -q enabled && echo enabled || echo disabled
   register: cis_wifi_verify
   changed_when: false

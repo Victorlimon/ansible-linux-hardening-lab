@@ -1,6 +1,12 @@
 ---
-- name: Config line audit | Delegate to config_line
+# CIS 6.2.2.3 "Ensure system is disabled when audit logs are full" audits
+# disk_full_action (halt|single) and disk_error_action (syslog|single|halt)
+# in /etc/audit/auditd.conf. The benchmark greps are case-insensitive (-Pi),
+# so each regexp carries an inline (?i) flag. space_left_action belongs to
+# CIS 6.2.2.4 and is no longer checked here.
+- name: CIS 6.2.2.3 | Audit | Check disk-full action
   ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
-  vars:
-    cis_linux_common_config_line: 'space_left_action = email'
-    cis_linux_common_config_line_regexp: '^space_left_action\s*=\s*email'
+  vars: {cis_linux_common_config_line: 'disk_full_action = halt', cis_linux_common_config_line_regexp: '(?i)^\s*disk_full_action\s*=\s*(halt|single)\b', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}
+- name: CIS 6.2.2.3 | Audit | Check disk-error action
+  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+  vars: {cis_linux_common_config_line: 'disk_error_action = halt', cis_linux_common_config_line_regexp: '(?i)^\s*disk_error_action\s*=\s*(syslog|single|halt)\b', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}

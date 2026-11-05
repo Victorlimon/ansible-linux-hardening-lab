@@ -1,0 +1,17 @@
+---
+# CIS 5.1.4 — Ensure sshd access is configured. Requires at least one of
+# AllowUsers/AllowGroups/DenyUsers/DenyGroups. We enforce AllowUsers from the
+# site-policy variable cis_linux_common_sshd_allow_users (lab default below is
+# set in the platform wrapper); production must override it with its own list.
+- name: CIS 5.1.4 | Remediation | Restrict SSH access to authorized users
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_config_line_path }}"
+    regexp: '^\s*AllowUsers\s'
+    line: "AllowUsers {{ cis_linux_common_sshd_allow_users }}"
+    insertafter: '^\s*#?\s*PermitRootLogin'
+    backup: true
+
+- name: CIS 5.1.4 | Remediation | Reload sshd
+  ansible.builtin.systemd:
+    name: ssh
+    state: reloaded

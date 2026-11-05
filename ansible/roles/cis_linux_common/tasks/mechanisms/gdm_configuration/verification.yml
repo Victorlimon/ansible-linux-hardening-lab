@@ -1,0 +1,27 @@
+---
+- name: Common GDM configuration | Inspect benchmark state
+  ansible.builtin.import_tasks: mechanisms/gdm_configuration/inspect.yml
+
+- name: Common GDM configuration | Report verified state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ cis_linux_common_gdm_state }}"
+      gate_package: "{{ cis_linux_common_gdm_gate_package }}"
+      gdm_installed: "{{ cis_linux_common_gdm_installed }}"
+      evidence: "{{ cis_linux_common_gdm_evidence }}"
+      changed_target: false
+
+- name: Common GDM configuration | Verify benchmark state
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_gdm_state != 'FAIL'
+    fail_msg: >-
+      GDM configuration control {{ cis_linux_common_control_id }} is non-compliant or
+      unreadable: gate package {{ cis_linux_common_gdm_gate_package }} installed={{
+      cis_linux_common_gdm_installed }}, checks={{ cis_linux_common_gdm_checks | to_json }},
+      evidence={{ cis_linux_common_gdm_evidence }}.
+    success_msg: >-
+      GDM configuration control {{ cis_linux_common_control_id }} verified
+      (classification={{ cis_linux_common_gdm_state }}).

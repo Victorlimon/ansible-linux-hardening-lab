@@ -1,0 +1,135 @@
+---
+# Shared read-only inspection for the CIS pam_faillock family (5.3.2.2 and
+# 5.3.3.1.1-.3). Missing, unreadable, malformed, duplicated, or misordered
+# evidence is reported as data so audit and verification can controlled-FAIL.
+# Nothing here ever writes PAM files; the generated /etc/pam.d/common-* files
+# and every /usr/share/pam-configs profile are only read and compared.
+
+- name: Common pam_faillock stack | Reset the per-inspection accumulators
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_override_files: []
+
+- name: Common pam_faillock stack | Discover PAM configuration files
+  ansible.builtin.find:
+    paths: "{{ item }}"
+    file_type: file
+    hidden: false
+    recurse: false
+  loop:
+    - /etc/pam.d
+    - /usr/share/pam-configs
+  register: cis_linux_common_faillock_find
+
+- name: Common pam_faillock stack | Read every discovered configuration file
+  ansible.builtin.slurp:
+    src: "{{ item.1.path }}"
+  loop: >-
+    {{ cis_linux_common_faillock_find.results
+       | subelements('files', skip_missing=true) }}
+  loop_control:
+    label: "{{ item.1.path }}"
+  failed_when: false
+  register: cis_linux_common_faillock_scan
+
+- name: Common pam_faillock stack | Derive scan bookkeeping facts
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_discovered_files: >-
+      {{ cis_linux_common_faillock_find.results
+         | subelements('files', skip_missing=true)
+         | map(attribute='1.path') | list }}
+    cis_linux_common_faillock_read_files: >-
+      {{ cis_linux_common_faillock_scan.results
+         | default([], true)
+         | selectattr('content', 'defined')
+         | map(attribute='source') | unique | list }}
+
+- name: Common pam_faillock stack | Derive uninspectable evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_unreadable_files: >-
+      {{ cis_linux_common_faillock_discovered_files
+         | difference(cis_linux_common_faillock_read_files) }}
+
+- name: Common pam_faillock stack | Flag files with inline faillock overrides
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_override_files: >-
+      {{ cis_linux_common_faillock_override_files
+         + [item.source]
+         if (item.content | b64decode) is search(cis_linux_common_faillock_override_regex)
+         else cis_linux_common_faillock_override_files }}
+  loop: >-
+    {{ cis_linux_common_faillock_scan.results
+       | default([], true)
+       | selectattr('content', 'defined')
+       | list }}
+  loop_control:
+    label: "{{ item.source }}"
+  vars:
+    cis_linux_common_faillock_override_regex: >-
+      (?m)^(?!\s*#)[^\n]*\bpam_faillock\.so\b[^\n]*\b(deny|unlock_time|even_deny_root|root_unlock_time)\b
+
+- name: Common pam_faillock stack | Decode the generated PAM files
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_auth_text: >-
+      {{ (cis_linux_common_faillock_scan.results
+          | default([], true)
+          | selectattr('content', 'defined')
+          | selectattr('source', 'equalto', '/etc/pam.d/common-auth')
+          | map(attribute='content') | first | default('', true) | b64decode) }}
+    cis_linux_common_faillock_account_text: >-
+      {{ (cis_linux_common_faillock_scan.results
+          | default([], true)
+          | selectattr('content', 'defined')
+          | selectattr('source', 'equalto', '/etc/pam.d/common-account')
+          | map(attribute='content') | first | default('', true) | b64decode) }}
+
+- name: Common pam_faillock stack | Split the generated PAM files into lines
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_auth_lines: >-
+      {{ cis_linux_common_faillock_auth_text | regex_findall('(?m)^.*$') }}
+    cis_linux_common_faillock_account_lines: >-
+      {{ cis_linux_common_faillock_account_text | regex_findall('(?m)^.*$') }}
+
+- name: Common pam_faillock stack | Derive the effective stack evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_preauth_count: >-
+      {{ cis_linux_common_faillock_auth_lines
+         | select('match', '^\s*auth\s+requisite\s+pam_faillock\.so\s+preauth\s*$')
+         | list | count }}
+    cis_linux_common_faillock_authfail_count: >-
+      {{ cis_linux_common_faillock_auth_lines
+         | select('match', '^\s*auth\s+\[default=die\]\s+pam_faillock\.so\s+authfail\s*$')
+         | list | count }}
+    cis_linux_common_faillock_account_count: >-
+      {{ cis_linux_common_faillock_account_lines
+         | select('match', '^\s*account\s+required\s+pam_faillock\.so\s*$')
+         | list | count }}
+    cis_linux_common_faillock_auth_faillock_total: >-
+      {{ cis_linux_common_faillock_auth_lines
+         | select('search', '\bpam_faillock\.so\b') | list | count }}
+    cis_linux_common_faillock_account_faillock_total: >-
+      {{ cis_linux_common_faillock_account_lines
+         | select('search', '\bpam_faillock\.so\b') | list | count }}
+    cis_linux_common_faillock_pam_unix_count: >-
+      {{ cis_linux_common_faillock_auth_lines
+         | select('match', '^\s*auth\s') | select('search', '\bpam_unix\.so\b')
+         | list | count }}
+    cis_linux_common_faillock_auth_signature: >-
+      {{ cis_linux_common_faillock_auth_lines
+         | select('match', '^\s*auth\s')
+         | select('search', '\bpam_faillock\.so\b|\bpam_unix\.so\b')
+         | map('regex_findall', 'preauth|authfail|\bpam_unix\.so\b|\bpam_faillock\.so\b')
+         | map('last') | list }}
+
+- name: Common pam_faillock stack | Aggregate the stack verdict
+  ansible.builtin.set_fact:
+    cis_linux_common_faillock_stack_ok: >-
+      {{ cis_linux_common_faillock_unreadable_files | length == 0
+         and cis_linux_common_faillock_override_files | length == 0
+         and cis_linux_common_faillock_preauth_count == 1
+         and cis_linux_common_faillock_authfail_count == 1
+         and cis_linux_common_faillock_account_count == 1
+         and cis_linux_common_faillock_auth_faillock_total == 2
+         and cis_linux_common_faillock_account_faillock_total == 1
+         and cis_linux_common_faillock_pam_unix_count >= 1
+         and cis_linux_common_faillock_auth_signature
+            == ['preauth', 'pam_unix.so', 'authfail'] }}

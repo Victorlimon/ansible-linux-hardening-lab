@@ -1,3 +1,53 @@
 ---
-- name: package_installed remediation | Delegate to mechanism
-  ansible.builtin.import_tasks: mechanisms/package_installed/remediation.yml
+- name: Common AIDE installed | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common AIDE installed | Inspect the AIDE database
+  ansible.builtin.stat:
+    path: /var/lib/aide/aide.db
+    get_checksum: false
+  register: cis_linux_common_aide_db
+
+- name: Common AIDE installed | Install AIDE packages
+  ansible.builtin.apt:
+    name:
+      - aide
+      - aide-common
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ('aide' not in ansible_facts.packages) or ('aide-common' not in ansible_facts.packages)
+
+- name: Common AIDE installed | Initialize the AIDE database
+  ansible.builtin.command:
+    argv: [aideinit, -y, -f]
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  changed_when: true
+  when: not (cis_linux_common_aide_db.stat.exists | default(false))
+
+- name: Common AIDE installed | Activate the new AIDE database
+  ansible.builtin.command:
+    argv: [mv, /var/lib/aide/aide.db.new, /var/lib/aide/aide.db]
+  changed_when: true
+  when: not (cis_linux_common_aide_db.stat.exists | default(false))
+
+- name: Common AIDE installed | Re-gather package facts after install
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common AIDE installed | Inspect the AIDE database after remediation
+  ansible.builtin.stat:
+    path: /var/lib/aide/aide.db
+    get_checksum: false
+  register: cis_linux_common_aide_db_post
+
+- name: Common AIDE installed | Verify AIDE install and initialization
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.packages['aide'] is defined
+      - ansible_facts.packages['aide-common'] is defined
+      - cis_linux_common_aide_db_post.stat.exists | default(false)
+    fail_msg: AIDE packages or database are not installed/initialized.
+    success_msg: AIDE install and initialization verified.

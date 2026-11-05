@@ -1,0 +1,11 @@
+---
+- name: Common kernel module disabled | Inspect effective module state
+  ansible.builtin.import_tasks: mechanisms/kernel_module_disabled/inspect.yml
+
+- name: Common kernel module disabled | Report effective module state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ cis_linux_common_kernel_module_state }}"
+      changed_target: false

@@ -1,0 +1,21 @@
+---
+- name: Common kernel module disabled | Inspect effective module state
+  ansible.builtin.import_tasks: mechanisms/kernel_module_disabled/inspect.yml
+
+- name: Common kernel module disabled | Verify module is effectively unavailable
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_kernel_module_state != 'FAIL'
+    fail_msg: >-
+      Kernel module "{{ cis_linux_common_kernel_module }}" is still loadable, still loaded, or
+      its real state is unreadable: loaded={{ cis_linux_common_kernel_module_loaded }}
+      loadable={{ cis_linux_common_kernel_module_loadable }}
+      builtin={{ cis_linux_common_kernel_module_builtin }}
+      effective_install={{ cis_linux_common_kernel_module_effective_install }}
+      effective_blacklist={{ cis_linux_common_kernel_module_effective_blacklist }}
+      probes_readable={{ cis_linux_common_kernel_module_probes_ok }}.
+      A line inside a modprobe.d file is not proof: modprobe --showconfig must resolve the
+      install and blacklist entries and lsmod must not show the module loaded.
+    success_msg: >-
+      Kernel module "{{ cis_linux_common_kernel_module }}" is not loaded and is either not a
+      loadable .ko in any installed kernel or disabled by effective modprobe configuration.

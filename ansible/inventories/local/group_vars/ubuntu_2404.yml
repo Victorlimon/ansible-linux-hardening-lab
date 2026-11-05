@@ -1,38 +1,45 @@
 ---
 # Política exclusiva del laboratorio Vagrant. En producción, sustituir estas
 # redes y servicios por allowlists aprobadas para cada entorno.
+cis_ubuntu_2404_2_2_4_telnet_client_remediate: true
+cis_ubuntu_2404_2_2_6_ftp_client_remediate: true
+# Apport restaura fs.suid_dumpable=2 al arrancar y contradice CIS 1.5.3.
+# En este laboratorio no se requiere el reporte automático de errores.
+cis_ubuntu_2404_1_5_5_error_reporting_remediate: true
 cis_section4_firewall: true
 cis_firewall_engine: ufw
 # Confirmación exclusiva del laboratorio efímero para reconstruir la política.
 cis_ufw_authoritative_reset_confirmed: true
 cis_ufw_ssh_allowed_sources:
-  - 192.168.56.0/24
+  - 192.168.56.10/32
   - 10.0.2.2/32
-cis_ufw_allowed_in_rules:
-  - from_ip: any
-    port: 80
-    proto: tcp
-    comment: HTTP service
-  - from_ip: any
-    port: 443
-    proto: tcp
-    comment: HTTPS service
-cis_ufw_allowed_out_ports:
-  - port: 53
-    proto: udp
-    comment: DNS
-  - port: 53
-    proto: tcp
-    comment: DNS fallback
-  - port: 67
-    proto: udp
-    comment: DHCP renewal
-  - port: 80
-    proto: tcp
-    comment: HTTP repositories
-  - port: 443
-    proto: tcp
-    comment: HTTPS repositories
-  - port: 123
-    proto: udp
-    comment: NTP
+# Añadir puertos sólo después de desplegar el servicio y aprobar sus orígenes.
+cis_ufw_allowed_in_rules: []
+# EXCEPCIÓN de laboratorio VirtualBox (LAB EXCEPTION explícita; nunca es un
+# PASS ni declara conformidad CIS 2.3): VBoxService sincroniza el reloj con el
+# host y entra en conflicto con systemd-timesyncd (enabled pero inactivo; sin
+# chrony/ntp). El benchmark permite omitir la sección 2.3 en huéspedes virtuales
+# sólo cuando el host usa una fuente horaria autorizada: el host Windows
+# sincroniza vía W32Time con time.windows.com,0x9 (stratum 5). El default del
+# rol permanece true; esta omisión aplica sólo al laboratorio y no se
+# extrapola a producción.
+cis_ubuntu_2404_2_3_1_1_single_daemon: false
+cis_ubuntu_2404_2_3_2_1_timesyncd_config: false
+cis_ubuntu_2404_2_3_2_2_timesyncd_enabled: false
+# EXCEPCIÓN de laboratorio efímero (LAB EXCEPTION explícita; no es conformidad):
+# CIS 5.2.4 no admite omisión. Las cuentas vagrant y ansible requieren NOPASSWD
+# (become_ask_pass=False en esta maqueta), por lo que desactivar el control
+# documenta una no conformidad real del laboratorio. En producción el default
+# del rol (true) sigue vigente y debe exigir contraseña de sudo.
+cis_ubuntu_2404_5_2_4_sudo_password: false
+
+# EXCEPCIÓN de laboratorio (LAB EXCEPTION explícita; nunca es un PASS ni
+# declara conformidad CIS 1.1.2): el laboratorio Vagrant es de un solo disco
+# y no puede proporcionar particiones separadas para /home, /var, /var/log y
+# /var/log/audit. El default del rol permanece true; esta omisión aplica solo
+# al laboratorio y no se extrapola a producción (donde sí se exige particionado
+# separado).
+cis_ubuntu_2404_1_1_2_3_home_partition: false
+cis_ubuntu_2404_1_1_2_4_var_partition: false
+cis_ubuntu_2404_1_1_2_6_var_log_partition: false
+cis_ubuntu_2404_1_1_2_7_var_log_audit_partition: false

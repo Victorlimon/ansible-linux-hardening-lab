@@ -1,6 +1,3 @@
 ---
-- name: Config line audit | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
-  vars:
-    cis_linux_common_config_line: 'auth required pam_faillock.so preauth'
-    cis_linux_common_config_line_regexp: '^auth\s+required\s+pam_faillock\.so\s+preauth'
+- name: pam_faillock stack audit | Delegate to pam_faillock_stack
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/audit.yml

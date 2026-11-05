@@ -1,0 +1,21 @@
+---
+# CIS 1.7.2 remediation: the benchmark's machine-wide branch writes the gdm
+# dconf keyfile plus the gdm profile, then updates the system databases. The
+# shared GDM mechanism no-ops while gdm3 is absent (benchmark skips section
+# 1.7 without GDM) and the platform routing keeps this opt-in behind the
+# cis_<platform>_1_7_2_gdm_banner_remediate gate (default false).
+- name: CIS 1.7.2 | Remediation | Delegate the GDM banner dconf artifacts
+  ansible.builtin.import_tasks: mechanisms/gdm_configuration/remediation.yml
+  vars:
+    cis_linux_common_gdm_remediate_files:
+      - path: /etc/dconf/db/gdm.d/01-banner-message
+        content: |
+          [org/gnome/login-screen]
+          banner-message-enable=true
+          banner-message-text='{{ cis_linux_common_gdm_banner_text }}'
+    cis_linux_common_gdm_remediate_profiles:
+      - path: /etc/dconf/profile/gdm
+        lines:
+          - user-db:user
+          - system-db:gdm
+          - file-db:/usr/share/gdm/greeter-dconf-defaults

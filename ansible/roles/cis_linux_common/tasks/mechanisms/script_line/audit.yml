@@ -1,0 +1,28 @@
+---
+# Shell-corpus controls (5.4.3.2 TMOUT, 5.4.3.3 default umask) audit verdict.
+# Benchmark PASS logic ported: the corpus must be fully readable, at least one
+# corpus file must satisfy every required pattern (or one OR-pattern), and no
+# file inside the forbidden scan scope may carry an overriding setting. The
+# short-circuit priority of the benchmark scripts is preserved by scoping the
+# forbidden scan to the shell corpus: once a higher-priority location is
+# compliant, lower-priority files (for example /etc/login.defs UMASK 022) are
+# never consulted by the benchmark and are therefore not violations.
+
+- name: Common script line | Delegate to shared inspection
+  ansible.builtin.import_tasks: mechanisms/script_line/inspect.yml
+
+- name: Common script line | Report corpus state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if cis_linux_common_script_unreadable_files | length == 0
+           and (cis_linux_common_script_any_files | default([], true)) | length > 0
+           and (cis_linux_common_script_forbidden_files | default([], true)) | length == 0
+           else 'FAIL' }}
+      changed_target: false
+      evidence:
+        compliant_files: "{{ cis_linux_common_script_any_files | default([], true) }}"
+        overriding_files: "{{ cis_linux_common_script_forbidden_files | default([], true) }}"
+        unreadable_files: "{{ cis_linux_common_script_unreadable_files }}"

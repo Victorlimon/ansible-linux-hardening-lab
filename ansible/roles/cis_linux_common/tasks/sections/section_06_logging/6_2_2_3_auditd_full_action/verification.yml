@@ -1,6 +1,9 @@
 ---
-- name: Config line verification | Delegate to config_line
+# Verification mirrors the 6.2.2.3 benchmark audit: disk_full_action must be
+# halt|single and disk_error_action must be syslog|single|halt.
+- name: CIS 6.2.2.3 | Verification | Check disk-full action
   ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
-  vars:
-    cis_linux_common_config_line: 'space_left_action = email'
-    cis_linux_common_config_line_regexp: '^space_left_action\s*=\s*email'
+  vars: {cis_linux_common_config_line_regexp: '(?i)^\s*disk_full_action\s*=\s*(halt|single)\b', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}
+- name: CIS 6.2.2.3 | Verification | Check disk-error action
+  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
+  vars: {cis_linux_common_config_line_regexp: '(?i)^\s*disk_error_action\s*=\s*(syslog|single|halt)\b', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}

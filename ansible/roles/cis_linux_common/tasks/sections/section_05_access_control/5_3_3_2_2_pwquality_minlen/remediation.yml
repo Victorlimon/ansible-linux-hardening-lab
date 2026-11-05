@@ -1,6 +1,13 @@
 ---
-- name: Config line remediation | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+- name: Pwquality minlen remediation | Delegate to pwquality_parameter
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/remediation.yml
   vars:
-    cis_linux_common_config_line: 'minlen = 14'
-    cis_linux_common_config_line_regexp: '^minlen\s*=\s*14'
+    cis_linux_common_pwq_param: minlen
+    cis_linux_common_pwq_kind: numeric_min
+    cis_linux_common_pwq_line: 'minlen = 14'
+    cis_linux_common_pwq_managed_path: /etc/security/pwquality.conf.d/50-pwlength.conf
+    cis_linux_common_pwq_name_regex: '(?mi)^[ \t]*minlen\b.*$'
+    cis_linux_common_pwq_value_regex: '(?mi)^[ \t]*minlen[ \t]*=[ \t]*(1[4-9]|[2-9][0-9]|[1-9][0-9]{2,})\b'
+    cis_linux_common_pwq_forbidden_regex: ''
+    cis_linux_common_pwq_line_regexp: '(?i)^[ \t]*minlen\b.*$'
+    cis_linux_common_pwq_inline_bad_regex: '(?mi)^[ \t]*password[ \t]+(requisite|required|sufficient)[ \t]+pam_pwquality\.so[ \t]+(?:[^#\n\r]+[ \t]+)?minlen[ \t]*=[ \t]*([0-9]|1[0-3])\b'

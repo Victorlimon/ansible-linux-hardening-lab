@@ -1,3 +1,5 @@
 ---
 - name: CIS 6.2.4.4 | Remediation | Delegate to fixed-file permissions mechanism
   ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/remediation.yml
+  vars:
+    cis_linux_common_fixed_file_enforce_group: false

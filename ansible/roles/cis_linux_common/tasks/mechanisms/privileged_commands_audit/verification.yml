@@ -1,0 +1,31 @@
+---
+- name: Common privileged commands | Inspect benchmark state
+  ansible.builtin.import_tasks: mechanisms/privileged_commands_audit/discover.yml
+
+- name: Common privileged commands | Report verified state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ cis_linux_common_privileged_state }}"
+      package: "{{ cis_linux_common_privileged_package }}"
+      rules_file: "{{ cis_linux_common_privileged_rules_path }}"
+      immutable: "{{ cis_linux_common_privileged_immutable }}"
+      evidence: "{{ cis_linux_common_privileged_evidence[:25] }}"
+      changed_target: false
+
+- name: Common privileged commands | Verify benchmark state
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_privileged_state != 'FAIL'
+    fail_msg: >-
+      Privileged-commands audit control {{ cis_linux_common_control_id }} is non-compliant or
+      unreadable: package={{ cis_linux_common_privileged_package }} applicable={{
+      cis_linux_common_privileged_required }}, rules file={{
+      cis_linux_common_privileged_rules_path }}, evidence={{
+      cis_linux_common_privileged_evidence[:25] }}.
+    success_msg: >-
+      Privileged-commands audit control {{ cis_linux_common_control_id }} verified
+      (classification={{ cis_linux_common_privileged_state }}, immutable={{
+      cis_linux_common_privileged_immutable }}{{ ', running rules require a reboot to load'
+      if cis_linux_common_privileged_immutable == 'yes' else '' }}).

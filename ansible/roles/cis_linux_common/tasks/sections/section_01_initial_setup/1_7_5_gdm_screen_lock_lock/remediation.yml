@@ -1,0 +1,15 @@
+---
+# CIS 1.7.5 remediation: benchmark locks branch — 00-screensaver lock file
+# with the two dconf key paths the audit greps, then dconf update (inside the
+# shared mechanism). No-op while gdm3 is absent; opt-in behind the
+# cis_<platform>_1_7_5_gdm_screen_lock_lock_remediate gate (default false).
+- name: CIS 1.7.5 | Remediation | Delegate the GDM screensaver lock artifacts
+  ansible.builtin.import_tasks: mechanisms/gdm_configuration/remediation.yml
+  vars:
+    cis_linux_common_gdm_remediate_files:
+      - path: /etc/dconf/db/local.d/locks/00-screensaver
+        content: |
+          # Lock desktop screensaver settings
+          /org/gnome/desktop/session/idle-delay
+          /org/gnome/desktop/screensaver/lock-delay
+    cis_linux_common_gdm_remediate_profiles: []

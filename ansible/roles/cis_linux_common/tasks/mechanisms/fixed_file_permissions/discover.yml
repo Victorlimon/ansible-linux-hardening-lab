@@ -1,0 +1,184 @@
+---
+# Shared discovery half of the fixed-file mechanism. Produces the normalized
+# scope plan, runs find-style searches, and stats every target exactly once.
+# Consumers: audit.yml, remediation.yml, verification.yml (each imports this
+# after validate.yml via their own entry point).
+
+- name: Common fixed file permissions | Normalize the scope plan
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_plan_json: >-
+      {%- set g_owner = cis_linux_common_fixed_file_owner -%}
+      {%- set g_group = cis_linux_common_fixed_file_group -%}
+      {%- set g_owners = cis_linux_common_fixed_file_allowed_owners | default([g_owner]) -%}
+      {%- set g_groups = cis_linux_common_fixed_file_allowed_groups | default([g_group]) -%}
+      {%- set g_enforce = cis_linux_common_fixed_file_enforce_group | default(true) -%}
+      {%- set g_type = cis_linux_common_fixed_file_expected_type | default('file') -%}
+      {%- set g_max = cis_linux_common_fixed_file_max_mode -%}
+      {%- set g_remediation = cis_linux_common_fixed_file_remediation_mode -%}
+      {%- set g_description = cis_linux_common_fixed_file_expected_mode_description -%}
+      {%- set g_allow_missing = cis_linux_common_fixed_file_allow_missing | default(false) -%}
+      {%- set default_scope = {
+        'path': cis_linux_common_fixed_file_path | default([]),
+        'search': cis_linux_common_fixed_file_search | default([])
+      } -%}
+      {%- set scopes_src = cis_linux_common_fixed_file_scopes | default([default_scope]) -%}
+      {%- set ns = namespace(scopes=[], specs=[]) -%}
+      {%- for raw in scopes_src -%}
+      {%-   set raw_paths = raw.path | default([]) -%}
+      {%-   set raw_more = raw.paths | default([]) -%}
+      {%-   set literals = (raw_paths if raw_paths is sequence and raw_paths is not string else [raw_paths])
+                           + (raw_more if raw_more is sequence and raw_more is not string else ([raw_more] if raw_more is string else [])) -%}
+      {%-   set raw_search = raw.search | default([]) -%}
+      {%-   set search_list = [raw_search] if raw_search is mapping else (raw_search if raw_search is sequence else []) -%}
+      {%-   set scope_index = ns.scopes | length -%}
+      {%-   set owner = raw.owner | default(g_owner) -%}
+      {%-   set raw_owners = raw.owners | default(raw.allowed_owners)
+                             | default([owner] if owner != g_owner else g_owners) -%}
+      {%-   set owners = [raw_owners] if raw_owners is string else raw_owners -%}
+      {%-   set scope_group = raw.group | default(g_group) -%}
+      {%-   set raw_groups = raw.groups | default(raw.allowed_groups)
+                             | default([scope_group] if scope_group != g_group else g_groups) -%}
+      {%-   set groups = [raw_groups] if raw_groups is string else raw_groups -%}
+      {%-   set ns.scopes = ns.scopes + [{
+             'label': raw.label | default('scope-' ~ scope_index),
+             'literals': literals,
+             'owner': owner,
+             'owners': owners,
+             'group': scope_group,
+             'groups': groups,
+             'enforce_group': raw.enforce_group | default(g_enforce),
+             'type': raw.type | default(raw.expected_type) | default(g_type),
+             'max_mode': raw.max_mode | default(g_max),
+             'remediation_mode': raw.remediation_mode | default(g_remediation),
+             'description': raw.description | default(raw.expected_mode_description) | default(g_description),
+             'allow_missing': raw.allow_missing | default(g_allow_missing),
+             'allow_system_owner': raw.allow_system_owner | default(false)
+           }] -%}
+      {%-   for s in search_list -%}
+      {%-     set s_paths = s.paths | default([]) -%}
+      {%-     set roots = (s_paths if s_paths is sequence and s_paths is not string else [s_paths]) -%}
+      {%-     set s_patterns = s.patterns | default(['*']) -%}
+      {%-     set patterns = (s_patterns if s_patterns is sequence and s_patterns is not string else [s_patterns]) -%}
+      {%-     set ns.specs = ns.specs + [{
+             'scope_index': scope_index,
+             'paths': roots,
+             'patterns': patterns,
+             'recurse': s.recurse | default(false),
+             'hidden': s.hidden | default(true),
+             'file_type': s.file_type | default('file'),
+             'follow': s.follow | default(false)
+           }] -%}
+      {%-   endfor -%}
+      {%- endfor -%}
+      {{ {'scopes': ns.scopes, 'search_specs': ns.specs} | to_json }}
+
+- name: Common fixed file permissions | Read the normalized scope plan
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_plan: "{{ cis_linux_common_fixed_file_plan_json | from_json }}"
+
+- name: Common fixed file permissions | Validate the normalized scope plan
+  ansible.builtin.assert:
+    that:
+      - all_target_paths | reject('ansible.builtin.abs') | list | length == 0
+      - plan_scopes | selectattr('max_mode', 'undefined') | list | length == 0
+      - (plan_scopes | map(attribute='literals') | flatten | length)
+        + (plan_specs | length) > 0
+    fail_msg: A fixed-file scope supplied relative paths or no target sources.
+    quiet: true
+  vars:
+    plan_scopes: "{{ cis_linux_common_fixed_file_plan.scopes }}"
+    plan_specs: "{{ cis_linux_common_fixed_file_plan.search_specs }}"
+    all_target_paths: >-
+      {{ (plan_scopes | map(attribute='literals') | flatten)
+         + (plan_specs | map(attribute='paths') | flatten) }}
+
+- name: Common fixed file permissions | Enumerate search roots
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_root_pairs: >-
+      {%- set ns = namespace(items=[]) -%}
+      {%- for spec_index in range(cis_linux_common_fixed_file_plan.search_specs | length) -%}
+      {%-   set spec = cis_linux_common_fixed_file_plan.search_specs[spec_index] -%}
+      {%-   for root in spec.paths -%}
+      {%-     set ns.items = ns.items + [{'path': root, 'spec_index': spec_index}] -%}
+      {%-   endfor -%}
+      {%- endfor -%}
+      {{ ns.items | to_json }}
+
+- name: Common fixed file permissions | Read search roots from JSON
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_roots: "{{ cis_linux_common_fixed_file_root_pairs | from_json }}"
+
+- name: Common fixed file permissions | Inspect search roots
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+    follow: true
+    get_checksum: false
+    get_attributes: false
+    get_mime: false
+  loop: "{{ cis_linux_common_fixed_file_roots }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: cis_linux_common_fixed_file_root_stats
+
+- name: Common fixed file permissions | Discover files for each search scope
+  ansible.builtin.find:
+    paths: "{{ cis_linux_common_fixed_file_spec_roots }}"
+    patterns: "{{ item.patterns }}"
+    recurse: "{{ item.recurse }}"
+    hidden: "{{ item.hidden }}"
+    file_type: "{{ item.file_type }}"
+    follow: "{{ item.follow }}"
+    get_checksum: false
+  vars:
+    cis_linux_common_fixed_file_spec_roots: >-
+      {{ cis_linux_common_fixed_file_root_stats.results | default([])
+         | selectattr('item.spec_index', 'equalto', cis_linux_common_fixed_file_spec_index)
+         | selectattr('stat.exists') | selectattr('stat.isdir')
+         | map(attribute='item.path') | list }}
+  loop: "{{ cis_linux_common_fixed_file_plan.search_specs }}"
+  loop_control:
+    loop_var: item
+    index_var: cis_linux_common_fixed_file_spec_index
+    label: "{{ item.paths | join(', ') }}"
+  when: cis_linux_common_fixed_file_spec_roots | length > 0
+  register: cis_linux_common_fixed_file_search_results
+
+- name: Common fixed file permissions | Build the deduplicated target set
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_targets_json: >-
+      {%- set ns = namespace(items=[], seen=[]) -%}
+      {%- for scope in cis_linux_common_fixed_file_plan.scopes -%}
+      {%-   set scope_index = loop.index0 -%}
+      {%-   for path in scope.literals -%}
+      {%-     if path not in ns.seen -%}
+      {%-       set ns.seen = ns.seen + [path] -%}
+      {%-       set ns.items = ns.items + [{'path': path, 'scope_index': scope_index, 'source': 'literal'}] -%}
+      {%-     endif -%}
+      {%-   endfor -%}
+      {%- endfor -%}
+      {%- for found in cis_linux_common_fixed_file_search_results.results | default([]) -%}
+      {%-   set scope_index = found.item.scope_index -%}
+      {%-   for entry in found.files | default([]) -%}
+      {%-     if entry.path not in ns.seen -%}
+      {%-       set ns.seen = ns.seen + [entry.path] -%}
+      {%-       set ns.items = ns.items + [{'path': entry.path, 'scope_index': scope_index, 'source': 'search'}] -%}
+      {%-     endif -%}
+      {%-   endfor -%}
+      {%- endfor -%}
+      {{ ns.items | to_json }}
+
+- name: Common fixed file permissions | Read the deduplicated target set
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_targets: "{{ cis_linux_common_fixed_file_targets_json | from_json }}"
+
+- name: Common fixed file permissions | Inspect metadata for every target
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+    follow: true
+    get_checksum: false
+    get_attributes: false
+    get_mime: false
+  loop: "{{ cis_linux_common_fixed_file_targets }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: cis_linux_common_fixed_file_target_stats

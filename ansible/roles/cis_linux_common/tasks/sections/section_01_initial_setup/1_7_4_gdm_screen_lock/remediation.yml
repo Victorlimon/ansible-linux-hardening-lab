@@ -1,0 +1,22 @@
+---
+# CIS 1.7.4 remediation: benchmark local.d branch — 00-screensaver keyfile
+# with compliant uint32 values (idle-delay 900 = the audit maximum,
+# lock-delay 0 = the benchmark remediation example), the local dconf user
+# profile, then dconf update (inside the shared mechanism). No-op while gdm3
+# is absent; opt-in behind the cis_<platform>_1_7_4_gdm_screen_lock_remediate
+# gate (default false).
+- name: CIS 1.7.4 | Remediation | Delegate the GDM screensaver dconf artifacts
+  ansible.builtin.import_tasks: mechanisms/gdm_configuration/remediation.yml
+  vars:
+    cis_linux_common_gdm_remediate_files:
+      - path: /etc/dconf/db/local.d/00-screensaver
+        content: |
+          [org/gnome/desktop/session]
+          idle-delay=uint32 900
+          [org/gnome/desktop/screensaver]
+          lock-delay=uint32 0
+    cis_linux_common_gdm_remediate_profiles:
+      - path: /etc/dconf/profile/user
+        lines:
+          - user-db:user
+          - system-db:local

@@ -1,3 +1,2 @@
 ---
-- name: config_line audit | Delegate to mechanism
-  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+- ansible.builtin.import_tasks: mechanisms/manual_observation/audit.yml

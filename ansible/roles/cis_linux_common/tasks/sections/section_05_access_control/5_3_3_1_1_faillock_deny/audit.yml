@@ -1,6 +1,10 @@
 ---
-- name: Config line audit | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+- name: Faillock deny audit | Delegate to faillock_parameter
+  ansible.builtin.import_tasks: mechanisms/faillock_parameter/audit.yml
   vars:
-    cis_linux_common_config_line: 'deny = 5'
-    cis_linux_common_config_line_regexp: '^deny\s*=\s*5'
+    cis_linux_common_faillock_param: deny
+    cis_linux_common_faillock_kind: numeric
+    cis_linux_common_faillock_line: 'deny = 5'
+    cis_linux_common_faillock_regexp: '^\s*deny\s*='
+    cis_linux_common_faillock_name_regex: '\s*deny\s*='
+    cis_linux_common_faillock_value_regex: '\s*deny\s*=\s*5\s*$'

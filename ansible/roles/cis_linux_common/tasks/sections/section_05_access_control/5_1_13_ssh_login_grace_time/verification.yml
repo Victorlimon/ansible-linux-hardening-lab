@@ -1,2 +1,6 @@
 ---
-- {name: 'CIS 5.1.13 | Verification | Delegate to config-line mechanism', ansible.builtin.import_tasks: mechanisms/config_line/verification.yml, vars: {cis_linux_common_config_line_regexp: '^LoginGraceTime\s+60$'}}
+- name: CIS 5.1.13 | Verification | Delegate to config-line mechanism
+  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
+  vars:
+    cis_linux_common_config_line_effective_command: 'sshd -T'
+    cis_linux_common_config_line_regexp: '^[ \t]*logingracetime[ \t]+(?:[1-9]|[1-5][0-9]|60)[ \t]*$'

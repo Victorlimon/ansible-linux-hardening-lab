@@ -2,4 +2,4 @@
 - ansible.builtin.import_role:
     name: cis_linux_common
     tasks_from: sections/section_04_firewall/4_3_6_nftables_loopback_traffic/verification.yml
-  vars: {cis_linux_common_control_id: '4.3.6', cis_linux_common_platform: debian_12, cis_linux_common_nftables_expected_patterns: ['iif "lo" accept', '127.0.0.0/8 counter drop', '::1 counter drop']}
+  vars: {cis_linux_common_control_id: '4.3.6', cis_linux_common_platform: debian_12, cis_linux_common_nftables_expected_patterns: ['iif "lo" accept', 'ip\s+saddr\s+127\.0\.0\.0/8\s+counter(?:\s+packets\s+\d+\s+bytes\s+\d+)?\s+drop', 'ip6\s+saddr\s+::1(?:/128)?\s+counter(?:\s+packets\s+\d+\s+bytes\s+\d+)?\s+drop']}

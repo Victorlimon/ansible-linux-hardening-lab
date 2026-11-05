@@ -1,2 +1,6 @@
 ---
-- {name: 'CIS 5.1.17 | Audit | Delegate to config-line mechanism', ansible.builtin.import_tasks: mechanisms/config_line/audit.yml, vars: {cis_linux_common_config_line_regexp: '^MaxSessions\s+10$'}}
+- name: CIS 5.1.17 | Audit | Delegate to config-line mechanism
+  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+  vars:
+    cis_linux_common_config_line_effective_command: 'sshd -T'
+    cis_linux_common_config_line_regexp: '^[ \t]*maxsessions[ \t]+(?:[0-9]|10)[ \t]*$'

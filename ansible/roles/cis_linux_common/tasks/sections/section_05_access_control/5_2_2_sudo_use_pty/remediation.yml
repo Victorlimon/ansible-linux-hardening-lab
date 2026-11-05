@@ -1,9 +1,64 @@
 ---
+- name: 'CIS 5.2.2 | Remediation | Inspect main sudoers file'
+  ansible.builtin.stat:
+    path: /etc/sudoers
+    follow: false
+    get_checksum: false
+    get_attributes: false
+    get_mime: false
+  register: cis_linux_common_sudo_main_stat
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+- name: 'CIS 5.2.2 | Remediation | Normalize main sudoers mode'
+  ansible.builtin.file:
+    path: /etc/sudoers
+    state: file
+    follow: false
+    mode: '0440'
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_sudo_main_stat.stat.isreg | default(false)
+    - cis_linux_common_sudo_main_stat.stat.mode != '0440'
+- name: 'CIS 5.2.2 | Remediation | Discover sudoers include files'
+  ansible.builtin.find:
+    paths: /etc/sudoers.d
+    file_type: file
+    follow: false
+    recurse: false
+    hidden: false
+    use_regex: true
+    patterns: '^[^.~]+$'
+  register: cis_linux_common_sudo_include_files
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+- name: 'CIS 5.2.2 | Remediation | Normalize sudoers include modes'
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: file
+    follow: false
+    mode: '0440'
+  loop: "{{ cis_linux_common_sudo_include_files.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: item.mode != '0440'
+- name: 'CIS 5.2.2 | Remediation | Record pending sudoers mode corrections'
+  ansible.builtin.set_fact:
+    cis_linux_common_sudo_mode_correction_needed: >-
+      {{ (cis_linux_common_sudo_main_stat.stat.isreg | default(false)
+          and cis_linux_common_sudo_main_stat.stat.mode != '0440')
+         or (cis_linux_common_sudo_include_files.files | default([])
+             | selectattr('mode', 'ne', '0440') | list | length > 0) }}
+  when: cis_linux_common_config_line_package in ansible_facts.packages
 - name: 'CIS 5.2.2 | Remediation | Validate sudo policy before change'
   ansible.builtin.command: /usr/sbin/visudo -c
+  check_mode: false
   changed_when: false
-  when: cis_linux_common_config_line_package in ansible_facts.packages
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - not ansible_check_mode or not cis_linux_common_sudo_mode_correction_needed
 - {name: 'CIS 5.2.2 | Remediation | Delegate to config-line mechanism', ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml}
 - name: 'CIS 5.2.2 | Remediation | Validate sudo policy after change'
   ansible.builtin.command: /usr/sbin/visudo -c
+  check_mode: false
   changed_when: false
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - not ansible_check_mode or not cis_linux_common_sudo_mode_correction_needed

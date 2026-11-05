@@ -1,0 +1,24 @@
+---
+- name: Common pam_faillock stack | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common pam_faillock stack | Delegate to shared inspection
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/inspect.yml
+
+- name: Common pam_faillock stack | Report stack state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'NOT_APPLICABLE' if cis_linux_common_faillock_package not in ansible_facts.packages else
+           ('PASS' if cis_linux_common_faillock_stack_ok else 'FAIL') }}
+      changed_target: false
+      evidence:
+        preauth: "{{ cis_linux_common_faillock_preauth_count }}"
+        authfail: "{{ cis_linux_common_faillock_authfail_count }}"
+        account: "{{ cis_linux_common_faillock_account_count }}"
+        auth_order: "{{ cis_linux_common_faillock_auth_signature }}"
+        inline_override_files: "{{ cis_linux_common_faillock_override_files }}"
+        unreadable_files: "{{ cis_linux_common_faillock_unreadable_files }}"

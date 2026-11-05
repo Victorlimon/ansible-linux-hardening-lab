@@ -1,0 +1,98 @@
+---
+# Shared evaluation half of the fixed-file mechanism. Runs after discover.yml
+# and produces:
+#   cis_linux_common_fixed_file_violations  (list of per-file failure records)
+#   cis_linux_common_fixed_file_checked     (number of evaluated targets)
+#   cis_linux_common_fixed_file_compliant   (boolean)
+# A file is compliant only when it exists (fail-closed), has the expected
+# type, its owner is inside the accepted owner set, its group is inside the
+# accepted group set (when enforced), and its mode is not more permissive
+# than max_mode digit-by-digit (special, owner, group, and other digits are
+# each compared as a permission-bit subset of the corresponding cap digit).
+
+- name: Common fixed file permissions | Evaluate every target against its scope
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_violations_json: >-
+      {%- set subsets = {
+            '0': [0], '1': [0, 1], '2': [0, 2], '3': [0, 1, 2, 3],
+            '4': [0, 4], '5': [0, 1, 4, 5], '6': [0, 2, 4, 6],
+            '7': [0, 1, 2, 3, 4, 5, 6, 7]
+          } -%}
+      {%- set scopes = cis_linux_common_fixed_file_plan.scopes -%}
+      {%- set stats = cis_linux_common_fixed_file_target_stats.results | default([]) -%}
+      {%- set ns = namespace(violations=[]) -%}
+      {%- for target in cis_linux_common_fixed_file_targets -%}
+      {%-   set scope = scopes[target.scope_index] -%}
+      {%-   set meta = (stats[loop.index0].stat | default({})) -%}
+      {%-   set flags = namespace(reasons=[], dimensions=[], mode_reported=false) -%}
+      {%-   if meta.exists | default(false) -%}
+      {%-     if scope.type == 'file' and not (meta.isreg | default(false)) -%}
+      {%-       set flags.reasons = flags.reasons + ['not a regular file'] -%}
+      {%-       set flags.dimensions = flags.dimensions + ['type'] -%}
+      {%-     endif -%}
+      {%-     if scope.type == 'directory' and not (meta.isdir | default(false)) -%}
+      {%-       set flags.reasons = flags.reasons + ['not a directory'] -%}
+      {%-       set flags.dimensions = flags.dimensions + ['type'] -%}
+      {%-     endif -%}
+      {%-     if meta.pw_name | default(None) not in scope.owners
+               and not (scope.allow_system_owner | default(false)
+                        and (meta.pw_uid | default(0) | int) < 1000) -%}
+      {%-       set flags.reasons = flags.reasons + [
+              'owner ' ~ (meta.pw_name | default('unresolvable'))
+              ~ ' not in ' ~ scope.owners | join('|')] -%}
+      {%-       set flags.dimensions = flags.dimensions + ['owner'] -%}
+      {%-     endif -%}
+      {%-     if scope.enforce_group
+               and meta.gr_name | default(None) not in scope.groups -%}
+      {%-       set flags.reasons = flags.reasons + [
+              'group ' ~ (meta.gr_name | default('unresolvable'))
+              ~ ' not in ' ~ scope.groups | join('|')] -%}
+      {%-       set flags.dimensions = flags.dimensions + ['group'] -%}
+      {%-     endif -%}
+      {%-     set cap = ('0' ~ scope.max_mode)[-4:] -%}
+      {%-     set observed = namespace(value=meta.mode | default('9999')) -%}
+      {%-     if observed.value | length < 4 -%}
+      {%-       set observed.value = ('0000' ~ observed.value)[-4:] -%}
+      {%-     endif -%}
+      {%-     for position in [0, 1, 2, 3] -%}
+      {%-       if (not flags.mode_reported)
+                   and (observed.value[position] | int(base=8))
+                       not in subsets[cap[position]] -%}
+      {%-         set flags.mode_reported = true -%}
+      {%-         set flags.reasons = flags.reasons + [
+                'mode ' ~ observed.value ~ ' is more permissive than ' ~ cap] -%}
+      {%-         set flags.dimensions = flags.dimensions + ['mode'] -%}
+      {%-       endif -%}
+      {%-     endfor -%}
+      {%-   elif not (target.source == 'literal' and scope.allow_missing) -%}
+      {%-     set flags.reasons = flags.reasons + ['missing or unreadable'] -%}
+      {%-     set flags.dimensions = flags.dimensions + ['exists'] -%}
+      {%-   endif -%}
+      {%-   if flags.reasons | length > 0 -%}
+      {%-     set ns.violations = ns.violations + [{
+             'path': target.path,
+             'scope_index': target.scope_index,
+             'scope': scope.label,
+             'source': target.source,
+             'target_index': loop.index0,
+             'dimensions': flags.dimensions,
+             'reasons': flags.reasons,
+             'observed': {
+               'exists': meta.exists | default(false),
+               'type': scope.type,
+               'owner': meta.pw_name | default('unavailable'),
+               'group': meta.gr_name | default('unavailable'),
+               'mode': meta.mode | default('unavailable')
+             }
+           }] -%}
+      {%-   endif -%}
+      {%- endfor -%}
+      {{ ns.violations | to_json }}
+
+- name: Common fixed file permissions | Read the evaluation result
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_violations: >-
+      {{ cis_linux_common_fixed_file_violations_json | from_json }}
+    cis_linux_common_fixed_file_checked: "{{ cis_linux_common_fixed_file_targets | length }}"
+    cis_linux_common_fixed_file_compliant: >-
+      {{ (cis_linux_common_fixed_file_violations_json | from_json) | length == 0 }}

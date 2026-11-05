@@ -1,12 +1,25 @@
 ---
+# become: true mirrors the benchmark (root-run audit commands). The
+# optional cis_linux_common_account_status_regex keeps CIS 5.4.2.4 semantics
+# (PASS only when the `passwd -S` status token starts with P or L); all other
+# consumers retain the empty-output-equals-compliant contract. `default('')`
+# is used instead of `is defined` so the flag resolves correctly regardless of
+# how it arrives (import_role vars, extra-vars, or absent).
 - name: Common account integrity | Re-run parameterized check
   ansible.builtin.shell: "{{ cis_linux_common_account_command }}"
+  become: true
   register: cis_acct_verify
   changed_when: false
   failed_when: false
 
 - name: Common account integrity | Assert check clean
   ansible.builtin.assert:
-    that: (cis_acct_verify.stdout | trim) == ''
+    that:
+      - >-
+        ((cis_linux_common_account_status_regex | default('')) != ''
+         and ((cis_acct_verify.stdout | trim).split() + ['', ''])[1] is match(cis_linux_common_account_status_regex | default('')))
+        or
+        ((cis_linux_common_account_status_regex | default('')) == ''
+         and (cis_acct_verify.stdout | trim) == '')
     fail_msg: Account integrity check failed.
     success_msg: Account integrity verification passed.

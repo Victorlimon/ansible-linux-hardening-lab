@@ -1,3 +1,28 @@
 ---
-- name: CIS 2.1.12 | Verification | Delegate to disabled-service mechanism
-  ansible.builtin.import_tasks: mechanisms/service_disabled/verification.yml
+- name: CIS 2.1.12 | Verification | Gather installed packages
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: CIS 2.1.12 | Verification | Read rpcbind unit activation states
+  ansible.builtin.command:
+    argv: [systemctl, "{{ item }}", rpcbind.socket, rpcbind.service]
+  loop: [is-enabled, is-active]
+  register: cis_linux_common_rpcbind_verification_states
+  check_mode: false
+  changed_when: false
+  failed_when: false
+  when: "'rpcbind' in ansible_facts.packages"
+
+- name: CIS 2.1.12 | Verification | Require both units disabled and inactive
+  ansible.builtin.assert:
+    that:
+      - >-
+        'rpcbind' not in ansible_facts.packages or
+        (cis_linux_common_rpcbind_verification_states.results | map(attribute='stdout_lines') |
+         map('length') | list == [2, 2] and
+         cis_linux_common_rpcbind_verification_states.results[0].stdout_lines |
+         select('match', '^enabled') | list | length == 0 and
+         cis_linux_common_rpcbind_verification_states.results[1].stdout_lines |
+         select('equalto', 'active') | list | length == 0)
+    fail_msg: rpcbind.socket or rpcbind.service is active or enabled.
+    success_msg: rpcbind socket and service verification passed.

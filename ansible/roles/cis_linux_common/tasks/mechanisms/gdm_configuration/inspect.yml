@@ -1,0 +1,162 @@
+---
+# CIS GDM configuration mechanism (shared inspection, fail-closed).
+#
+# The benchmark prefixes section 1.7 with "IF - GDM is not installed on the
+# system, this section can be skipped", so the gate package (gdm3) decides
+# NOT_APPLICABLE before any probe runs. When GDM is installed the probes
+# mirror the benchmark audits verbatim:
+#   * gsettings / gsettings_text / gsettings_uint run the benchmark's
+#     `gsettings get <schema> <key>` command against the expected value.
+#     gsettings resolves the compiled dconf databases, the same view the
+#     benchmark's CIS-CAT assessment takes after `dconf update`.
+#   * locks greps /etc/dconf/db/local.d/locks/* like the benchmark scripts.
+#     Patterns use PCRE \h, so the probe uses grep -P exactly as the
+#     benchmark does.
+#   * xdmcp replays the benchmark [xdmcp] Enable=true scan over
+#     /etc/{gdm3,gdm}/{custom,daemon}.conf. Control 1.7.10 runs it even when
+#     GDM is absent (no files -> no findings -> PASS), per the benchmark.
+# Checks arrive as `kind|field|field|...` strings (the pattern is always the
+# last field because regexes may contain '|'); they are handed to the probe
+# through a JSON environment variable because ansible-core >= 2.19/2.21 does
+# not interpret Python-style escapes inside Jinja string literals, so joining
+# the list with a newline in Jinja would embed a literal backslash-n.
+# Unreadable state (failed probes, unparsable output, an empty check list)
+# classifies FAIL; the NOT_APPLICABLE branch short-circuits before that.
+
+- name: Common GDM configuration | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common GDM configuration | Derive GDM applicability
+  ansible.builtin.set_fact:
+    cis_linux_common_gdm_installed: >-
+      {{ 'yes' if cis_linux_common_gdm_gate_package in ansible_facts.packages else 'no' }}
+    cis_linux_common_gdm_probe_required: >-
+      {{ 'yes' if (cis_linux_common_gdm_gate_package in ansible_facts.packages)
+                  or not (cis_linux_common_gdm_apply_gate | default(true) | bool) else 'no' }}
+
+- name: Common GDM configuration | Run the benchmark audit checks
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      set -u
+      while IFS= read -r l_check; do
+        [ -n "$l_check" ] || continue
+        l_kind="${l_check%%|*}"
+        l_rest="${l_check#*|}"
+        case "$l_kind" in
+          gsettings)
+            # kind|schema|key|regex (regex may contain '|': it is the rest)
+            l_schema="${l_rest%%|*}"
+            l_rest2="${l_rest#*|}"
+            l_key="${l_rest2%%|*}"
+            l_regex="${l_rest2#*|}"
+            if l_out="$(gsettings get "$l_schema" "$l_key" 2>/dev/null)"; then
+              if printf '%s' "$l_out" | grep -Pq -- "$l_regex"; then
+                echo "CHECK pass gsettings $l_schema $l_key = $l_out"
+              else
+                echo "CHECK fail gsettings $l_schema $l_key = $l_out"
+              fi
+            else
+              echo "CHECK unreadable gsettings $l_schema $l_key (gsettings get failed)"
+            fi
+            ;;
+          gsettings_text)
+            # kind|schema|key: pass when the value is a non-empty quoted string
+            l_schema="${l_rest%%|*}"
+            l_key="${l_rest#*|}"
+            if l_out="$(gsettings get "$l_schema" "$l_key" 2>/dev/null)"; then
+              if printf '%s' "$l_out" | grep -Pq "^'..*'$"; then
+                echo "CHECK pass gsettings_text $l_schema $l_key = $l_out"
+              else
+                echo "CHECK fail gsettings_text $l_schema $l_key = $l_out"
+              fi
+            else
+              echo "CHECK unreadable gsettings_text $l_schema $l_key (gsettings get failed)"
+            fi
+            ;;
+          gsettings_uint)
+            # kind|schema|key|min|max: pass when "uint32 N" has min <= N <= max
+            l_schema="${l_rest%%|*}"
+            l_rest2="${l_rest#*|}"
+            l_key="${l_rest2%%|*}"
+            l_rest3="${l_rest2#*|}"
+            l_min="${l_rest3%%|*}"
+            l_max="${l_rest3#*|}"
+            if l_out="$(gsettings get "$l_schema" "$l_key" 2>/dev/null)"; then
+              if printf '%s' "$l_out" | grep -Pq '^uint32 [0-9]+$'; then
+                l_val="${l_out##* }"
+                if [ "$l_val" -ge "$l_min" ] && [ "$l_val" -le "$l_max" ]; then
+                  echo "CHECK pass gsettings_uint $l_schema $l_key = $l_out"
+                else
+                  echo "CHECK fail gsettings_uint $l_schema $l_key = $l_out (want $l_min..$l_max)"
+                fi
+              else
+                echo "CHECK unreadable gsettings_uint $l_schema $l_key = $l_out"
+              fi
+            else
+              echo "CHECK unreadable gsettings_uint $l_schema $l_key (gsettings get failed)"
+            fi
+            ;;
+          locks)
+            # kind|regex: pass when some dconf lock file matches (grep -P, as
+            # in the benchmark; a missing locks directory fails closed)
+            l_regex="$l_rest"
+            if grep -Psrq -- "$l_regex" /etc/dconf/db/local.d/locks/ 2>/dev/null; then
+              echo "CHECK pass locks $l_regex"
+            else
+              echo "CHECK fail locks $l_regex"
+            fi
+            ;;
+          xdmcp)
+            # kind: the benchmark's [xdmcp] Enable=true scan; no findings
+            # (including no files at all) is the passing branch.
+            if l_found="$( { while IFS= read -r l_file; do
+                awk '/\[xdmcp\]/{f=1;next} /\[/{f=0} f && /^[[:space:]]*Enable[[:space:]]*=[[:space:]]*true/{print "The file: \""$l_file"\" includes: \""$0"\" in the \"[xdmcp]\" block"}' "$l_file"
+              done < <(grep -Psil -- '^\h*\[xdmcp\]' /etc/gdm3/custom.conf /etc/gdm3/daemon.conf /etc/gdm/custom.conf /etc/gdm/daemon.conf 2>/dev/null); } 2>/dev/null )"; then
+              if [ -z "$l_found" ]; then
+                echo "CHECK pass xdmcp"
+              else
+                echo "CHECK fail xdmcp $(printf '%s' "$l_found" | tr '\n' '; ')"
+              fi
+            else
+              echo "CHECK unreadable xdmcp (scan failed)"
+            fi
+            ;;
+          *)
+            echo "CHECK unreadable unknown-kind $l_check"
+            ;;
+        esac
+      done < <(printf '%s' "$CIS_GDM_CHECKS_JSON" | python3 -c 'import json,sys; [print(check) for check in json.load(sys.stdin)]')
+  # environment is a TASK keyword; nesting it in the module args is an
+  # "Unsupported parameters" module error the failed_when below would mask.
+  environment:
+    CIS_GDM_CHECKS_JSON: "{{ cis_linux_common_gdm_checks | to_json }}"
+  register: cis_linux_common_gdm_probe
+  become: true
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: cis_linux_common_gdm_probe_required == 'yes'
+
+- name: Common GDM configuration | Normalize check evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_gdm_probe_ok: >-
+      {{ 'yes' if ((cis_linux_common_gdm_probe | default({})).rc | default(1) == 0
+                   and (cis_linux_common_gdm_checks | default([], true) | length) > 0
+                   and ((cis_linux_common_gdm_probe | default({})).stdout_lines | default([])
+                        | select('match', '^CHECK ') | list | length)
+                       == (cis_linux_common_gdm_checks | default([], true) | length)) else 'no' }}
+    cis_linux_common_gdm_all_pass: >-
+      {{ 'yes' if ((cis_linux_common_gdm_probe | default({})).stdout_lines | default([])
+                   | reject('match', '^CHECK pass ') | list | length) == 0 else 'no' }}
+    cis_linux_common_gdm_evidence: >-
+      {{ (cis_linux_common_gdm_probe | default({})).stdout_lines | default([])
+         if cis_linux_common_gdm_probe_required == 'yes' else [] }}
+
+- name: Common GDM configuration | Classify GDM configuration state
+  ansible.builtin.set_fact:
+    cis_linux_common_gdm_state: >-
+      {{ 'NOT_APPLICABLE' if cis_linux_common_gdm_probe_required == 'no' else
+         ('PASS' if cis_linux_common_gdm_probe_ok == 'yes'
+                  and cis_linux_common_gdm_all_pass == 'yes' else 'FAIL') }}

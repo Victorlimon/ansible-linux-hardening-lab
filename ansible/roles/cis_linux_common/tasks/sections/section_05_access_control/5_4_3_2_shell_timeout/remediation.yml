@@ -1,6 +1,17 @@
 ---
-- name: Config line remediation | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+- name: Shell timeout TMOUT remediation | Delegate to script_line
+  ansible.builtin.import_tasks: mechanisms/script_line/remediation.yml
   vars:
-    cis_linux_common_config_line: 'TMOUT=900'
-    cis_linux_common_config_line_regexp: '^TMOUT='
+    cis_linux_common_script_required_regexps:
+      - '(?im)^[ \t]*(?:[^#\n]+[ \t]+)?TMOUT=(900|[1-8][0-9][0-9]|[1-9][0-9]|[1-9])\b'
+      - '(?im)^[ \t]*(?:[^#\n]+;[ \t]*)?readonly[ \t]+TMOUT(\s+|\s*;|\s*$|=(900|[1-8][0-9][0-9]|[1-9][0-9]|[1-9]))\b'
+      - '(?im)^[ \t]*(?:[^#\n]+;[ \t]*)?export[ \t]+TMOUT(\s+|\s*;|\s*$|=(900|[1-8][0-9][0-9]|[1-9][0-9]|[1-9]))\b'
+    cis_linux_common_script_or_regexps: []
+    cis_linux_common_script_forbidden_regexps:
+      - '(?im)^[ \t]*(?:[^#\n]+[ \t]+)?TMOUT=(9[0-9][1-9]|9[1-9][0-9]|0+|[1-9]\d{3,})\b'
+    cis_linux_common_script_extra_files: []
+    cis_linux_common_script_managed_path: /etc/profile.d/50-tmout.sh
+    cis_linux_common_script_managed_content: |
+      TMOUT=900
+      readonly TMOUT
+      export TMOUT

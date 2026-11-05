@@ -1,0 +1,27 @@
+---
+- name: Common pam_faillock stack | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common pam_faillock stack | Delegate to shared inspection
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/inspect.yml
+
+- name: Common pam_faillock stack | Verify the enabled pam_faillock stack
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_faillock_package not in ansible_facts.packages or
+        cis_linux_common_faillock_stack_ok
+    fail_msg: >-
+      The pam_faillock PAM stack is not compliant:
+      preauth={{ cis_linux_common_faillock_preauth_count }} (required exactly 1),
+      authfail={{ cis_linux_common_faillock_authfail_count }} (required exactly 1),
+      account={{ cis_linux_common_faillock_account_count }} (required exactly 1),
+      auth_faillock_lines={{ cis_linux_common_faillock_auth_faillock_total }}
+      (required exactly 2), account_faillock_lines={{ cis_linux_common_faillock_account_faillock_total }}
+      (required exactly 1), order={{ cis_linux_common_faillock_auth_signature }}
+      (required [preauth, pam_unix.so, authfail]),
+      inline_override_files={{ cis_linux_common_faillock_override_files }}
+      (required none), unreadable_files={{ cis_linux_common_faillock_unreadable_files }}
+      (required none). Configure it through pam-auth-update profiles in
+      /usr/share/pam-configs, never by editing /etc/pam.d/common-* directly.
+    success_msg: pam_faillock stack verification passed.

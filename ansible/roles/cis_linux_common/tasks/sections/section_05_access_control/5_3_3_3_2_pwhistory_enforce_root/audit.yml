@@ -1,6 +1,7 @@
 ---
-- name: Config line audit | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+- name: Pwhistory enforce_for_root audit | Delegate to pwhistory_parameter
+  ansible.builtin.import_tasks: mechanisms/pwhistory_parameter/audit.yml
   vars:
-    cis_linux_common_config_line: 'enforce_for_root'
-    cis_linux_common_config_line_regexp: '^enforce_for_root'
+    cis_linux_common_pwhistory_param: enforce_for_root
+    cis_linux_common_pwhistory_name_regex: '\benforce_for_root\b'
+    cis_linux_common_pwhistory_value_regex: '^\s*password\s+requisite\s+pam_pwhistory\.so\s+remember=24\s+enforce_for_root\s+try_first_pass\s+use_authtok\s*$'

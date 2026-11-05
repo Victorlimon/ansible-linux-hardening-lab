@@ -1,0 +1,23 @@
+---
+# Independent verification of the shell-corpus controls (5.4.3.2 TMOUT,
+# 5.4.3.3 default umask): re-runs the benchmark PASS conditions against the
+# live corpus and asserts.
+
+- name: Common script line | Delegate to shared inspection
+  ansible.builtin.import_tasks: mechanisms/script_line/inspect.yml
+
+- name: Common script line | Verify the corpus setting
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_script_unreadable_files | length == 0
+      - (cis_linux_common_script_any_files | default([], true)) | length > 0
+      - (cis_linux_common_script_forbidden_files | default([], true)) | length == 0
+    fail_msg: >-
+      The benchmark shell-corpus condition is not satisfied for
+      {{ cis_linux_common_control_id }}:
+      compliant_files={{ cis_linux_common_script_any_files | default([], true) }},
+      overriding_files={{ cis_linux_common_script_forbidden_files | default([], true) }},
+      unreadable_files={{ cis_linux_common_script_unreadable_files }}.
+    success_msg: >-
+      Shell corpus verification passed: compliant in
+      {{ cis_linux_common_script_any_files | default([], true) }}

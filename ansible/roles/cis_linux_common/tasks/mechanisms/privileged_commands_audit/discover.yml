@@ -1,0 +1,226 @@
+---
+# CIS privileged-commands audit mechanism (shared discovery, fail-closed).
+#
+# CIS Debian 12 v1.1.0 / CIS Ubuntu 24.04 v1.0.0 control 6.2.3.6 enumerates,
+# for every traversable partition, the files with the setuid and/or setgid
+# bit set (`find <part> -xdev -perm /6000 -type f`) and requires one audit
+# rule per file:
+#   -a always,exit -F path=<file> -F perm=x -F auid>=<UID_MIN> -F auid!=unset -k privileged
+# written to /etc/audit/rules.d/50-privileged.rules, then `augenrules --load`.
+#
+# The partition set mirrors the benchmark scripts verbatim: kernel filesystems
+# whose type is not `nodev` (findmnt -i -t over /proc/filesystems), minus any
+# mount whose options carry noexec or nosuid (grep -Pv "noexec|nosuid"). The
+# benchmark's Impact note allows extra performance exclusions; those arrive
+# through cis_linux_common_privileged_exclude_pattern as an additional PCRE
+# alternation appended to that grep (default: none).
+#
+# UID_MIN is read from /etc/login.defs exactly like the benchmark
+# (`awk '/^\s*UID_MIN/{print $2}'`); an unresolvable UID_MIN is treated as
+# unreadable state and fails closed instead of emitting a broken rule.
+#
+# The probe compares three states and reports them as `CHECK pass|fail|unreadable`
+# lines (the gdm_configuration evidence contract):
+#   * on-disk: 50-privileged.rules must contain EXACTLY the generated rule set
+#     (comment/blank lines ignored). Missing rules OR stale/extra rule lines
+#     FAIL: this control owns the file.
+#   * running: every privileged path must appear in `auditctl -l`
+#     (`path=<file> ` or `-w <file> ` display forms), mirroring the benchmark's
+#     running-configuration grep. While the audit configuration is immutable
+#     (`auditctl -s` -> `enabled 2`) the running set cannot change until reboot
+#     (benchmark "Additional Information: Potential reboot required"), so a
+#     running mismatch is reported as PASS-with-note instead of FAIL; on-disk
+#     correctness still gates the control.
+#   * unreadable evidence (failed findmnt/find/auditctl, unreadable rules file)
+#     always FAILs; remediation refuses to write in that state.
+#
+# `RULE <line>` echoes carry the canonical generated set and are only emitted
+# when cis_linux_common_privileged_emit_rules == '1' (remediation), so audit
+# evidence stays small on hosts with many privileged files.
+
+- name: Common privileged commands | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common privileged commands | Derive auditd applicability
+  ansible.builtin.set_fact:
+    cis_linux_common_privileged_required: >-
+      {{ 'yes' if cis_linux_common_privileged_package in ansible_facts.packages else 'no' }}
+
+- name: Common privileged commands | Enumerate setuid/setgid files and compare rule state
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      set -u
+      export LC_ALL=C
+      l_rules_file='{{ cis_linux_common_privileged_rules_path }}'
+      l_key='{{ cis_linux_common_privileged_key }}'
+      l_exclude='{{ cis_linux_common_privileged_exclude_pattern | default('', true) }}'
+      l_emit='{{ cis_linux_common_privileged_emit_rules | default('0', true) }}'
+
+      l_uid_min="$(awk '/^\s*UID_MIN/{print $2}' /etc/login.defs 2>/dev/null | head -n 1)"
+      if ! printf '%s' "$l_uid_min" | grep -Eq '^[0-9]+$'; then
+        printf 'CHECK unreadable uid_min (/etc/login.defs unreadable or UID_MIN not found)\n'
+        printf 'SUMMARY generated=0 unreadable=1\n'
+        exit 0
+      fi
+      printf 'CHECK pass uid_min %s\n' "$l_uid_min"
+
+      l_fm="$(findmnt -n -l -k -it "$(awk '/nodev/ { print $2 }' /proc/filesystems | paste -sd,)" 2>/dev/null)"
+      l_fm_rc=$?
+      if [ "$l_fm_rc" -gt 1 ]; then
+        printf 'CHECK unreadable partitions (findmnt failed rc=%s)\n' "$l_fm_rc"
+        exit 0
+      fi
+      l_partitions="$(printf '%s\n' "$l_fm" | grep -Pv "noexec|nosuid${l_exclude}" | awk '{print $1}')"
+      l_part_count=0
+      [ -n "$l_partitions" ] && l_part_count="$(printf '%s\n' "$l_partitions" | wc -l)"
+      printf 'CHECK pass partitions %s traversable filesystems\n' "$l_part_count"
+
+      l_files="$(mktemp)" || { printf 'CHECK unreadable mktemp\n'; exit 0; }
+      l_scan_rc=0
+      for l_partition in $l_partitions; do
+        find "$l_partition" -xdev -perm /6000 -type f >>"$l_files" 2>/dev/null || l_scan_rc=1
+      done
+      if [ "$l_scan_rc" -ne 0 ]; then
+        rm -f "$l_files"
+        printf 'CHECK unreadable partition_scan (find failed on a traversable filesystem)\n'
+        exit 0
+      fi
+      l_sorted="$(sort -u "$l_files")"
+      rm -f "$l_files"
+      l_count=0
+      [ -n "$l_sorted" ] && l_count="$(printf '%s\n' "$l_sorted" | wc -l)"
+      printf 'CHECK pass scan %s privileged files\n' "$l_count"
+
+      l_rules=""
+      if [ -n "$l_sorted" ]; then
+        l_rules="$(printf '%s\n' "$l_sorted" | while IFS= read -r l_file; do
+          printf -- '-a always,exit -F path=%s -F perm=x -F auid>=%s -F auid!=unset -k %s\n' \
+            "$l_file" "$l_uid_min" "$l_key"
+        done)"
+      fi
+      if [ "$l_emit" = "1" ] && [ -n "$l_rules" ]; then
+        printf '%s\n' "$l_rules" | while IFS= read -r l_line; do
+          [ -n "$l_line" ] && printf 'RULE %s\n' "$l_line"
+        done
+      fi
+      l_gen_sorted="$(printf '%s\n' "$l_rules" | sed '/^$/d' | sort -u)"
+
+      # On-disk comparison: the owned rules file must equal the generated set.
+      l_disk_sorted=""
+      if [ -e "$l_rules_file" ]; then
+        l_disk_rc=0
+        l_disk_raw="$(grep -Ev '^[[:space:]]*(#.*)?$' "$l_rules_file" 2>/dev/null)" || l_disk_rc=$?
+        if [ "$l_disk_rc" -gt 1 ]; then
+          printf 'CHECK unreadable on_disk_rules (%s exists but cannot be read)\n' "$l_rules_file"
+          exit 0
+        fi
+        l_disk_sorted="$(printf '%s\n' "$l_disk_raw" | sed '/^$/d' | sort -u)"
+      fi
+      l_missing="$(comm -23 <(printf '%s\n' "$l_gen_sorted") <(printf '%s\n' "$l_disk_sorted"))"
+      l_stale="$(comm -13 <(printf '%s\n' "$l_gen_sorted") <(printf '%s\n' "$l_disk_sorted"))"
+      l_missing_n=0
+      [ -n "$l_missing" ] && l_missing_n="$(printf '%s\n' "$l_missing" | wc -l)"
+      l_stale_n=0
+      [ -n "$l_stale" ] && l_stale_n="$(printf '%s\n' "$l_stale" | wc -l)"
+      if [ "$l_missing_n" -eq 0 ] && [ "$l_stale_n" -eq 0 ]; then
+        printf 'CHECK pass on_disk %s rules match %s\n' "$l_count" "$l_rules_file"
+      else
+        printf '%s\n' "$l_missing" | sed '/^$/d' | head -n 20 | while IFS= read -r l_line; do
+          printf 'EVIDENCE missing %s\n' "$l_line"
+        done
+        printf '%s\n' "$l_stale" | sed '/^$/d' | head -n 20 | while IFS= read -r l_line; do
+          printf 'EVIDENCE stale %s\n' "$l_line"
+        done
+        printf 'CHECK fail on_disk missing=%s stale=%s\n' "$l_missing_n" "$l_stale_n"
+      fi
+
+      # Running comparison (auditctl -l), with the benchmark's immutable/-e 2
+      # reboot carve-out taken from auditctl -s. Some audit versions exit
+      # non-zero while printing "No rules": that is a readable empty state,
+      # only a real auditctl failure is unreadable.
+      l_running="$(auditctl -l 2>/dev/null)"; l_run_rc=$?
+      if [ "$l_run_rc" -ne 0 ] && ! printf '%s\n' "$l_running" | grep -q '^No rules'; then
+        printf 'CHECK unreadable running (auditctl -l failed rc=%s; is auditd running?)\n' "$l_run_rc"
+        printf 'SUMMARY generated=%s disk_missing=%s disk_stale=%s\n' \
+          "$l_count" "$l_missing_n" "$l_stale_n"
+        exit 0
+      fi
+      printf '%s\n' "$l_running" | grep -q '^No rules' && l_running=""
+      l_enabled="$(auditctl -s 2>/dev/null | grep -E '^enabled' | head -n 1)"
+      [ -n "$l_enabled" ] && printf 'STATE %s\n' "$l_enabled"
+      l_immutable=0
+      case "$l_enabled" in *"enabled 2"*) l_immutable=1 ;; esac
+      l_run_missing=0
+      if [ "$l_count" -gt 0 ]; then
+        while IFS= read -r l_file; do
+          [ -n "$l_file" ] || continue
+          if printf '%s' "$l_running" | grep -Fq -- "path=${l_file} " \
+             || printf '%s' "$l_running" | grep -Fq -- "-w ${l_file} "; then
+            continue
+          fi
+          l_run_missing=$((l_run_missing + 1))
+          [ "$l_run_missing" -le 20 ] && printf 'EVIDENCE running-missing %s\n' "$l_file"
+        done <<< "$l_sorted"
+      fi
+      printf 'COUNT missing_running %s\n' "$l_run_missing"
+      if [ "$l_immutable" -eq 1 ]; then
+        printf 'CHECK pass running immutable (locked by -e 2: %s rules pending reboot)\n' "$l_run_missing"
+      elif [ "$l_run_missing" -eq 0 ]; then
+        printf 'CHECK pass running all %s privileged paths loaded\n' "$l_count"
+      else
+        printf 'CHECK fail running missing=%s\n' "$l_run_missing"
+      fi
+      printf 'SUMMARY generated=%s disk_missing=%s disk_stale=%s running_missing=%s immutable=%s\n' \
+        "$l_count" "$l_missing_n" "$l_stale_n" "$l_run_missing" \
+        "$([ "$l_immutable" -eq 1 ] && echo yes || echo no)"
+  register: cis_linux_common_privileged_probe
+  become: true
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: cis_linux_common_privileged_required == 'yes'
+
+# NOTE: set_fact resolves multiple keys in ALPHABETICAL order, so a key may
+# only reference another key defined earlier in the SAME task
+# alphabetically. probe_ok depends on readable ("p" < "r"), so readable is
+# established in its own task first.
+- name: Common privileged commands | Derive probe readability
+  ansible.builtin.set_fact:
+    cis_linux_common_privileged_readable: >-
+      {{ 'yes' if ((cis_linux_common_privileged_probe | default({})).rc | default(1) == 0
+                   and ((cis_linux_common_privileged_probe | default({})).stdout_lines | default([])
+                        | select('match', '^CHECK ') | list | length) > 0
+                   and ((cis_linux_common_privileged_probe | default({})).stdout_lines | default([])
+                        | select('match', '^CHECK ') | list | length)
+                       == ((cis_linux_common_privileged_probe | default({})).stdout_lines | default([])
+                           | select('match', '^CHECK (pass|fail) ') | list | length)) else 'no' }}
+
+- name: Common privileged commands | Normalize probe evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_privileged_probe_ok: >-
+      {{ 'yes' if cis_linux_common_privileged_readable == 'yes'
+                 and ((cis_linux_common_privileged_probe | default({})).stdout_lines | default([])
+                      | select('match', '^CHECK ') | reject('match', '^CHECK pass ')
+                      | list | length) == 0 else 'no' }}
+    cis_linux_common_privileged_generated: >-
+      {{ (cis_linux_common_privileged_probe | default({})).stdout_lines | default([])
+         | select('match', '^RULE ') | map('regex_replace', '^RULE ', '') | list }}
+    cis_linux_common_privileged_immutable: >-
+      {{ 'yes' if ((cis_linux_common_privileged_probe | default({})).stdout_lines | default([])
+                   | select('match', '^STATE enabled 2$') | list | length) > 0 else 'no' }}
+    cis_linux_common_privileged_missing_running: >-
+      {{ ((cis_linux_common_privileged_probe | default({})).stdout_lines | default([])
+          | select('match', '^COUNT missing_running ') | list | first
+          | default('COUNT missing_running 0')
+          | regex_replace('^COUNT missing_running ', '')) | int }}
+    cis_linux_common_privileged_evidence: >-
+      {{ (cis_linux_common_privileged_probe | default({})).stdout_lines | default([])
+         | select('match', '^(CHECK|EVIDENCE|COUNT|STATE|SUMMARY) ') | list }}
+
+- name: Common privileged commands | Classify privileged-commands state
+  ansible.builtin.set_fact:
+    cis_linux_common_privileged_state: >-
+      {{ 'NOT_APPLICABLE' if cis_linux_common_privileged_required == 'no' else
+         ('PASS' if cis_linux_common_privileged_probe_ok == 'yes' else 'FAIL') }}

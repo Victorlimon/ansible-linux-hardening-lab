@@ -1,0 +1,96 @@
+---
+# CIS 5.3.2.2 dedicated remediation: deploy the exact two pam-auth-update
+# profiles required by the CIS Debian 12 v1.1.0 and CIS Ubuntu 24.04 v1.0.0
+# benchmarks, then enable them noninteractively in a single atomic
+# regeneration. The generated /etc/pam.d/common-auth and
+# /etc/pam.d/common-account files are never created or edited directly;
+# pam-auth-update owns that rendering.
+#
+# Gate: cis_linux_common_faillock_pam_auth_update_force (default false).
+# pam-auth-update silently refuses to update when it detects local
+# modifications to /etc/pam.d/common-*, and the documented way to proceed is
+# 'pam-auth-update --force', which re-renders every managed common-* file
+# from the enabled profiles. The gate stays false in general so a deployment
+# can never silently discard site-local PAM edits; enabling it is an explicit
+# operator confirmation that re-rendering from profiles is acceptable here.
+
+- name: Common pam_faillock stack | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common pam_faillock stack | Inspect the current stack
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/inspect.yml
+
+- name: Common pam_faillock stack | Deploy the faillock_notify pam-auth-update profile
+  ansible.builtin.copy:
+    dest: /usr/share/pam-configs/faillock_notify
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      Name: Notify of failed login attempts and reset count upon success
+      Default: yes
+      Priority: 1024
+      Auth-Type: Primary
+      Auth:
+       requisite pam_faillock.so preauth
+      Account-Type: Primary
+      Account:
+       required pam_faillock.so
+  when: cis_linux_common_faillock_package in ansible_facts.packages
+  register: cis_linux_common_faillock_notify_profile
+
+- name: Common pam_faillock stack | Deploy the faillock pam-auth-update profile
+  ansible.builtin.copy:
+    dest: /usr/share/pam-configs/faillock
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      Name: Enable pam_faillock to deny access
+      Default: yes
+      Priority: 0
+      Auth-Type: Primary
+      Auth:
+       [default=die] pam_faillock.so authfail
+  when: cis_linux_common_faillock_package in ansible_facts.packages
+  register: cis_linux_common_faillock_deny_profile
+
+- name: Common pam_faillock stack | Enable both faillock profiles through pam-auth-update
+  ansible.builtin.command:
+    argv: >-
+      {{ ['pam-auth-update']
+         + (['--force'] if cis_linux_common_faillock_pam_auth_update_force | default(false) | bool else [])
+         + ['--enable', 'faillock', 'faillock_notify'] }}
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when:
+    - cis_linux_common_faillock_package in ansible_facts.packages
+    - >-
+      not cis_linux_common_faillock_stack_ok
+      or cis_linux_common_faillock_notify_profile.changed | default(false)
+      or cis_linux_common_faillock_deny_profile.changed | default(false)
+  changed_when: true
+
+- name: Common pam_faillock stack | Inspect the remediated stack
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/inspect.yml
+
+- name: Common pam_faillock stack | Verify the remediated stack
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_faillock_package not in ansible_facts.packages or
+        cis_linux_common_faillock_stack_ok
+    fail_msg: >-
+      pam-auth-update did not produce the required pam_faillock stack:
+      preauth={{ cis_linux_common_faillock_preauth_count }},
+      authfail={{ cis_linux_common_faillock_authfail_count }},
+      account={{ cis_linux_common_faillock_account_count }},
+      order={{ cis_linux_common_faillock_auth_signature }},
+      inline_override_files={{ cis_linux_common_faillock_override_files }},
+      unreadable_files={{ cis_linux_common_faillock_unreadable_files }}.
+      If pam-auth-update reported local modifications to /etc/pam.d/common-*,
+      review them and re-apply with
+      cis_linux_common_faillock_pam_auth_update_force=true only when
+      re-rendering every managed common-* file from the enabled profiles is
+      an accepted outcome.
+    success_msg: pam_faillock stack remediation verified.

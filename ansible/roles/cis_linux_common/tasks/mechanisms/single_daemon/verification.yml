@@ -12,6 +12,6 @@
             ansible_facts.services.get('chrony.service', {}).get('state') == 'running',
             ansible_facts.services.get('ntp.service', {}).get('state') == 'running'
           ] | select('equalto', true) | list | length
-        ) <= 1
-    fail_msg: More than one time synchronization daemon is active.
+        ) == 1
+    fail_msg: Exactly one time synchronization daemon must be active.
     success_msg: Time daemon exclusivity verification passed.

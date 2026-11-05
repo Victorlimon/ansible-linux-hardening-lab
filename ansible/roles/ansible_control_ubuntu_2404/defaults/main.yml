@@ -1,0 +1,8 @@
+---
+controller_critical_enabled: false
+controller_policy_approved: false
+controller_repository_path: ''
+controller_repository_owner: ''
+controller_repository_group: ''
+controller_repository_mode: ''
+controller_private_paths: []

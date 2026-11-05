@@ -1,0 +1,29 @@
+---
+- name: Common pwquality parameter | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common pwquality parameter | Delegate to shared inspection
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/inspect.yml
+
+- name: Common pwquality parameter | Compute parameter evidence
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/evaluate.yml
+
+- name: Common pwquality parameter | Report parameter state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'NOT_APPLICABLE' if cis_linux_common_pwq_package not in ansible_facts.packages else
+           ('PASS' if cis_linux_common_pwq_parameter_ok else 'FAIL') }}
+      changed_target: false
+      evidence:
+        named_lines: "{{ cis_linux_common_pwq_name_count }}"
+        compliant_lines: "{{ cis_linux_common_pwq_compliant_count }}"
+        forbidden_lines: "{{ cis_linux_common_pwq_forbidden_count }}"
+        malformed_lines: "{{ cis_linux_common_pwq_malformed_count }}"
+        named_files: "{{ cis_linux_common_pwq_named_paths }}"
+        forbidden_files: "{{ cis_linux_common_pwq_forbidden_paths }}"
+        inline_override_files: "{{ cis_linux_common_pwq_inline_override_files }}"
+        unreadable_files: "{{ cis_linux_common_pwq_unreadable_files }}"

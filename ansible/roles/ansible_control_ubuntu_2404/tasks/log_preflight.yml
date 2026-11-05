@@ -1,0 +1,32 @@
+---
+- name: Inspect the runner-owned Ansible log directory
+  ansible.builtin.stat:
+    path: /var/log/ansible-control
+    follow: false
+  register: controller_log_dir_stat
+
+- name: Reject an unsafe Ansible log directory
+  ansible.builtin.assert:
+    that:
+      - controller_log_dir_stat.stat.isdir | default(false)
+      - not (controller_log_dir_stat.stat.islnk | default(false))
+      - controller_log_dir_stat.stat.pw_name | default('') == 'root'
+      - controller_log_dir_stat.stat.gr_name | default('') == 'root'
+      - controller_log_dir_stat.stat.mode | default('') == '0700'
+    fail_msg: Run the local launcher with a real root:root 0700 Ansible log directory.
+
+- name: Inspect the runner-owned Ansible log file
+  ansible.builtin.stat:
+    path: /var/log/ansible-control/ansible.log
+    follow: false
+  register: controller_log_file_stat
+
+- name: Reject an unsafe Ansible log file
+  ansible.builtin.assert:
+    that:
+      - controller_log_file_stat.stat.isreg | default(false)
+      - not (controller_log_file_stat.stat.islnk | default(false))
+      - controller_log_file_stat.stat.pw_name | default('') == 'root'
+      - controller_log_file_stat.stat.gr_name | default('') == 'root'
+      - controller_log_file_stat.stat.mode | default('') == '0600'
+    fail_msg: Run the local launcher with a real root:root 0600 Ansible log file.

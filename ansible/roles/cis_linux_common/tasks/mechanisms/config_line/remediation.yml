@@ -3,6 +3,15 @@
   ansible.builtin.package_facts:
     manager: auto
 
+- name: Common config line | Inspect existing configuration file
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_config_line_path }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: cis_linux_common_config_line_stat
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
 - name: Common config line | Set authorized configuration line
   ansible.builtin.lineinfile:
     path: "{{ cis_linux_common_config_line_path }}"
@@ -11,5 +20,6 @@
     create: true
     owner: root
     group: root
-    mode: '0644'
+    mode: "{{ '0440' if cis_linux_common_config_line_path == '/etc/sudoers' or cis_linux_common_config_line_path.startswith('/etc/sudoers.d/') else (omit if cis_linux_common_config_line_stat.stat.exists else '0644') }}"
+    validate: "{{ '/usr/sbin/visudo -cf %s' if cis_linux_common_config_line_path == '/etc/sudoers' or cis_linux_common_config_line_path.startswith('/etc/sudoers.d/') else omit }}"
   when: cis_linux_common_config_line_package in ansible_facts.packages

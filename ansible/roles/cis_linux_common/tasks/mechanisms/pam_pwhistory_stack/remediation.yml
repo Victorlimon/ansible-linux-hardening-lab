@@ -1,0 +1,75 @@
+---
+# CIS 5.3.2.4 dedicated remediation: deploy the exact pam-auth-update profile
+# required by the CIS Debian 12 v1.1.0 and CIS Ubuntu 24.04 v1.0.0 benchmarks,
+# then enable it noninteractively through one atomic regeneration. The
+# generated /etc/pam.d/common-password file is never created or edited
+# directly; pam-auth-update owns that rendering, and the benchmark's own
+# remediation steps mandate the /usr/share/pam-configs/pwhistory profile plus
+# 'pam-auth-update --enable pwhistory'.
+#
+# Gate: cis_linux_common_pwhistory_pam_auth_update_force (default false).
+# pam-auth-update silently refuses to update when it detects local
+# modifications to /etc/pam.d/common-*, and the documented way to proceed is
+# 'pam-auth-update --force', which re-renders every managed common-* file
+# from the enabled profiles. The gate stays false in general so a deployment
+# can never silently discard site-local PAM edits; enabling it is an explicit
+# operator confirmation that re-rendering from profiles is acceptable here.
+
+- name: Common pam_pwhistory stack | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common pam_pwhistory stack | Inspect the current stack
+  ansible.builtin.import_tasks: mechanisms/pam_pwhistory_stack/inspect.yml
+
+- name: Common pam_pwhistory stack | Deploy the pwhistory pam-auth-update profile
+  ansible.builtin.copy:
+    dest: /usr/share/pam-configs/pwhistory
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      Name: pwhistory password history checking
+      Default: yes
+      Priority: 1024
+      Password-Type: Primary
+      Password:
+       requisite pam_pwhistory.so remember=24 enforce_for_root try_first_pass use_authtok
+  when: cis_linux_common_pwhistory_package in ansible_facts.packages
+  register: cis_linux_common_pwhistory_profile
+
+- name: Common pam_pwhistory stack | Enable the pwhistory profile through pam-auth-update
+  ansible.builtin.command:
+    argv: >-
+      {{ ['pam-auth-update']
+         + (['--force'] if cis_linux_common_pwhistory_pam_auth_update_force | default(false) | bool else [])
+         + ['--enable', 'pwhistory'] }}
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when:
+    - cis_linux_common_pwhistory_package in ansible_facts.packages
+    - >-
+      not cis_linux_common_pwhistory_stack_ok
+      or cis_linux_common_pwhistory_profile.changed | default(false)
+  changed_when: true
+
+- name: Common pam_pwhistory stack | Inspect the remediated stack
+  ansible.builtin.import_tasks: mechanisms/pam_pwhistory_stack/inspect.yml
+
+- name: Common pam_pwhistory stack | Verify the remediated stack
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_pwhistory_package not in ansible_facts.packages or
+        cis_linux_common_pwhistory_stack_ok
+    fail_msg: >-
+      pam-auth-update did not produce the required pam_pwhistory stack:
+      canonical_lines={{ cis_linux_common_pwhistory_canonical_count }},
+      password_order={{ cis_linux_common_pwhistory_password_signature }},
+      inline_override_files={{ cis_linux_common_pwhistory_override_files }},
+      unreadable_files={{ cis_linux_common_pwhistory_unreadable_files }}.
+      If pam-auth-update reported local modifications to /etc/pam.d/common-*,
+      review them and re-apply with
+      cis_linux_common_pwhistory_pam_auth_update_force=true only when
+      re-rendering every managed common-* file from the enabled profiles is
+      an accepted outcome.
+    success_msg: pam_pwhistory stack remediation verified.

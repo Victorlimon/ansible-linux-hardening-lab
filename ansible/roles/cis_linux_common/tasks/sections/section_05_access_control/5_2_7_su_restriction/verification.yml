@@ -1,6 +1,41 @@
 ---
-- name: Config line verification | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
-  vars:
-    cis_linux_common_config_line: 'auth required pam_wheel.so use_uid'
-    cis_linux_common_config_line_regexp: '^auth\s+required\s+pam_wheel\.so\s+use_uid'
+- name: CIS 5.2.7 | Verification | Collect PAM line and empty-group evidence
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_2_7_su_restriction/inspect.yml
+
+- name: CIS 5.2.7 | Verification | Confirm su PAM configuration is readable
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_su_restriction_file_readable | bool
+    fail_msg: >-
+      /etc/pam.d/su is absent, not a regular file, or unreadable; su restriction
+      cannot be confirmed in {{ cis_linux_common_config_line_path }}.
+    success_msg: su PAM configuration file is present and readable.
+
+- name: CIS 5.2.7 | Verification | Confirm single compliant pam_wheel line
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_su_restriction_line_compliant | bool
+    fail_msg: >-
+      Expected exactly one active line "{{ cis_linux_common_su_restriction_expected_line }}"
+      in {{ cis_linux_common_config_line_path }}; found
+      {{ cis_linux_common_su_restriction_active_wheel_lines }}. A missing line, the
+      legacy group-less line, duplicate lines, or a malformed or commented
+      variant all fail this check.
+    success_msg: pam_wheel su restriction line is compliant.
+
+- name: CIS 5.2.7 | Verification | Confirm su-restriction group exists and is empty
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_su_restriction_group_record is not none
+      - cis_linux_common_su_restriction_group_gid | length > 0
+      - cis_linux_common_su_restriction_group_members | length == 0
+      - cis_linux_common_su_restriction_group_primary_holders | length == 0
+    fail_msg: >-
+      Group {{ cis_linux_common_su_restriction_group }} must exist with no users;
+      record={{ cis_linux_common_su_restriction_group_record }},
+      supplementary_members={{ cis_linux_common_su_restriction_group_members }},
+      primary_gid_holders={{ cis_linux_common_su_restriction_group_primary_holders }}.
+      The primary-GID condition is stronger than the benchmark grep of
+      /etc/group because Linux-PAM pam_wheel also admits users whose primary
+      GID is the named group.
+    success_msg: su-restriction group exists and contains no users.

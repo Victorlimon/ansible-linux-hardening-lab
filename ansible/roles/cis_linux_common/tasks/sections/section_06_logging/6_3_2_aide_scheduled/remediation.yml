@@ -1,6 +1,20 @@
 ---
-- name: Config line remediation | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
-  vars:
-    cis_linux_common_config_line: '0 5 * * * root /usr/bin/aide.wrapper --check'
-    cis_linux_common_config_line_regexp: 'aide\.wrapper'
+- name: Common AIDE scheduled | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common AIDE scheduled | Unmask the AIDE check timer and service
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    masked: false
+  loop:
+    - dailyaidecheck.timer
+    - dailyaidecheck.service
+  when: '"aide-common" in ansible_facts.packages'
+
+- name: Common AIDE scheduled | Enable and start the AIDE check timer
+  ansible.builtin.systemd:
+    name: dailyaidecheck.timer
+    enabled: true
+    state: started
+  when: '"aide-common" in ansible_facts.packages'

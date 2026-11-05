@@ -9,3 +9,5 @@
   vars:
     cis_linux_common_config_line: "blacklist cfg80211"
     cis_linux_common_config_line_regexp: "^blacklist cfg80211$"
+    cis_linux_common_config_line_path: /etc/modprobe.d/cfg80211.conf
+    cis_linux_common_config_line_package: kmod

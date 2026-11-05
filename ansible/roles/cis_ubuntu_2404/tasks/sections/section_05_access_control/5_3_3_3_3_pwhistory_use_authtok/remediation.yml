@@ -3,4 +3,4 @@
   ansible.builtin.import_role:
     name: cis_linux_common
     tasks_from: sections/section_05_access_control/5_3_3_3_3_pwhistory_use_authtok/remediation.yml
-  vars: {cis_linux_common_control_id: "5.3.3.3.3", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_config_line_path: /etc/security/pwhistory.conf, cis_linux_common_config_line_package: libpam-modules}
+  vars: {cis_linux_common_control_id: "5.3.3.3.3", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_pwhistory_package: libpam-modules}

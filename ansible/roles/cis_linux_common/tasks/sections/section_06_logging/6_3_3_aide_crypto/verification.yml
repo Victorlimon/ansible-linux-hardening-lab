@@ -1,6 +1,24 @@
 ---
-- name: Config line verification | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/verification.yml
-  vars:
-    cis_linux_common_config_line: 'CRYPTO_HASHES = sha256'
-    cis_linux_common_config_line_regexp: '^CRYPTO_HASHES'
+- name: Common AIDE crypto | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common AIDE crypto | Read the audit-tool crypto rules
+  ansible.builtin.slurp:
+    src: /etc/aide/aide.conf.d/50-audit-tools.conf
+  register: cis_linux_common_aide_crypto_file
+  failed_when: false
+  when: '"aide" in ansible_facts.packages'
+
+- name: Common AIDE crypto | Verify sha512 rules for the audit tools
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.packages['aide'] is not defined or
+        ((cis_linux_common_aide_crypto_file.content | default('') | b64decode)
+         is search('sha512') and
+         (cis_linux_common_aide_crypto_file.content | default('') | b64decode)
+         is search('acl') and
+         (cis_linux_common_aide_crypto_file.content | default('') | b64decode)
+         is search('xattrs'))
+    fail_msg: AIDE audit-tool rules do not use sha512/acl/xattrs.
+    success_msg: AIDE audit-tool cryptographic rules verified.

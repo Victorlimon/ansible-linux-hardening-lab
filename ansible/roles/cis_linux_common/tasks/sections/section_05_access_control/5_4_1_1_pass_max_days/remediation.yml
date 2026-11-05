@@ -1,6 +1,13 @@
 ---
-- name: Config line remediation | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+- name: Login.defs PASS_MAX_DAYS remediation | Delegate to login_defs_parameter
+  ansible.builtin.import_tasks: mechanisms/login_defs_parameter/remediation.yml
   vars:
-    cis_linux_common_config_line: 'PASS_MAX_DAYS 365'
-    cis_linux_common_config_line_regexp: '^PASS_MAX_DAYS\s+365'
+    cis_linux_common_logindefs_param: PASS_MAX_DAYS
+    cis_linux_common_logindefs_active_regex: '(?im)^[ \t]*PASS_MAX_DAYS\b.*$'
+    cis_linux_common_logindefs_value_regex: '(?i)^[ \t]*PASS_MAX_DAYS[ \t]+(?:[1-9]|[1-9][0-9]|1[0-9]{2}|2[0-9]{2}|3[0-5][0-9]|36[0-5])\b'
+    cis_linux_common_logindefs_line: 'PASS_MAX_DAYS 365'
+    cis_linux_common_logindefs_line_regexp: '(?i)^[ \t]*PASS_MAX_DAYS\b.*'
+    cis_linux_common_logindefs_shadow_cmd: |-
+      awk -F: '($2~/^\$.+\$/) {if($5 > 365 || $5 < 1)print "User: " $1 " PASS_MAX_DAYS: " $5}' /etc/shadow
+    cis_linux_common_logindefs_shadow_fix_cmd: |-
+      awk -F: '($2~/^\$.+\$/) {if($5 > 365 || $5 < 1)system("chage --maxdays 365 " $1)}' /etc/shadow

@@ -1,2 +1,8 @@
 ---
-- ansible.builtin.import_tasks: mechanisms/ufw_policy/verification.yml
+- ansible.builtin.import_tasks: sections/section_04_firewall/4_2_4_ufw_loopback_traffic/audit.yml
+
+- name: CIS 4.2.4 | Verification | Assert loopback traffic
+  ansible.builtin.assert:
+    that: cis_linux_common_ufw_loopback_compliant
+    fail_msg: UFW loopback accept or anti-spoofing rules are missing.
+    success_msg: UFW loopback traffic verification passed.

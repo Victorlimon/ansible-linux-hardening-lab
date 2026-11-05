@@ -3,4 +3,4 @@
   ansible.builtin.import_role:
     name: cis_linux_common
     tasks_from: sections/section_05_access_control/5_3_3_2_2_pwquality_minlen/verification.yml
-  vars: {cis_linux_common_control_id: "5.3.3.2.2", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_config_line_path: /etc/security/pwquality.conf, cis_linux_common_config_line_package: libpam-pwquality}
+  vars: {cis_linux_common_control_id: "5.3.3.2.2", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_pwq_main_file: /etc/security/pwquality.conf, cis_linux_common_pwq_conf_d: /etc/security/pwquality.conf.d, cis_linux_common_pwq_package: libpam-pwquality}

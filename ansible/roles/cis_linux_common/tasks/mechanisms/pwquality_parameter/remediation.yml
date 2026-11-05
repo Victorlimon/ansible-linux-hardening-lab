@@ -1,0 +1,127 @@
+---
+# CIS 5.3.3.2.x dedicated remediation. The managed parameter belongs to the
+# benchmark corpus: the per-control owned drop-in file under
+# /etc/security/pwquality.conf.d (the exact benchmark example names), while
+# the shared /etc/security/pwquality.conf is only ever commented out in
+# place — never rewritten — mirroring the benchmark 'sed -ri s/^\s*X\s*=/# &/'
+# step. Duplicate named lines, third-party drop-ins, forbidden inline
+# pam_pwquality.so arguments, or unreadable corpus files fail closed with
+# evidence for manual consolidation, mirroring the benchmark note that a
+# setting must live in only one location. No task here edits /etc/pam.d or
+# /usr/share/pam-configs; pam-auth-update owns the PAM stack rendering.
+#
+# Actions decided by evaluate.yml:
+#   none    -> already compliant: nothing writes (idempotent)
+#   create  -> parameter absent from the corpus: append the canonical line
+#              to the managed drop-in (numeric and flag controls)
+#   replace -> one non-compliant named line in an owned location: comment
+#              out the named lines in the main file (benchmark sed
+#              equivalent) and establish the canonical line in the managed
+#              drop-in (in-place if the single named line already lives in
+#              the managed file)
+#   remove  -> not_zero control whose only named line is forbidden
+#              ('= 0'): comment it out in place; the compliant module
+#              default then applies
+#   blocked -> fail closed with evidence, never force-written
+
+- name: Common pwquality parameter | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common pwquality parameter | Inspect the corpus before remediation
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/inspect.yml
+
+- name: Common pwquality parameter | Compute pre-remediation evidence
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/evaluate.yml
+
+- name: Common pwquality parameter | Fail closed on blocked evidence
+  ansible.builtin.fail:
+    msg: >-
+      {{ cis_linux_common_pwq_param }} cannot be remediated automatically:
+      name_lines={{ cis_linux_common_pwq_name_count }},
+      compliant_lines={{ cis_linux_common_pwq_compliant_count }},
+      forbidden_lines={{ cis_linux_common_pwq_forbidden_count }},
+      malformed_lines={{ cis_linux_common_pwq_malformed_count }},
+      named_files={{ cis_linux_common_pwq_named_paths }},
+      forbidden_files={{ cis_linux_common_pwq_forbidden_paths }},
+      inline_override_files={{ cis_linux_common_pwq_inline_override_files }},
+      unreadable_files={{ cis_linux_common_pwq_unreadable_files }}.
+      Duplicate or third-party pwquality configuration, inline
+      pam_pwquality.so arguments, or unreadable corpus files require manual
+      consolidation into a single benchmark location first.
+  when:
+    - cis_linux_common_pwq_package in ansible_facts.packages
+    - cis_linux_common_pwq_action == 'blocked'
+
+- name: Common pwquality parameter | Ensure the managed drop-in directory
+  ansible.builtin.file:
+    path: "{{ cis_linux_common_pwq_conf_d }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when:
+    - cis_linux_common_pwq_package in ansible_facts.packages
+    - cis_linux_common_pwq_action in ['create', 'replace']
+
+- name: Common pwquality parameter | Establish the canonical line in the managed drop-in
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_pwq_managed_path }}"
+    regexp: "{{ cis_linux_common_pwq_line_regexp }}"
+    line: "{{ cis_linux_common_pwq_line }}"
+    create: true
+    # An existing managed file keeps its ownership and mode: no CIS control
+    # of this family prescribes them, and forcing root:root 0644 over a
+    # site-hardened root:shadow 640 file would silently loosen it. Only a
+    # created file is given the packaged default (root:root 0644).
+    owner: "{{ omit if cis_linux_common_pwq_managed_stat.stat.exists | default(false) else 'root' }}"
+    group: "{{ omit if cis_linux_common_pwq_managed_stat.stat.exists | default(false) else 'root' }}"
+    mode: "{{ omit if cis_linux_common_pwq_managed_stat.stat.exists | default(false) else '0644' }}"
+  when:
+    - cis_linux_common_pwq_package in ansible_facts.packages
+    - cis_linux_common_pwq_action in ['create', 'replace']
+
+- name: Common pwquality parameter | Comment out the named lines in the main file
+  ansible.builtin.replace:
+    path: "{{ cis_linux_common_pwq_main_file }}"
+    regexp: "{{ cis_linux_common_pwq_name_regex }}"
+    replace: '# \g<0>'
+  when:
+    - cis_linux_common_pwq_package in ansible_facts.packages
+    - cis_linux_common_pwq_action in ['replace', 'remove']
+    - cis_linux_common_pwq_main_file in cis_linux_common_pwq_named_paths
+
+- name: Common pwquality parameter | Comment out the named lines in the managed drop-in
+  ansible.builtin.replace:
+    path: "{{ cis_linux_common_pwq_managed_path }}"
+    regexp: "{{ cis_linux_common_pwq_name_regex }}"
+    replace: '# \g<0>'
+  when:
+    - cis_linux_common_pwq_package in ansible_facts.packages
+    - cis_linux_common_pwq_action == 'remove'
+    - cis_linux_common_pwq_managed_path in cis_linux_common_pwq_named_paths
+
+- name: Common pwquality parameter | Inspect the corpus after remediation
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/inspect.yml
+
+- name: Common pwquality parameter | Compute post-remediation evidence
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/evaluate.yml
+
+- name: Common pwquality parameter | Verify the remediated parameter
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_pwq_package not in ansible_facts.packages or
+        cis_linux_common_pwq_parameter_ok
+    fail_msg: >-
+      {{ cis_linux_common_pwq_param }} could not be established in the
+      benchmark corpus: name_lines={{ cis_linux_common_pwq_name_count }},
+      compliant_lines={{ cis_linux_common_pwq_compliant_count }},
+      forbidden_lines={{ cis_linux_common_pwq_forbidden_count }},
+      malformed_lines={{ cis_linux_common_pwq_malformed_count }},
+      inline_override_files={{ cis_linux_common_pwq_inline_override_files }},
+      unreadable_files={{ cis_linux_common_pwq_unreadable_files }}.
+    success_msg: >-
+      Pwquality parameter remediation verified:
+      {{ cis_linux_common_pwq_line if cis_linux_common_pwq_action
+         in ['create', 'replace']
+         else 'forbidden line removed; the compliant module default applies' }}

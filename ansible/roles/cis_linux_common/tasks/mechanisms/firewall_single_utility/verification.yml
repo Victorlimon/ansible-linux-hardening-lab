@@ -1,18 +1,46 @@
 ---
-- name: Common single firewall | Gather service facts
-  ansible.builtin.service_facts:
-
 - name: Common single firewall | Gather utility paths
   ansible.builtin.stat:
     path: "{{ item.path }}"
   loop: "{{ cis_linux_common_firewall_utilities }}"
   register: cis_linux_common_firewall_utility_paths
 
+- name: Common single firewall | Check enabled services
+  ansible.builtin.command:
+    argv: [systemctl, is-enabled, --quiet, "{{ item.0.service }}"]
+  loop: "{{ cis_linux_common_firewall_utilities | zip(cis_linux_common_firewall_utility_paths.results) }}"
+  register: cis_linux_common_firewall_enabled
+  when: item.1.stat.exists
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Common single firewall | Check active services
+  ansible.builtin.command:
+    argv: [systemctl, is-active, --quiet, "{{ item.0.service }}"]
+  loop: "{{ cis_linux_common_firewall_utilities | zip(cis_linux_common_firewall_utility_paths.results) }}"
+  register: cis_linux_common_firewall_active
+  when: item.1.stat.exists
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
 - name: Common single firewall | Verify exactly one utility
+  vars:
+    cis_linux_common_active_firewall_count: >-
+      {%- set active = namespace(count=0) -%}
+      {%- for utility in cis_linux_common_firewall_utilities -%}
+        {%- set path = cis_linux_common_firewall_utility_paths.results[loop.index0] -%}
+        {%- set enabled = cis_linux_common_firewall_enabled.results[loop.index0] -%}
+        {%- set running = cis_linux_common_firewall_active.results[loop.index0] -%}
+        {%- if path.stat.exists and enabled.rc | default(1) == 0
+            and running.rc | default(1) == 0 -%}
+          {%- set active.count = active.count + 1 -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ active.count }}
   ansible.builtin.assert:
     that:
-      - >-
-        (cis_linux_common_firewall_utilities | zip(cis_linux_common_firewall_utility_paths.results)
-        | selectattr('1.stat.exists') | map(attribute='0.name') | list | length) == 1
-    fail_msg: Exactly one firewall utility must be installed and selected.
+      - cis_linux_common_active_firewall_count | int == 1
+    fail_msg: Exactly one installed, enabled, and active firewall utility is required.
     success_msg: Single firewall utility verification passed.

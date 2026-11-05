@@ -1,0 +1,18 @@
+---
+- name: Common login.defs parameter | Delegate to shared inspection
+  ansible.builtin.import_tasks: mechanisms/login_defs_parameter/inspect.yml
+
+- name: Common login.defs parameter | Report parameter state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if cis_linux_common_logindefs_ok else 'FAIL' }}
+      changed_target: false
+      evidence:
+        parameter: "{{ cis_linux_common_logindefs_param }}"
+        active_lines: "{{ cis_linux_common_logindefs_active_lines | count }}"
+        compliant_lines: "{{ cis_linux_common_logindefs_compliant_lines | count }}"
+        shadow_violations: "{{ cis_linux_common_logindefs_shadow_violations }}"
+        unreadable_files: "{{ cis_linux_common_logindefs_unreadable }}"

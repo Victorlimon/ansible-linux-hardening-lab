@@ -1,0 +1,45 @@
+---
+- name: Common pwquality parameter | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common pwquality parameter | Delegate to shared inspection
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/inspect.yml
+
+- name: Common pwquality parameter | Compute parameter evidence
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/evaluate.yml
+
+- name: Common pwquality parameter | Verify the managed parameter
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_pwq_package not in ansible_facts.packages or
+        cis_linux_common_pwq_parameter_ok
+    fail_msg: >-
+      pwquality {{ cis_linux_common_pwq_param }} is not compliant across the
+      benchmark corpus ({{ cis_linux_common_pwq_main_file }} plus
+      {{ cis_linux_common_pwq_conf_d }}/*.conf):
+      {% if cis_linux_common_pwq_kind in ['numeric_min', 'numeric_max'] %}
+      name_lines={{ cis_linux_common_pwq_name_count }},
+      compliant_lines={{ cis_linux_common_pwq_compliant_count }}
+      (the parameter must appear exactly once in a single benchmark
+      location and that line must hold a value from the bounded
+      {{ cis_linux_common_pwq_param }} set),
+      {% elif cis_linux_common_pwq_kind == 'not_zero' %}
+      name_lines={{ cis_linux_common_pwq_name_count }},
+      forbidden_lines={{ cis_linux_common_pwq_forbidden_count }},
+      malformed_lines={{ cis_linux_common_pwq_malformed_count }}
+      (no active line may set {{ cis_linux_common_pwq_param }} to zero, the
+      module default is compliant, and at most one named line may exist),
+      {% else %}
+      name_lines={{ cis_linux_common_pwq_name_count }},
+      compliant_lines={{ cis_linux_common_pwq_compliant_count }},
+      forbidden_lines={{ cis_linux_common_pwq_forbidden_count }}
+      (enforce_for_root defaults off: at least one active line is required
+      and every named line must be the bare 'enforce_for_root' token),
+      {% endif %}
+      inline_override_files={{ cis_linux_common_pwq_inline_override_files }}
+      (inline pam_pwquality.so arguments override the configuration files
+      and the benchmark forbids the checked variants),
+      unreadable_files={{ cis_linux_common_pwq_unreadable_files }}
+      (required none).
+    success_msg: "Pwquality parameter verification passed: {{ cis_linux_common_pwq_param }}"

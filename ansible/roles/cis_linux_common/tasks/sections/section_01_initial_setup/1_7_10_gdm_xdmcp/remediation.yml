@@ -1,0 +1,48 @@
+---
+# CIS 1.7.10 remediation (benchmark): remove or comment out Enable=true
+# lines inside the [xdmcp] block of /etc/{gdm3,gdm}/{custom,daemon}.conf.
+# XDMCP is audited regardless of the gdm3 package (the benchmark scan simply
+# finds nothing on a GDM-less host), so this task is driven by file
+# existence, not by the package gate: a headless system skips every item and
+# stays unchanged. Rewriting through cp preserves the original owner/mode,
+# and the awk match is case-sensitive exactly like the audit awk, so reruns
+# are idempotent (an already-commented line no longer matches).
+- name: CIS 1.7.10 | Remediation | Discover existing GDM configuration files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  loop:
+    - /etc/gdm3/custom.conf
+    - /etc/gdm3/daemon.conf
+    - /etc/gdm/custom.conf
+    - /etc/gdm/daemon.conf
+  register: cis_1_7_10_gdm_conf_stat
+
+- name: CIS 1.7.10 | Remediation | Comment Enable=true lines inside the [xdmcp] block
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      set -eu
+      f='{{ item.item }}'
+      l_tmp="$(mktemp)"
+      awk '
+        /^[[:space:]]*\[xdmcp\][[:space:]]*$/ { l_xdmcp = 1; print; next }
+        /^[[:space:]]*\[/ { l_xdmcp = 0 }
+        l_xdmcp == 1 && /^[[:space:]]*Enable[[:space:]]*=[[:space:]]*true[[:space:]]*$/ { print "#" $0; next }
+        { print }
+      ' "$f" > "$l_tmp"
+      if ! cmp -s "$f" "$l_tmp"; then
+        cp "$l_tmp" "$f"
+        echo CHANGED
+      fi
+      rm -f "$l_tmp"
+  loop: "{{ cis_1_7_10_gdm_conf_stat.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stat.exists | default(false)
+  become: true
+  # `result` is the in-flight task result, available to changed_when.
+  changed_when: "'CHANGED' in result.stdout | default('')"
+  register: cis_1_7_10_xdmcp_remediate

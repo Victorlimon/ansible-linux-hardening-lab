@@ -1,2 +1,9 @@
 ---
 - ansible.builtin.import_tasks: mechanisms/ufw_policy/remediation.yml
+
+- name: CIS 4.2.4 | Remediation | Deny spoofed loopback sources
+  community.general.ufw:
+    rule: deny
+    direction: in
+    from_ip: "{{ item }}"
+  loop: [127.0.0.0/8, '::1']

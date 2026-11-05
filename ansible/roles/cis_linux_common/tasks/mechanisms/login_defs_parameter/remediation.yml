@@ -1,0 +1,79 @@
+---
+# CIS 5.4.1.x login.defs remediation.
+#
+# Actions decided by the shared inspection:
+#   compliant          -> nothing writes (idempotent re-apply reports
+#                         changed=0: the lineinfile converges in place and
+#                         the shadow fix only runs while the probe still
+#                         reports violations)
+#   one bad line       -> lineinfile replaces that keyword line IN PLACE
+#                         (regexp matches any active value, so the packaged
+#                         first-occurrence-wins shadow-utils parse rule can
+#                         never be defeated by a dangling appended line)
+#   keyword absent     -> the canonical line is appended (file otherwise
+#                         untouched)
+#   existing accounts  -> the benchmark per-user fix runs only while the
+#                         read-only shadow probe reports violations (e.g.
+#                         'chage --maxdays 365' for accounts frozen at
+#                         99999), mirroring the benchmark example script
+#   duplicate lines / missing or unreadable file -> fail closed with
+#                         evidence: consolidation is a manual decision
+# The file owner/group/mode of an existing /etc/login.defs are preserved;
+# only a created file gets the packaged 0644 default.
+
+- name: Common login.defs parameter | Inspect before remediation
+  ansible.builtin.import_tasks: mechanisms/login_defs_parameter/inspect.yml
+
+- name: Common login.defs parameter | Fail closed on blocked evidence
+  ansible.builtin.fail:
+    msg: >-
+      {{ cis_linux_common_logindefs_param }} cannot be remediated
+      automatically: unreadable={{ cis_linux_common_logindefs_unreadable }},
+      active_lines={{ cis_linux_common_logindefs_active_lines | count }},
+      lines={{ cis_linux_common_logindefs_active_lines }}. A missing or
+      unreadable /etc/login.defs, or a keyword duplicated by active lines,
+      requires manual consolidation first: shadow-utils resolves duplicated
+      login.defs keywords with the first occurrence, so automatic writes
+      could silently target the wrong line.
+  when:
+    - cis_linux_common_logindefs_unreadable | length > 0
+      or cis_linux_common_logindefs_active_lines | length > 1
+
+- name: Common login.defs parameter | Establish the canonical keyword line
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "{{ cis_linux_common_logindefs_line_regexp }}"
+    line: "{{ cis_linux_common_logindefs_line }}"
+    create: true
+    owner: "{{ omit if cis_linux_common_logindefs_stat.stat.exists | default(false) else 'root' }}"
+    group: "{{ omit if cis_linux_common_logindefs_stat.stat.exists | default(false) else 'root' }}"
+    mode: "{{ omit if cis_linux_common_logindefs_stat.stat.exists | default(false) else '0644' }}"
+  when:
+    - not cis_linux_common_logindefs_ok
+    - cis_linux_common_logindefs_compliant_lines | length == 0
+
+- name: Common login.defs parameter | Align existing accounts in /etc/shadow
+  ansible.builtin.shell: "{{ cis_linux_common_logindefs_shadow_fix_cmd }}"
+  args:
+    executable: /bin/bash
+  when:
+    - not cis_linux_common_logindefs_ok
+    - cis_linux_common_logindefs_shadow_fix_cmd | length > 0
+    - cis_linux_common_logindefs_shadow_violations | length > 0
+
+- name: Common login.defs parameter | Inspect after remediation
+  ansible.builtin.import_tasks: mechanisms/login_defs_parameter/inspect.yml
+
+- name: Common login.defs parameter | Verify the remediated parameter
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_logindefs_ok
+    fail_msg: >-
+      {{ cis_linux_common_logindefs_param }} could not be established:
+      active_lines={{ cis_linux_common_logindefs_active_lines | count }},
+      compliant_lines={{ cis_linux_common_logindefs_compliant_lines | count }},
+      shadow_violations={{ cis_linux_common_logindefs_shadow_violations }},
+      unreadable_files={{ cis_linux_common_logindefs_unreadable }}.
+    success_msg: >-
+      login.defs parameter remediation verified:
+      {{ cis_linux_common_logindefs_line }}

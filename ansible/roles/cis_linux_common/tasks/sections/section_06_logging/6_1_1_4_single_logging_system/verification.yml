@@ -4,6 +4,8 @@
 
 - name: CIS 6.1.1.4 | Verification | Assert logging exclusivity
   ansible.builtin.assert:
-    that: cis_linux_common_logging_daemon_count <= 1
-    fail_msg: Multiple logging daemons are active.
+    that:
+      - cis_linux_common_logging_selected_running
+      - not cis_linux_common_logging_competing_running
+    fail_msg: The selected logging system is inactive or a competing system is active.
     success_msg: Logging exclusivity verification passed.

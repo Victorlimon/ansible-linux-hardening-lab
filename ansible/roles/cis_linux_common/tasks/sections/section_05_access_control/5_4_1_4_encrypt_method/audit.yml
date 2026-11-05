@@ -1,6 +1,11 @@
 ---
-- name: Config line audit | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+- name: Login.defs ENCRYPT_METHOD audit | Delegate to login_defs_parameter
+  ansible.builtin.import_tasks: mechanisms/login_defs_parameter/audit.yml
   vars:
-    cis_linux_common_config_line: 'ENCRYPT_METHOD SHA512'
-    cis_linux_common_config_line_regexp: '^ENCRYPT_METHOD\s+SHA512'
+    cis_linux_common_logindefs_param: ENCRYPT_METHOD
+    cis_linux_common_logindefs_active_regex: '(?im)^[ \t]*ENCRYPT_METHOD\b.*$'
+    cis_linux_common_logindefs_value_regex: '(?i)^[ \t]*ENCRYPT_METHOD[ \t]+(?:SHA512|YESCRYPT)\b'
+    cis_linux_common_logindefs_line: 'ENCRYPT_METHOD SHA512'
+    cis_linux_common_logindefs_line_regexp: '(?i)^[ \t]*ENCRYPT_METHOD\b.*'
+    cis_linux_common_logindefs_shadow_cmd: ''
+    cis_linux_common_logindefs_shadow_fix_cmd: ''

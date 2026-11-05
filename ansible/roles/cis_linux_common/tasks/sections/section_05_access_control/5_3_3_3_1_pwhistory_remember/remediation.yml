@@ -1,6 +1,7 @@
 ---
-- name: Config line remediation | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+- name: Pwhistory remember remediation | Delegate to pwhistory_parameter
+  ansible.builtin.import_tasks: mechanisms/pwhistory_parameter/remediation.yml
   vars:
-    cis_linux_common_config_line: 'remember = 24'
-    cis_linux_common_config_line_regexp: '^remember\s*=\s*24'
+    cis_linux_common_pwhistory_param: remember
+    cis_linux_common_pwhistory_name_regex: '\bremember=\d+\b'
+    cis_linux_common_pwhistory_value_regex: '^\s*password\s+requisite\s+pam_pwhistory\.so\s+remember=24\s+enforce_for_root\s+try_first_pass\s+use_authtok\s*$'

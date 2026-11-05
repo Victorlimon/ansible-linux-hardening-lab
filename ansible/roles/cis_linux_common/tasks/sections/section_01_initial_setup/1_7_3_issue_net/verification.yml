@@ -1,3 +1,0 @@
----
-- name: manual_observation verification | Delegate to mechanism
-  ansible.builtin.import_tasks: mechanisms/manual_observation/verification.yml

@@ -1,6 +1,13 @@
 ---
-- name: Config line remediation | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+- name: Pwquality maxrepeat remediation | Delegate to pwquality_parameter
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/remediation.yml
   vars:
-    cis_linux_common_config_line: 'maxrepeat = 3'
-    cis_linux_common_config_line_regexp: '^maxrepeat\s*=\s*3'
+    cis_linux_common_pwq_param: maxrepeat
+    cis_linux_common_pwq_kind: numeric_max
+    cis_linux_common_pwq_line: 'maxrepeat = 3'
+    cis_linux_common_pwq_managed_path: /etc/security/pwquality.conf.d/50-pwrepeat.conf
+    cis_linux_common_pwq_name_regex: '(?mi)^[ \t]*maxrepeat\b.*$'
+    cis_linux_common_pwq_value_regex: '(?mi)^[ \t]*maxrepeat[ \t]*=[ \t]*[1-3]\b'
+    cis_linux_common_pwq_forbidden_regex: ''
+    cis_linux_common_pwq_line_regexp: '(?i)^[ \t]*maxrepeat\b.*$'
+    cis_linux_common_pwq_inline_bad_regex: '(?mi)^[ \t]*password[ \t]+(requisite|required|sufficient)[ \t]+pam_pwquality\.so[ \t]+(?:[^#\n\r]+[ \t]+)?maxrepeat[ \t]*=[ \t]*(0|[4-9]|[1-9][0-9]+)\b'

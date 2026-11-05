@@ -1,0 +1,9 @@
+---
+# Copy outside the repository, set institutional values, protect as root:root 0600.
+# This file intentionally fails critical-stage preflight until completed.
+controller_policy_approved: false
+controller_repository_path: ''
+controller_repository_owner: ''
+controller_repository_group: ''
+controller_repository_mode: ''  # 0700 or 0750 after Wazuh/gateway access review
+controller_private_paths: []  # Audit only: [{path: /absolute/file, owner: root, group: root, mode: '0600'}]

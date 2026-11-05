@@ -1,6 +1,13 @@
 ---
-- name: Config line audit | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+- name: Login.defs PASS_WARN_AGE audit | Delegate to login_defs_parameter
+  ansible.builtin.import_tasks: mechanisms/login_defs_parameter/audit.yml
   vars:
-    cis_linux_common_config_line: 'PASS_WARN_AGE 7'
-    cis_linux_common_config_line_regexp: '^PASS_WARN_AGE\s+7'
+    cis_linux_common_logindefs_param: PASS_WARN_AGE
+    cis_linux_common_logindefs_active_regex: '(?im)^[ \t]*PASS_WARN_AGE\b.*$'
+    cis_linux_common_logindefs_value_regex: '(?i)^[ \t]*PASS_WARN_AGE[ \t]+(?:[7-9]|[1-9][0-9]+)\b'
+    cis_linux_common_logindefs_line: 'PASS_WARN_AGE 7'
+    cis_linux_common_logindefs_line_regexp: '(?i)^[ \t]*PASS_WARN_AGE\b.*'
+    cis_linux_common_logindefs_shadow_cmd: |-
+      awk -F: '($2~/^\$.+\$/) {if($6 < 7)print "User: " $1 " PASS_WARN_AGE: " $6}' /etc/shadow
+    cis_linux_common_logindefs_shadow_fix_cmd: |-
+      awk -F: '($2~/^\$.+\$/) {if($6 < 7)system("chage --warndays 7 " $1)}' /etc/shadow

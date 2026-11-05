@@ -2,10 +2,59 @@
 - name: Common fixed file permissions | Load remediation contract
   ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/validate.yml
 
-- name: Common fixed file permissions | Apply declared metadata
+- name: Common fixed file permissions | Discover every benchmark target
+  ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/discover.yml
+
+- name: Common fixed file permissions | Evaluate every benchmark target
+  ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/evaluate.yml
+
+# Remediation touches only non-compliant targets and only the dimensions that
+# failed: compliant-but-more-restrictive files keep their tighter mode (the
+# mechanism never re-permissions a passing file). A missing literal target is
+# created outside check mode, exactly as the legacy single-path behavior.
+- name: Common fixed file permissions | Build the remediation actions
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_actions_json: >-
+      {%- set scopes = cis_linux_common_fixed_file_plan.scopes -%}
+      {%- set stats = cis_linux_common_fixed_file_target_stats.results | default([]) -%}
+      {%- set ns = namespace(actions=[]) -%}
+      {%- for violation in cis_linux_common_fixed_file_violations -%}
+      {%-   set scope = scopes[violation.scope_index] -%}
+      {%-   set meta = (stats[violation.target_index].stat | default({})) -%}
+      {%-   set exists = meta.exists | default(false) -%}
+      {%-   set creating = (not exists) and violation.source == 'literal' -%}
+      {%-   set run = exists
+                      or (violation.source == 'literal'
+                          and (not ansible_check_mode or scope.type == 'directory')) -%}
+      {%-   if run -%}
+      {%-     set needs_owner = creating or ('owner' in violation.dimensions) -%}
+      {%-     set needs_group = scope.enforce_group
+                                and (creating or ('group' in violation.dimensions)) -%}
+      {%-     set needs_mode = creating or ('mode' in violation.dimensions) -%}
+      {%-     set ns.actions = ns.actions + [{
+             'path': violation.path,
+             'state': scope.type,
+             'owner': scope.owner if needs_owner else 'OMIT',
+             'group': scope.group if needs_group else 'OMIT',
+             'mode': scope.remediation_mode if needs_mode else 'OMIT'
+           }] -%}
+      {%-   endif -%}
+      {%- endfor -%}
+      {{ ns.actions | to_json }}
+
+- name: Common fixed file permissions | Read the remediation actions
+  ansible.builtin.set_fact:
+    cis_linux_common_fixed_file_actions: >-
+      {{ cis_linux_common_fixed_file_actions_json | from_json }}
+
+- name: Common fixed file permissions | Apply declared metadata to non-compliant targets
   ansible.builtin.file:
-    path: "{{ cis_linux_common_fixed_file_path }}"
-    state: "{{ cis_linux_common_fixed_file_expected_type | default('file') }}"
-    owner: "{{ cis_linux_common_fixed_file_owner }}"
-    group: "{{ cis_linux_common_fixed_file_group }}"
-    mode: "{{ cis_linux_common_fixed_file_remediation_mode }}"
+    path: "{{ item.path }}"
+    state: "{{ item.state }}"
+    owner: "{{ item.owner if item.owner != 'OMIT' else omit }}"
+    group: "{{ item.group if item.group != 'OMIT' else omit }}"
+    mode: "{{ item.mode if item.mode != 'OMIT' else omit }}"
+    follow: true
+  loop: "{{ cis_linux_common_fixed_file_actions }}"
+  loop_control:
+    label: "{{ item.path }}"

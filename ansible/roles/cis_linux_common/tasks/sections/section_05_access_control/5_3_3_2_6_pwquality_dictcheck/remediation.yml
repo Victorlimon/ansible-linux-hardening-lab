@@ -1,6 +1,13 @@
 ---
-- name: Config line remediation | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+- name: Pwquality dictcheck remediation | Delegate to pwquality_parameter
+  ansible.builtin.import_tasks: mechanisms/pwquality_parameter/remediation.yml
   vars:
-    cis_linux_common_config_line: 'dictcheck = 1'
-    cis_linux_common_config_line_regexp: '^dictcheck\s*=\s*1'
+    cis_linux_common_pwq_param: dictcheck
+    cis_linux_common_pwq_kind: not_zero
+    cis_linux_common_pwq_line: 'dictcheck = 1'
+    cis_linux_common_pwq_managed_path: /etc/security/pwquality.conf.d/50-pwdictcheck.conf
+    cis_linux_common_pwq_name_regex: '(?mi)^[ \t]*dictcheck\b.*$'
+    cis_linux_common_pwq_value_regex: '(?mi)^[ \t]*dictcheck\b.*$'
+    cis_linux_common_pwq_forbidden_regex: '(?mi)^[ \t]*dictcheck[ \t]*=[ \t]*0\b'
+    cis_linux_common_pwq_line_regexp: '(?i)^[ \t]*dictcheck\b.*$'
+    cis_linux_common_pwq_inline_bad_regex: '(?mi)^[ \t]*password[ \t]+(requisite|required|sufficient)[ \t]+pam_pwquality\.so[ \t]+(?:[^#\n\r]+[ \t]+)?dictcheck[ \t]*=[ \t]*0\b'

@@ -1,0 +1,9 @@
+---
+- name: mount_options remediation | Delegate to mechanism
+  ansible.builtin.import_tasks: mechanisms/mount_options/remediation.yml
+  vars:
+    cis_linux_common_mount_path: /tmp
+    cis_linux_common_mount_unit: tmp.mount
+    cis_linux_common_mount_check: nosuid
+    cis_linux_common_mount_unit_required: 'no'
+    cis_linux_common_mount_fstab_opts: defaults,rw,nosuid,nodev,noexec,relatime

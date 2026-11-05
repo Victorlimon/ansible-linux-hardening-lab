@@ -1,0 +1,30 @@
+---
+- name: Harden the dedicated Ubuntu 24.04 Ansible controller locally
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: true
+  any_errors_fatal: true
+  pre_tasks:
+    - name: Refuse non-local or non-controller execution before gathering facts
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'localhost'
+          - ansible_host == '127.0.0.1'
+          - ansible_connection == 'local'
+          - lookup('ansible.builtin.pipe', 'hostname -s') == 'ansible-control'
+        fail_msg: This playbook runs only on the local ansible-control host.
+
+    - name: Gather local platform facts
+      ansible.builtin.setup:
+
+    - name: Refuse unsupported operating systems
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == 'Ubuntu'
+          - ansible_facts.distribution_version == '24.04'
+          - ansible_facts.service_mgr == 'systemd'
+        fail_msg: This profile supports only Ubuntu 24.04 with systemd.
+
+  roles:
+    - ansible_control_ubuntu_2404

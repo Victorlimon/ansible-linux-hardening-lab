@@ -1,0 +1,20 @@
+---
+# CIS 1.7.3 remediation: benchmark machine-wide branch — gdm keyfile with
+# disable-user-list=true plus the gdm profile, then dconf update (inside the
+# shared mechanism). No-op while gdm3 is absent; opt-in behind the
+# cis_<platform>_1_7_3_gdm_user_list_remediate gate (default false).
+- name: CIS 1.7.3 | Remediation | Delegate the GDM user-list dconf artifacts
+  ansible.builtin.import_tasks: mechanisms/gdm_configuration/remediation.yml
+  vars:
+    cis_linux_common_gdm_remediate_files:
+      - path: /etc/dconf/db/gdm.d/00-login-screen
+        content: |
+          [org/gnome/login-screen]
+          # Do not show the user list
+          disable-user-list=true
+    cis_linux_common_gdm_remediate_profiles:
+      - path: /etc/dconf/profile/gdm
+        lines:
+          - user-db:user
+          - system-db:gdm
+          - file-db:/usr/share/gdm/greeter-dconf-defaults

@@ -1,0 +1,173 @@
+---
+# Shared read-only inspection for the CIS shell-environment controls whose
+# benchmark audit is a per-file grep of the authoritative system shell corpus:
+# /etc/profile, every *.sh under /etc/profile.d, /etc/bash.bashrc, and
+# /etc/bashrc when that file exists (both distributions source these; the
+# benchmark script includes /etc/bashrc only when present). A control may add
+# further precedence-relevant files (for example /etc/login.defs and
+# /etc/pam.d/postlogin for 5.4.3.3) through cis_linux_common_script_extra_files.
+#
+# Inputs supplied by the delegating control:
+#   cis_linux_common_script_required_regexps — regexes (each self-flagged with
+#     (?im), translated from the benchmark -Psi greps). A corpus file is a
+#     compliant location only when EVERY required regex matches inside that
+#     same file, mirroring the benchmark's three-conditonal && per file.
+#   cis_linux_common_script_or_regexps — alternative single-regex compliance
+#     forms; a file matching ANY of them is compliant on its own (used for
+#     the pam_umask=027 form of 5.4.3.3, which the generic umask regexes
+#     cannot express).
+#   cis_linux_common_script_forbidden_regexps — any corpus file holding any
+#     match is an overriding violation (empty list disables the scan). Files
+#     listed in cis_linux_common_script_extra_files are NOT forbidden-scanned:
+#     they are lower-precedence locations that the benchmark audit script
+#     short-circuits once a higher-priority file is compliant (for example
+#     /etc/login.defs 'UMASK 022' is irrelevant once /etc/profile.d carries
+#     the compliant managed umask).
+# A corpus file that exists but cannot be read fails closed. Nothing writes.
+#
+# The accumulators below are set_fact state and outlive one import: every
+# accumulator is reset here so an inspection that runs twice inside the same
+# play (remediation re-scans after writing) classifies the live corpus, never
+# a stale duplicate of it.
+
+- name: Common script line | Reset the per-inspection accumulators
+  ansible.builtin.set_fact:
+    cis_linux_common_script_corpus: []
+    cis_linux_common_script_required_hits: {}
+    cis_linux_common_script_or_files: []
+    cis_linux_common_script_forbidden_files: []
+
+- name: Common script line | Discover profile.d shell files
+  ansible.builtin.find:
+    paths: /etc/profile.d
+    file_type: file
+    hidden: false
+    recurse: false
+    patterns:
+      - '*.sh'
+  register: cis_linux_common_script_profiled_find
+
+- name: Common script line | Enumerate the candidate corpus
+  ansible.builtin.set_fact:
+    cis_linux_common_script_candidates: >-
+      {{ (['/etc/profile', '/etc/bash.bashrc', '/etc/bashrc']
+          + (cis_linux_common_script_extra_files | default([], true))
+          + (cis_linux_common_script_profiled_find.files
+             | default([], true) | map(attribute='path') | sort))
+         | unique }}
+
+- name: Common script line | Stat every candidate corpus file
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  loop: "{{ cis_linux_common_script_candidates }}"
+  loop_control:
+    label: "{{ item }}"
+  register: cis_linux_common_script_stat
+
+- name: Common script line | Read every existing corpus file
+  ansible.builtin.slurp:
+    src: "{{ item.stat.path }}"
+  loop: "{{ cis_linux_common_script_stat.results | selectattr('stat.exists') | list }}"
+  loop_control:
+    label: "{{ item.stat.path }}"
+  failed_when: false
+  register: cis_linux_common_script_read
+
+- name: Common script line | Derive unreadable corpus files
+  ansible.builtin.set_fact:
+    cis_linux_common_script_unreadable_files: >-
+      {{ (cis_linux_common_script_stat.results
+          | selectattr('stat.exists') | map(attribute='stat.path') | list)
+         | difference(cis_linux_common_script_read.results
+                      | default([], true)
+                      | selectattr('content', 'defined')
+                      | map(attribute='source') | list)
+         | sort }}
+
+- name: Common script line | Decode the readable corpus into path/text pairs
+  ansible.builtin.set_fact:
+    cis_linux_common_script_corpus: >-
+      {{ (cis_linux_common_script_corpus | default([], true))
+         + [{'path': item.source, 'text': item.content | b64decode}] }}
+  loop: "{{ cis_linux_common_script_read.results | default([], true)
+            | selectattr('content', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.source }}"
+
+- name: Common script line | Count required-regex hits per corpus file
+  ansible.builtin.set_fact:
+    cis_linux_common_script_required_hits: >-
+      {{ (cis_linux_common_script_required_hits | default({}, true))
+         | combine({item.0.path: ((cis_linux_common_script_required_hits
+                                   | default({}, true))
+                                  .get(item.0.path, 0))
+                    + (1 if (item.0.text is search(item.1)) else 0)}) }}
+  loop: >-
+    {{ (cis_linux_common_script_corpus | default([], true))
+       | product(cis_linux_common_script_required_regexps
+                 | default([], true)) | list }}
+  loop_control:
+    label: "{{ item.0.path }}"
+
+- name: Common script line | Collect or-regex compliant files
+  ansible.builtin.set_fact:
+    cis_linux_common_script_or_files: >-
+      {{ (cis_linux_common_script_or_files | default([], true))
+         + [item.0.path]
+         if (item.0.text is search(item.1))
+         else (cis_linux_common_script_or_files | default([], true)) }}
+  loop: >-
+    {{ (cis_linux_common_script_corpus | default([], true))
+       | product(cis_linux_common_script_or_regexps
+                 | default([], true)) | list }}
+  loop_control:
+    label: "{{ item.0.path }}"
+
+- name: Common script line | Derive the required-compliant file set
+  ansible.builtin.set_fact:
+    cis_linux_common_script_compliant_files: >-
+      {{ ((cis_linux_common_script_required_hits | default({}, true))
+          | dict2items
+          | selectattr('value', 'equalto',
+                       cis_linux_common_script_required_regexps
+                       | default([], true) | length)
+          | map(attribute='key') | list
+          if (cis_linux_common_script_required_regexps
+              | default([], true)) | length > 0 else [])
+         | unique | sort }}
+
+# The union depends on the compliant-file fact above. Ansible resolves every
+# value inside one set_fact against the facts as they existed BEFORE the task,
+# so defining both keys in the same task makes any_files read
+# compliant_files while it is still undefined. It must be a separate task.
+- name: Common script line | Derive the winning compliant-file set
+  ansible.builtin.set_fact:
+    cis_linux_common_script_any_files: >-
+      {{ ((cis_linux_common_script_compliant_files | default([], true))
+          + (cis_linux_common_script_or_files | default([], true)))
+         | unique | sort }}
+
+- name: Common script line | Scope the forbidden scan to precedence-relevant files
+  ansible.builtin.set_fact:
+    cis_linux_common_script_forbidden_corpus: >-
+      {{ cis_linux_common_script_corpus
+         | rejectattr('path', 'in',
+                      cis_linux_common_script_extra_files | default([], true))
+         | list }}
+
+- name: Common script line | Flag files carrying forbidden overrides
+  ansible.builtin.set_fact:
+    cis_linux_common_script_forbidden_files: >-
+      {{ (cis_linux_common_script_forbidden_files | default([], true))
+         + [item.0.path]
+         if (item.0.text is search(item.1))
+         else (cis_linux_common_script_forbidden_files | default([], true)) }}
+  loop: >-
+    {{ (cis_linux_common_script_forbidden_corpus | default([], true))
+       | product(cis_linux_common_script_forbidden_regexps
+                 | default([], true)) | list }}
+  loop_control:
+    label: "{{ item.0.path }}"

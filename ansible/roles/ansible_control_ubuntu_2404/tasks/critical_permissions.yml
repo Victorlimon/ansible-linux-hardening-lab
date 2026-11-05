@@ -1,0 +1,8 @@
+---
+- name: Restrict the approved controller repository directory
+  ansible.builtin.file:
+    path: "{{ controller_repository_path }}"
+    state: directory
+    mode: "{{ controller_repository_mode }}"
+    recurse: false
+

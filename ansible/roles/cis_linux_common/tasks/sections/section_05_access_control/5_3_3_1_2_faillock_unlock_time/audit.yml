@@ -1,6 +1,10 @@
 ---
-- name: Config line audit | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+- name: Faillock unlock_time audit | Delegate to faillock_parameter
+  ansible.builtin.import_tasks: mechanisms/faillock_parameter/audit.yml
   vars:
-    cis_linux_common_config_line: 'unlock_time = 900'
-    cis_linux_common_config_line_regexp: '^unlock_time\s*=\s*900'
+    cis_linux_common_faillock_param: unlock_time
+    cis_linux_common_faillock_kind: numeric
+    cis_linux_common_faillock_line: 'unlock_time = 900'
+    cis_linux_common_faillock_regexp: '^\s*unlock_time\s*='
+    cis_linux_common_faillock_name_regex: '\s*unlock_time\s*='
+    cis_linux_common_faillock_value_regex: '\s*unlock_time\s*=\s*900\s*$'

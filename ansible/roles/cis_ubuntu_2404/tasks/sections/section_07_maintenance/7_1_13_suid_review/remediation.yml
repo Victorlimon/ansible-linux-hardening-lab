@@ -3,4 +3,4 @@
   ansible.builtin.import_role:
     name: cis_linux_common
     tasks_from: sections/section_07_maintenance/7_1_13_suid_review/remediation.yml
-  vars: {cis_linux_common_control_id: "7.1.13", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_account_check: suid_review, cis_linux_common_account_command: 'echo manual-review'}
+  vars: {cis_linux_common_control_id: "7.1.13", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_manual_path: /usr/bin}

@@ -1,0 +1,25 @@
+---
+- name: Common pam_pwhistory stack | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common pam_pwhistory stack | Delegate to shared inspection
+  ansible.builtin.import_tasks: mechanisms/pam_pwhistory_stack/inspect.yml
+
+- name: Common pam_pwhistory stack | Verify the enabled pam_pwhistory stack
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_pwhistory_package not in ansible_facts.packages or
+        cis_linux_common_pwhistory_stack_ok
+    fail_msg: >-
+      The pam_pwhistory password stack is not compliant:
+      canonical_lines={{ cis_linux_common_pwhistory_canonical_count }}
+      (required exactly 1), password_order={{ cis_linux_common_pwhistory_password_signature }}
+      (required [pam_pwquality.so, pam_pwhistory.so, pam_unix.so]),
+      pwhistory_password_lines={{ cis_linux_common_pwhistory_line_total }}
+      (required exactly 1), inline_override_files={{ cis_linux_common_pwhistory_override_files }}
+      (required none), unreadable_files={{ cis_linux_common_pwhistory_unreadable_files }}
+      (required none). Configure it through the pam-auth-update profile
+      /usr/share/pam-configs/pwhistory, never by editing
+      /etc/pam.d/common-password directly.
+    success_msg: pam_pwhistory stack verification passed.

@@ -1,3 +1,11 @@
 ---
-- name: CIS 1.6.2 | Remediation | Delegate local banner to the common config-line mechanism
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+# CIS 1.6.2 — Ensure local login warning banner is configured properly.
+# Remediation replaces the file with the site warning banner, removing any
+# OS name/version/release disclosure.
+- name: CIS 1.6.2 | Remediation | Replace local banner with clean warning
+  ansible.builtin.copy:
+    content: "{{ cis_linux_common_config_line }}\n"
+    dest: "{{ cis_linux_common_config_line_path }}"
+    owner: root
+    group: root
+    mode: '0644'

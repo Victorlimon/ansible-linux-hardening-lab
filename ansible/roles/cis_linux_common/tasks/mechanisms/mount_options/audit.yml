@@ -1,0 +1,19 @@
+---
+- name: Common mount options | Inspect live mount state
+  ansible.builtin.import_tasks: mechanisms/mount_options/inspect.yml
+
+- name: Common mount options | Report the live mount state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      benchmark: "{{ cis_linux_common_benchmark }}"
+      classification: "{{ cis_linux_common_mount_state }}"
+      check: "{{ cis_linux_common_mount_check }}"
+      target: "{{ cis_linux_common_mount_path }}"
+      observed:
+        mounted: "{{ cis_linux_common_mount_exists_state }}"
+        mount_options: "{{ cis_linux_common_mount_options_probe.stdout | default('') | trim }}"
+        boot_unit: "{{ cis_linux_common_mount_unit }}"
+        boot_unit_state: "{{ cis_linux_common_mount_unit_state }}"
+      changed_target: false

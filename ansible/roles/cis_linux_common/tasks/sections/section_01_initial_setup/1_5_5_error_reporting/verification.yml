@@ -1,3 +1,19 @@
 ---
 - name: service_disabled verification | Delegate to mechanism
   ansible.builtin.import_tasks: mechanisms/service_disabled/verification.yml
+
+- name: CIS 1.5.5 | Verification | Read persistent Apport setting
+  ansible.builtin.slurp:
+    src: /etc/default/apport
+  register: cis_linux_common_apport_defaults
+  when: "'apport' in ansible_facts.packages"
+
+- name: CIS 1.5.5 | Verification | Require automatic error reporting disabled
+  ansible.builtin.assert:
+    that:
+      - >-
+        'apport' not in ansible_facts.packages or
+        (cis_linux_common_apport_defaults.content | b64decode |
+         regex_findall('(?m)^[ \t]*enabled[ \t]*=[ \t]*([^ \t#\r\n]+)') | last | default('')) == '0'
+    fail_msg: Apport must be disabled in /etc/default/apport.
+  when: "'apport' in ansible_facts.packages"

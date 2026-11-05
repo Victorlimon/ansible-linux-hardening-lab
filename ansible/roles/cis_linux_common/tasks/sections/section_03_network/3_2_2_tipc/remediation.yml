@@ -1,11 +1,3 @@
 ---
-- name: CIS 3.2.2 | Remediation | Add tipc install rule
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
-  vars:
-    cis_linux_common_config_line: "install {{ cis_linux_common_kernel_module }} /bin/true"
-    cis_linux_common_config_line_regexp: "^install {{ cis_linux_common_kernel_module }} /bin/true$"
-- name: CIS 3.2.2 | Remediation | Add tipc blacklist rule
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
-  vars:
-    cis_linux_common_config_line: "blacklist {{ cis_linux_common_kernel_module }}"
-    cis_linux_common_config_line_regexp: "^blacklist {{ cis_linux_common_kernel_module }}$"
+- name: CIS 3.2.2 | Remediation | Disable the tipc module effectively
+  ansible.builtin.import_tasks: mechanisms/kernel_module_disabled/remediation.yml

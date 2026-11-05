@@ -1,9 +1,11 @@
 ---
-- name: CIS 5.1.2 | Verification | Find private host keys
-  ansible.builtin.find: {paths: /etc/ssh, patterns: ssh_host_*_key, file_type: file}
-  register: cis_ssh_private_host_keys
-- name: CIS 5.1.2 | Verification | Delegate each private host key
-  ansible.builtin.include_tasks: mechanisms/fixed_file_permissions/verification.yml
-  loop: "{{ cis_ssh_private_host_keys.files }}"
-  loop_control: {label: "{{ item.path }}"}
-  vars: {cis_linux_common_fixed_file_path: "{{ item.path }}"}
+- name: CIS 5.1.2 | Verification | Cover every private host key found under /etc/ssh
+  ansible.builtin.include_tasks:
+    file: mechanisms/fixed_file_permissions/verification.yml
+    apply:
+      tags: always
+  vars:
+    cis_linux_common_fixed_file_search:
+      paths: /etc/ssh
+      patterns: ssh_host_*_key
+      file_type: file

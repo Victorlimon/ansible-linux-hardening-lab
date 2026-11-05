@@ -1,0 +1,23 @@
+---
+- name: Common mount options | Inspect live mount state
+  ansible.builtin.import_tasks: mechanisms/mount_options/inspect.yml
+
+- name: Common mount options | Verify the live mount state
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_mount_state != 'FAIL'
+    fail_msg: >-
+      Mount control "{{ cis_linux_common_control_id }}" for "{{ cis_linux_common_mount_path }}"
+      ({{ cis_linux_common_mount_check }}) fails on the live mount table:
+      mounted={{ cis_linux_common_mount_exists_state }}
+      options={{ (cis_linux_common_mount_options_probe.stdout | default('') | trim) | default('none') }}
+      boot_unit={{ cis_linux_common_mount_unit }}[{{ cis_linux_common_mount_unit_state }}]
+      evidence_readable={{ cis_linux_common_mount_evidence_ok }}.
+      A directory under / is not a mount: stat tells observation, findmnt tells truth,
+      and unreadable evidence is never certified as compliant.
+    success_msg: >-
+      Mount control "{{ cis_linux_common_control_id }}" for "{{ cis_linux_common_mount_path }}"
+      ({{ cis_linux_common_mount_check }}) is {{ cis_linux_common_mount_state }} on the live
+      mount table: mounted={{ cis_linux_common_mount_exists_state }}
+      options={{ (cis_linux_common_mount_options_probe.stdout | default('') | trim) | default('none') }}
+      boot_unit={{ cis_linux_common_mount_unit }}[{{ cis_linux_common_mount_unit_state }}].

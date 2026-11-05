@@ -1,0 +1,10 @@
+---
+- name: CIS 1.7.1 | Remediation | Run common package_absent mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_01_initial_setup/1_7_1_gdm_removed/remediation.yml
+  vars:
+    cis_linux_common_control_id: '1.7.1'
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: 'CIS Debian Linux 12 Benchmark v1.1.0'
+    cis_linux_common_package_name: gdm3

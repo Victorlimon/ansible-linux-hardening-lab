@@ -1,6 +1,29 @@
 ---
+# CIS 5.3.2.1 (Ensure pam_unix module is enabled) remediation.
+#
+# The jump value in [success=N default=ignore] is rendering-dependent, not a
+# benchmark constant: stock Debian/Ubuntu render N=1, but a stack that also
+# carries the CIS 5.3.2.2 pam_faillock preauth line renders N=2 (pam_unix must
+# jump over faillock's authfail line too). Rewriting an existing pam_unix line
+# to a hardcoded jump would break the authentication stack, so remediation
+# preserves the exact line that is already present (idempotent for both N=1
+# and N=2) and only falls back to the stock benchmark line when pam_unix is
+# genuinely absent from /etc/pam.d/common-auth.
+- name: Pam unix enabled remediation | Read the generated authentication stack
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/inspect.yml
+
+- name: Pam unix enabled remediation | Derive the existing pam_unix auth line
+  ansible.builtin.set_fact:
+    cis_linux_common_pam_unix_enabled_current_line: >-
+      {{ cis_linux_common_faillock_auth_lines
+         | select('match', '^\s*auth\s+\[success=[12] default=ignore\]\s+pam_unix\.so')
+         | list | first | default('', true) }}
+
 - name: Config line remediation | Delegate to config_line
   ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
   vars:
-    cis_linux_common_config_line: 'auth [success=1 default=ignore] pam_unix.so nullok'
-    cis_linux_common_config_line_regexp: '^auth\s+\[success=1 default=ignore\]\s+pam_unix\.so'
+    cis_linux_common_config_line: >-
+      {{ cis_linux_common_pam_unix_enabled_current_line
+         if cis_linux_common_pam_unix_enabled_current_line
+         else 'auth [success=1 default=ignore] pam_unix.so nullok' }}
+    cis_linux_common_config_line_regexp: '^auth\s+\[success=[12] default=ignore\]\s+pam_unix\.so'

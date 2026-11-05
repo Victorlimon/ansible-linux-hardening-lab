@@ -1,0 +1,125 @@
+---
+# CIS mount-options remediation (tmpfs-achievable mounts only: /tmp, /dev/shm,
+# /var/tmp). Mirrors the benchmark remediation: an fstab tmpfs entry carrying
+# nodev,nosuid,noexec, daemon-reload so systemd-fstab-generator owns the boot
+# mount, then mount or remount to converge the LIVE state. Idempotent: the
+# entry and the mount only move when the audited state is not PASS.
+#
+# Separate-partition mounts (/home, /var, /var/log, /var/log/audit) are NOT
+# remediated by design: creating a real partition requires destructive
+# repartitioning that no automated playbook may attempt on a running single
+# disk host, so those controls keep audit/verification routes only and their
+# FAIL verdicts stay honest. Re-verification after convergence is mandatory:
+# an unproven mount is never certified.
+#
+# Requires (besides the inspect parameters):
+#   cis_linux_common_mount_fstab_opts  options for the tmpfs fstab entry
+
+- name: Common mount options | Inspect live mount state before remediation
+  ansible.builtin.import_tasks: mechanisms/mount_options/inspect.yml
+
+- name: Common mount options | Refuse to remediate on unreadable evidence
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_mount_evidence_ok == 'yes'
+    fail_msg: >-
+      Mount remediation for "{{ cis_linux_common_mount_path }}" aborted: the live
+      mount table is unreadable (evidence_readable={{ cis_linux_common_mount_evidence_ok }}).
+      Remediation never guesses over broken findmnt probes.
+    success_msg: >-
+      Mount remediation for "{{ cis_linux_common_mount_path }}" proceeds on readable
+      findmnt evidence.
+
+- name: Common mount options | Unmask the boot-mount unit if masked
+  ansible.builtin.systemd:
+    name: "{{ cis_linux_common_mount_unit }}"
+    masked: false
+  when:
+    - cis_linux_common_mount_unit_state == 'masked'
+    - not ansible_check_mode
+
+- name: Common mount options | Inspect /etc/fstab before editing
+  ansible.builtin.stat:
+    path: /etc/fstab
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: cis_linux_common_mount_fstab_stat
+
+# The audited paths are fixed literals (/tmp, /dev/shm, /var/tmp): no regex
+# metacharacters, so the mount point interpolates into the matcher directly.
+- name: Common mount options | Write the tmpfs fstab entry
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^[^#\s]+\s+{{ cis_linux_common_mount_path }}\s+'
+    line: "tmpfs {{ cis_linux_common_mount_path }} tmpfs {{ cis_linux_common_mount_fstab_opts }} 0 0"
+    create: true
+    backup: true
+    owner: root
+    group: root
+    mode: "{{ omit if cis_linux_common_mount_fstab_stat.stat.exists else '0644' }}"
+  register: cis_linux_common_mount_fstab_line
+  when: cis_linux_common_mount_state != 'PASS'
+
+- name: Common mount options | Regenerate systemd mount units
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when:
+    - cis_linux_common_mount_fstab_line.changed | default(false)
+    - not ansible_check_mode
+
+- name: Common mount options | Mount the tmpfs at the target path
+  ansible.builtin.command:
+    cmd: mount {{ cis_linux_common_mount_path }}
+  environment:
+    # The mount covers its own mount point. Without this, the module payload
+    # unpacked under /tmp vanishes when tmpfs lands on /tmp, and the still-
+    # running module dies during result serialization (observed on the lab).
+    TMPDIR: /run
+  changed_when: true
+  when:
+    - cis_linux_common_mount_state != 'PASS'
+    - cis_linux_common_mount_exists_state == 'unmounted'
+    - not ansible_check_mode
+
+- name: Common mount options | Remount with the audited options
+  ansible.builtin.command:
+    cmd: mount -o remount {{ cis_linux_common_mount_path }}
+  environment:
+    TMPDIR: /run
+  changed_when: true
+  when:
+    - cis_linux_common_mount_state != 'PASS'
+    - cis_linux_common_mount_exists_state == 'mounted'
+    - not ansible_check_mode
+
+- name: Common mount options | Report the planned convergence in check mode
+  ansible.builtin.debug:
+    msg: >-
+      Would write "tmpfs {{ cis_linux_common_mount_path }} tmpfs
+      {{ cis_linux_common_mount_fstab_opts }} 0 0" to /etc/fstab, reload the
+      generator, and {{ 'mount' if cis_linux_common_mount_exists_state == 'unmounted'
+      else 'remount' }} {{ cis_linux_common_mount_path }}.
+  when:
+    - ansible_check_mode
+    - cis_linux_common_mount_state != 'PASS'
+
+- name: Common mount options | Re-read the live mount state after remediation
+  ansible.builtin.import_tasks: mechanisms/mount_options/inspect.yml
+
+- name: Common mount options | Certify the converged mount state
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_mount_state == 'PASS'
+    fail_msg: >-
+      Remediation of "{{ cis_linux_common_mount_path }}" ({{ cis_linux_common_mount_check }})
+      did not reach a compliant live state: mounted={{ cis_linux_common_mount_exists_state }}
+      options={{ (cis_linux_common_mount_options_probe.stdout | default('') | trim) | default('none') }}
+      boot_unit={{ cis_linux_common_mount_unit }}[{{ cis_linux_common_mount_unit_state }}]
+      evidence_readable={{ cis_linux_common_mount_evidence_ok }}.
+      Re-mounting a path with active workloads can be refused by the kernel; that
+      outcome is reported honestly instead of being certified.
+    success_msg: >-
+      Remediation of "{{ cis_linux_common_mount_path }}" ({{ cis_linux_common_mount_check }})
+      is certified by a fresh findmnt read: {{ cis_linux_common_mount_state }}.
+  when: not ansible_check_mode

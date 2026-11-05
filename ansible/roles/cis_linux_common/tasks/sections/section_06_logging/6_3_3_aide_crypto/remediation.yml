@@ -1,6 +1,45 @@
 ---
-- name: Config line remediation | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
-  vars:
-    cis_linux_common_config_line: 'CRYPTO_HASHES = sha256'
-    cis_linux_common_config_line_regexp: '^CRYPTO_HASHES'
+- name: Common AIDE crypto | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common AIDE crypto | Ensure the AIDE configuration directory
+  ansible.builtin.file:
+    path: /etc/aide/aide.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Common AIDE crypto | Establish sha512 rules for the audit tools
+  ansible.builtin.copy:
+    content: |
+      /sbin/auditctl p+i+n+u+g+s+b+acl+xattrs+sha512
+      /sbin/auditd p+i+n+u+g+s+b+acl+xattrs+sha512
+      /sbin/ausearch p+i+n+u+g+s+b+acl+xattrs+sha512
+      /sbin/aureport p+i+n+u+g+s+b+acl+xattrs+sha512
+      /sbin/autrace p+i+n+u+g+s+b+acl+xattrs+sha512
+      /sbin/augenrules p+i+n+u+g+s+b+acl+xattrs+sha512
+    dest: /etc/aide/aide.conf.d/50-audit-tools.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Common AIDE crypto | Read the audit-tool crypto rules after remediation
+  ansible.builtin.slurp:
+    src: /etc/aide/aide.conf.d/50-audit-tools.conf
+  register: cis_linux_common_aide_crypto_file
+  when: '"aide" in ansible_facts.packages'
+
+- name: Common AIDE crypto | Verify sha512 rules for the audit tools
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.packages['aide'] is not defined or
+        ((cis_linux_common_aide_crypto_file.content | default('') | b64decode)
+         is search('sha512') and
+         (cis_linux_common_aide_crypto_file.content | default('') | b64decode)
+         is search('acl') and
+         (cis_linux_common_aide_crypto_file.content | default('') | b64decode)
+         is search('xattrs'))
+    fail_msg: AIDE audit-tool rules do not use sha512/acl/xattrs.
+    success_msg: AIDE audit-tool cryptographic rules verified.

@@ -1,2 +1,6 @@
 ---
-- {name: 'CIS 5.1.18 | Audit | Delegate to config-line mechanism', ansible.builtin.import_tasks: mechanisms/config_line/audit.yml, vars: {cis_linux_common_config_line_regexp: '^MaxStartups\s+10:30:60$'}}
+- name: CIS 5.1.18 | Audit | Delegate to config-line mechanism
+  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
+  vars:
+    cis_linux_common_config_line_effective_command: 'sshd -T'
+    cis_linux_common_config_line_regexp: '^[ \t]*maxstartups[ \t]+(?:[0-9]|10)(?::(?:[0-9]|[12][0-9]|30)(?::(?:[0-9]|[1-5][0-9]|60))?)?[ \t]*$'

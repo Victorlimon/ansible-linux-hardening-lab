@@ -1,3 +1,22 @@
 ---
-- name: package_installed audit | Delegate to mechanism
-  ansible.builtin.import_tasks: mechanisms/package_installed/audit.yml
+- name: Common AIDE installed | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common AIDE installed | Inspect the AIDE database
+  ansible.builtin.stat:
+    path: /var/lib/aide/aide.db
+    get_checksum: false
+  register: cis_linux_common_aide_db
+
+- name: Common AIDE installed | Report AIDE install state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if ('aide' in ansible_facts.packages
+                      and 'aide-common' in ansible_facts.packages
+                      and (cis_linux_common_aide_db.stat.exists | default(false)))
+           else 'FAIL' }}
+      changed_target: false

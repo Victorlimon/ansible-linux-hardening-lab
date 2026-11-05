@@ -1,3 +1,4 @@
 ---
-- name: account_integrity remediation | Delegate to mechanism
-  ansible.builtin.import_tasks: mechanisms/account_integrity/remediation.yml
+- name: SUID review remediation | Manual control with no automated remediation
+  ansible.builtin.debug:
+    msg: "CIS 7.1.13 SUID/SGID review is a manual control; no automated remediation."

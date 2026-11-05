@@ -2,4 +2,4 @@
 - ansible.builtin.import_role:
     name: cis_linux_common
     tasks_from: sections/section_04_firewall/4_2_6_ufw_rules_for_open_ports/verification.yml
-  vars: {cis_linux_common_control_id: '4.2.6', cis_linux_common_platform: ubuntu_2404, cis_linux_common_ufw_rule_match: "{{ cis_ufw_ssh_port }}"}
+  vars: {cis_linux_common_control_id: '4.2.6', cis_linux_common_platform: ubuntu_2404, cis_linux_common_ufw_rule_match: "{{ cis_ufw_ssh_port | string }}"}

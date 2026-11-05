@@ -1,3 +1,51 @@
 ---
-- name: CIS 2.1.21 | Remediation | Delegate MTA local-only configuration to config-line mechanisms
+# Remediation writes `inet_interfaces = loopback-only` (the benchmark
+# remediation line) with a broad match so any non-compliant existing value
+# (for example `all`) is replaced in place, then restarts postfix exactly
+# when the previous effective value was not loopback-only. The benchmark
+# audit checks postconf/ss, so a written file without a restart leaves the
+# listening sockets stale. exim4/absent-MTA routes write nothing.
+- name: CIS 2.1.21 | Remediation | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: CIS 2.1.21 | Remediation | Route by installed MTA
+  ansible.builtin.set_fact:
+    cis_2_1_21_postfix: "{{ 'postfix' in ansible_facts.packages }}"
+    cis_2_1_21_exim4: "{{ 'exim4' in ansible_facts.packages or 'exim4-base' in ansible_facts.packages }}"
+
+- name: CIS 2.1.21 | Remediation | Read effective inet_interfaces before writing
+  ansible.builtin.command:
+    argv: [postconf, -h, inet_interfaces]
+  register: cis_2_1_21_pre_postconf
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: cis_2_1_21_postfix
+
+- name: CIS 2.1.21 | Remediation | Postfix route through config_line mechanism
   ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars:
+    cis_linux_common_config_line_path: /etc/postfix/main.cf
+    cis_linux_common_config_line_regexp: '(?i)^\s*inet_interfaces\s*='
+    cis_linux_common_config_line: 'inet_interfaces = loopback-only'
+    cis_linux_common_config_line_package: postfix
+  when: cis_2_1_21_postfix
+
+- name: CIS 2.1.21 | Remediation | Restart postfix when the previous value was not loopback
+  ansible.builtin.systemd:
+    name: postfix
+    state: restarted
+  when:
+    - cis_2_1_21_postfix
+    - not ansible_check_mode
+    - "cis_2_1_21_pre_postconf.rc | default(1) == 0"
+    - "cis_2_1_21_pre_postconf.stdout | default('') | trim | lower is not match('^(loopback-only|127\\.0\\.0\\.1|\\[::1\\]|::1|localhost)(\\s*,\\s*(loopback-only|127\\.0\\.0\\.1|\\[::1\\]|::1|localhost))*$')"
+
+- name: CIS 2.1.21 | Remediation | Report non-postfix route
+  ansible.builtin.debug:
+    msg: >-
+      CIS {{ cis_linux_common_control_id }} has no automated remediation on this host:
+      {{ 'exim4 is the installed MTA, consult its documentation per the benchmark note'
+         if cis_2_1_21_exim4 else 'no MTA is installed' }}.
+  when: not cis_2_1_21_postfix

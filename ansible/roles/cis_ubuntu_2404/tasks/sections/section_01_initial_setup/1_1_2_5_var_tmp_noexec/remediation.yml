@@ -1,0 +1,6 @@
+---
+- name: CIS 1.1.2.5.4 | Remediation | Run common mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_01_initial_setup/1_1_2_5_var_tmp_noexec/remediation.yml
+  vars: {cis_linux_common_control_id: '1.1.2.5.4', cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: 'CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0'}

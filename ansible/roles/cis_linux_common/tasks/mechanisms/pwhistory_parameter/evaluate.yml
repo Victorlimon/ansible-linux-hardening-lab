@@ -1,0 +1,38 @@
+---
+# Shared evidence computation for CIS 5.3.3.3.1-.3 (pam_pwhistory arguments).
+# Requires mechanisms/pam_pwhistory_stack/inspect.yml to have run first: the
+# rendered /etc/pam.d/common-password lines and the inline-override and
+# unreadable-file facts come from that shared scan of /etc/pam.d and
+# /usr/share/pam-configs.
+#
+# Verdict semantics, deterministic by design: the benchmark pins the four
+# pam_pwhistory arguments (remember=24, enforce_for_root, try_first_pass,
+# use_authtok) in a single inseparable line owned by the
+# /usr/share/pam-configs/pwhistory profile. A parameter PASS therefore
+# requires exactly one rendered pam_pwhistory password line, that line to be
+# the exact canonical line (value_regex), the parameter token to be present
+# (name_regex), no inline-override variant lines anywhere, and no unreadable
+# files. Missing, duplicated, reordered, or argument-variant evidence FAILs
+# in a controlled way; nothing here ever rewrites a site-local PAM file.
+
+- name: Common pwhistory parameter | Count parameter occurrences
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_param_named_count: >-
+      {{ cis_linux_common_pwhistory_password_lines
+         | select('match', '^\s*password\s+')
+         | select('search', '\bpam_pwhistory\.so\b')
+         | select('search', cis_linux_common_pwhistory_name_regex)
+         | list | count }}
+    cis_linux_common_pwhistory_param_compliant_count: >-
+      {{ cis_linux_common_pwhistory_password_lines
+         | select('match', cis_linux_common_pwhistory_value_regex)
+         | list | count }}
+
+- name: Common pwhistory parameter | Aggregate the parameter verdict
+  ansible.builtin.set_fact:
+    cis_linux_common_pwhistory_parameter_ok: >-
+      {{ cis_linux_common_pwhistory_unreadable_files | length == 0
+         and cis_linux_common_pwhistory_override_files | length == 0
+         and cis_linux_common_pwhistory_line_total == 1
+         and cis_linux_common_pwhistory_param_named_count == 1
+         and cis_linux_common_pwhistory_param_compliant_count == 1 }}

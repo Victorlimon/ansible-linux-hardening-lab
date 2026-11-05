@@ -1,3 +1,21 @@
 ---
 - name: service_disabled audit | Delegate to mechanism
   ansible.builtin.import_tasks: mechanisms/service_disabled/audit.yml
+
+- name: CIS 1.5.5 | Audit | Read persistent Apport setting
+  ansible.builtin.slurp:
+    src: /etc/default/apport
+  register: cis_linux_common_apport_defaults
+  when: "'apport' in ansible_facts.packages"
+
+- name: CIS 1.5.5 | Audit | Report persistent Apport setting
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if 'apport' not in ansible_facts.packages or
+           (cis_linux_common_apport_defaults.content | b64decode |
+            regex_findall('(?m)^[ \t]*enabled[ \t]*=[ \t]*([^ \t#\r\n]+)') | last | default('')) == '0'
+           else 'FAIL' }}
+      changed_target: false

@@ -1,3 +1,54 @@
 ---
 # Debian 12 permite únicamente controles canario explícitos. El master gate de
 # remediación permanece desactivado y debe habilitarse en cada ejecución.
+
+# Política exclusiva del laboratorio Vagrant: sólo SSH desde ansible-control
+# y la puerta NAT de Vagrant. Se conserva la salida TCP/UDP del rol para el
+# agente de Wazuh y el gestor de paquetes; no es una lista de destinos.
+# No abrir otros puertos entrantes hasta desplegar y aprobar cada servicio.
+cis_debian_12_2_1_12_rpcbind_remediate: true
+# EXCEPCIÓN del laboratorio VirtualBox (LAB EXCEPTION explícita; nunca es un
+# PASS ni declara conformidad): Guest Additions sincroniza con el host y su
+# servicio entra en conflicto con systemd-timesyncd. CIS 2.3 permite omitir
+# estos controles solo si se verifica que el host usa una fuente horaria
+# autorizada (host Windows con W32Time sincronizado a time.windows.com,0x9,
+# stratum 5); no extrapolar esta excepción a producción.
+cis_debian_12_2_3_1_1_single_daemon: false
+cis_debian_12_2_3_2_1_timesyncd_config: false
+cis_debian_12_2_3_2_2_timesyncd_enabled: false
+# EXCEPCIÓN de laboratorio efímero (LAB EXCEPTION explícita; no es conformidad):
+# CIS 5.2.4 no admite omisión. Las cuentas vagrant y ansible requieren NOPASSWD
+# (become_ask_pass=False en esta maqueta), por lo que desactivar el control
+# documenta una no conformidad real del laboratorio. En producción el default
+# del rol (true) sigue vigente y debe exigir contraseña de sudo.
+cis_debian_12_5_2_4_sudo_password: false
+cis_nftables_config: |-
+  table inet filter {
+    chain input {
+      type filter hook input priority 0; policy drop;
+      iif "lo" accept
+      ip saddr 127.0.0.0/8 counter drop
+      ip6 saddr ::1 counter drop
+      ip protocol tcp ct state established,related accept
+      ip protocol udp ct state established,related accept
+      ip saddr 192.168.56.10/32 tcp dport {{ cis_ufw_ssh_port }} accept
+      ip saddr 10.0.2.2/32 tcp dport {{ cis_ufw_ssh_port }} accept
+    }
+    chain forward { type filter hook forward priority 0; policy drop; }
+    chain output {
+      type filter hook output priority 0; policy drop;
+      ip protocol tcp ct state established,related,new accept
+      ip protocol udp ct state established,related,new accept
+    }
+  }
+
+# EXCEPCIÓN de laboratorio (LAB EXCEPTION explícita; nunca es un PASS ni
+# declara conformidad CIS 1.1.2): el laboratorio Vagrant es de un solo disco
+# y no puede proporcionar particiones separadas para /home, /var, /var/log y
+# /var/log/audit. El default del rol permanece true; esta omisión aplica solo
+# al laboratorio y no se extrapola a producción (donde sí se exige particionado
+# separado).
+cis_debian_12_1_1_2_3_home_partition: false
+cis_debian_12_1_1_2_4_var_partition: false
+cis_debian_12_1_1_2_6_var_log_partition: false
+cis_debian_12_1_1_2_7_var_log_audit_partition: false

@@ -1,2 +1,79 @@
 ---
-- ansible.builtin.import_tasks: mechanisms/ufw_rule/remediation.yml
+- name: Common UFW rule | Validate allowlist structure
+  ansible.builtin.assert:
+    that:
+      - cis_ufw_ssh_allowed_sources | type_debug == 'list'
+      - cis_ufw_ssh_allowed_sources | length > 0
+      - cis_ufw_allowed_in_rules | type_debug == 'list'
+      - cis_ufw_ssh_port | string is match('^[0-9]{1,5}$')
+      - cis_ufw_ssh_port | int >= 1
+      - cis_ufw_ssh_port | int <= 65535
+    fail_msg: UFW requires a reviewed SSH source list and valid inbound rule list.
+
+- name: Common UFW rule | Validate SSH sources
+  ansible.builtin.assert:
+    that:
+      - item is string
+      - item is match(cis_ufw_ipv4_cidr_pattern)
+      - item is not match('^.*/0$')
+    fail_msg: SSH sources must be explicit IPv4 CIDR networks.
+  loop: "{{ cis_ufw_ssh_allowed_sources }}"
+  vars:
+    cis_ufw_ipv4_cidr_pattern: '^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[012])$'
+
+- name: Common UFW rule | Validate published services
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.keys() | difference(['from_ip', 'port', 'proto', 'comment']) | length == 0
+      - item.from_ip is defined
+      - item.from_ip is string
+      - item.from_ip == 'any' or item.from_ip is match(cis_ufw_ipv4_cidr_pattern)
+      - item.port is defined
+      - item.port | string is match('^[0-9]{1,5}$')
+      - item.port | int >= 1
+      - item.port | int <= 65535
+      - item.port | int != cis_ufw_ssh_port | int
+      - item.proto is defined
+      - item.proto in ['tcp', 'udp']
+      - item.comment is not defined or item.comment is string
+    fail_msg: Inbound UFW rules require from_ip, numeric port, and tcp/udp.
+  loop: "{{ cis_ufw_allowed_in_rules }}"
+  vars:
+    cis_ufw_ipv4_cidr_pattern: '^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[012])$'
+
+- name: Common UFW rule | Allow SSH from approved sources
+  community.general.ufw:
+    rule: allow
+    direction: in
+    port: "{{ cis_ufw_ssh_port | string }}"
+    proto: tcp
+    from_ip: "{{ item }}"
+  loop: "{{ cis_ufw_ssh_allowed_sources }}"
+
+- name: Common UFW rule | Allow reviewed published services
+  community.general.ufw:
+    rule: allow
+    direction: in
+    port: "{{ item.port | string }}"
+    proto: "{{ item.proto }}"
+    from_ip: "{{ item.from_ip }}"
+    comment: "{{ item.comment | default(omit) }}"
+  loop: "{{ cis_ufw_allowed_in_rules }}"
+
+- name: Common UFW rule | Inspect persisted rules
+  ansible.builtin.command:
+    argv: [ufw, show, added]
+  register: cis_ufw_saved_rules
+  changed_when: false
+  check_mode: false
+
+- name: Common UFW rule | Remove legacy unrestricted SSH access
+  community.general.ufw:
+    rule: allow
+    direction: in
+    port: "{{ cis_ufw_ssh_port | string }}"
+    proto: tcp
+    from_ip: any
+    delete: true
+  when: '("ufw allow " ~ (cis_ufw_ssh_port | string) ~ "/tcp") in cis_ufw_saved_rules.stdout_lines'

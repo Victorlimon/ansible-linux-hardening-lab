@@ -1,3 +1,19 @@
 ---
-- name: package_installed verification | Delegate to mechanism
-  ansible.builtin.import_tasks: mechanisms/package_installed/verification.yml
+- name: Common AIDE installed | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common AIDE installed | Inspect the AIDE database
+  ansible.builtin.stat:
+    path: /var/lib/aide/aide.db
+    get_checksum: false
+  register: cis_linux_common_aide_db
+
+- name: Common AIDE installed | Verify AIDE install and initialization
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.packages['aide'] is defined
+      - ansible_facts.packages['aide-common'] is defined
+      - cis_linux_common_aide_db.stat.exists | default(false)
+    fail_msg: AIDE is not installed or its database is not initialized.
+    success_msg: AIDE install and initialization verified.

@@ -2,34 +2,15 @@
 - name: Common fixed file permissions | Load audit contract
   ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/validate.yml
 
-- name: Common fixed file permissions | Inspect metadata for audit
-  ansible.builtin.stat:
-    path: "{{ cis_linux_common_fixed_file_path }}"
-  register: cis_linux_common_fixed_file_audit
+- name: Common fixed file permissions | Discover every benchmark target
+  ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/discover.yml
+
+- name: Common fixed file permissions | Evaluate every benchmark target
+  ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/evaluate.yml
 
 - name: Common fixed file permissions | Classify observed metadata
   ansible.builtin.set_fact:
-    cis_linux_common_fixed_file_audit_compliant: >-
-      {{
-        cis_linux_common_fixed_file_audit.stat.exists | default(false)
-        and (
-          (cis_linux_common_fixed_file_expected_type | default('file') == 'file'
-            and cis_linux_common_fixed_file_audit.stat.isreg | default(false))
-          or
-          (cis_linux_common_fixed_file_expected_type | default('file') == 'directory'
-            and cis_linux_common_fixed_file_audit.stat.isdir | default(false))
-        )
-        and cis_linux_common_fixed_file_audit.stat.pw_name | default('')
-            == cis_linux_common_fixed_file_owner
-        and cis_linux_common_fixed_file_audit.stat.gr_name | default('')
-            == cis_linux_common_fixed_file_group
-        and (cis_linux_common_fixed_file_audit.stat.mode | default('9999'))[1]
-            in cis_linux_common_fixed_file_allowed_owner_digits
-        and (cis_linux_common_fixed_file_audit.stat.mode | default('9999'))[2]
-            in cis_linux_common_fixed_file_allowed_group_digits
-        and (cis_linux_common_fixed_file_audit.stat.mode | default('9999'))[3]
-            in cis_linux_common_fixed_file_allowed_other_digits
-      }}
+    cis_linux_common_fixed_file_audit_compliant: "{{ cis_linux_common_fixed_file_compliant }}"
 
 - name: Common fixed file permissions | Report observed metadata
   ansible.builtin.debug:
@@ -37,21 +18,24 @@
       control: "{{ cis_linux_common_control_id }}"
       platform: "{{ cis_linux_common_platform }}"
       benchmark: "{{ cis_linux_common_benchmark }}"
-      classification: >-
-        {{ 'PASS' if cis_linux_common_fixed_file_audit_compliant else 'FAIL' }}
+      classification: "{{ 'PASS' if cis_linux_common_fixed_file_compliant else 'FAIL' }}"
       expected:
-        path: "{{ cis_linux_common_fixed_file_path }}"
+        scopes: >-
+          {{ cis_linux_common_fixed_file_plan.scopes
+             | map(attribute='label') | list }}
+        literals: >-
+          {{ cis_linux_common_fixed_file_plan.scopes
+             | map(attribute='literals') | flatten | list }}
+        searches: "{{ cis_linux_common_fixed_file_plan.search_specs }}"
         owner: "{{ cis_linux_common_fixed_file_owner }}"
-        group: "{{ cis_linux_common_fixed_file_group }}"
+        group: >-
+          {{ cis_linux_common_fixed_file_allowed_groups
+             | default([cis_linux_common_fixed_file_group])
+             if cis_linux_common_fixed_file_enforce_group | default(true)
+             else 'not constrained' }}
         mode: "{{ cis_linux_common_fixed_file_expected_mode_description }}"
       observed:
-        exists: "{{ cis_linux_common_fixed_file_audit.stat.exists | default(false) }}"
-        is_regular: "{{ cis_linux_common_fixed_file_audit.stat.isreg | default(false) }}"
-        is_directory: "{{ cis_linux_common_fixed_file_audit.stat.isdir | default(false) }}"
-        owner: >-
-          {{ cis_linux_common_fixed_file_audit.stat.pw_name | default('unavailable') }}
-        group: >-
-          {{ cis_linux_common_fixed_file_audit.stat.gr_name | default('unavailable') }}
-        mode: >-
-          {{ cis_linux_common_fixed_file_audit.stat.mode | default('unavailable') }}
+        checked: "{{ cis_linux_common_fixed_file_checked }}"
+        non_compliant_count: "{{ cis_linux_common_fixed_file_violations | length }}"
+        violations: "{{ cis_linux_common_fixed_file_violations }}"
       changed_target: false

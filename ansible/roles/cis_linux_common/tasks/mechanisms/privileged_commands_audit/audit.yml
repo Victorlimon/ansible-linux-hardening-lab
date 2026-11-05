@@ -1,0 +1,16 @@
+---
+- name: Common privileged commands | Inspect benchmark state
+  ansible.builtin.import_tasks: mechanisms/privileged_commands_audit/discover.yml
+
+- name: Common privileged commands | Report benchmark state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      benchmark: "{{ cis_linux_common_benchmark }}"
+      classification: "{{ cis_linux_common_privileged_state }}"
+      package: "{{ cis_linux_common_privileged_package }}"
+      rules_file: "{{ cis_linux_common_privileged_rules_path }}"
+      immutable: "{{ cis_linux_common_privileged_immutable }}"
+      evidence: "{{ cis_linux_common_privileged_evidence[:25] }}"
+      changed_target: false

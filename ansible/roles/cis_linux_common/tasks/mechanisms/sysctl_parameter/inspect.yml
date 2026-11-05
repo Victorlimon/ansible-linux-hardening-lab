@@ -19,6 +19,7 @@
       - /usr/lib/systemd/systemd-sysctl
       - --cat-config
   register: cis_linux_common_sysctl_systemd_config
+  check_mode: false
   changed_when: false
   failed_when: cis_linux_common_sysctl_systemd_config.rc != 0
 
@@ -56,7 +57,7 @@
           cis_linux_common_sysctl_ufw_defaults_slurp.content |
           b64decode |
           regex_findall(
-            '(?m)^[ \t]*IPT_SYSCTL[ \t]*=[ \t]*"?([^" \t#]+)'
+            '(?m)^[ \t]*IPT_SYSCTL[ \t]*=[ \t]*"?([^" \t#\r\n]*)'
           )
         )
         if cis_linux_common_sysctl_ufw_defaults_stat.stat.exists | default(false)
@@ -66,12 +67,27 @@
 - name: Common sysctl parameter | Select the UFW sysctl path
   ansible.builtin.set_fact:
     cis_linux_common_sysctl_ufw_path: >-
-      {{ cis_linux_common_sysctl_ufw_paths | first | default('') | trim }}
+      {{ cis_linux_common_sysctl_ufw_paths | last | default('') | trim }}
+
+- name: Common sysctl parameter | Reject unapproved UFW sysctl path
+  ansible.builtin.assert:
+    that: cis_linux_common_sysctl_ufw_path == '/etc/ufw/sysctl.conf'
+    fail_msg: IPT_SYSCTL must select /etc/ufw/sysctl.conf.
+  when: cis_linux_common_sysctl_ufw_path | length > 0
 
 - name: Common sysctl parameter | Inspect the selected UFW sysctl file
   ansible.builtin.stat:
     path: "{{ cis_linux_common_sysctl_ufw_path }}"
   register: cis_linux_common_sysctl_ufw_file_stat
+  when: cis_linux_common_sysctl_ufw_path | length > 0
+
+- name: Common sysctl parameter | Validate the selected UFW sysctl file
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_sysctl_ufw_file_stat.stat.exists | default(false)
+      - cis_linux_common_sysctl_ufw_file_stat.stat.isreg | default(false)
+      - not (cis_linux_common_sysctl_ufw_file_stat.stat.islnk | default(false))
+    fail_msg: IPT_SYSCTL must select an existing regular file, not a symlink.
   when: cis_linux_common_sysctl_ufw_path | length > 0
 
 - name: Common sysctl parameter | Read the selected UFW sysctl file
@@ -91,8 +107,8 @@
           b64decode |
           regex_findall(
             '(?m)^[ \t]*' ~
-            (cis_linux_common_sysctl_parameter | regex_escape) ~
-            '[ \t]*=[ \t]*([^ \t#]+)'
+            (cis_linux_common_sysctl_parameter | replace('.', '[./]')) ~
+            '[ \t]*=[ \t]*([^ \t#\r\n]+)'
           )
         )
         if cis_linux_common_sysctl_ufw_file_stat.stat.exists | default(false)

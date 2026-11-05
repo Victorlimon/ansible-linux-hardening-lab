@@ -1,0 +1,47 @@
+---
+# Shared mechanism for the CIS shell-environment controls (5.4.3.2 TMOUT,
+# 5.4.3.3 default user umask). Establishes the managed corpus file.
+#
+# Inputs: cis_linux_common_script_managed_path,
+#         cis_linux_common_script_managed_content.
+# copy content= is checksum-idempotent: a second apply reports changed=0.
+
+- name: Common script line | Inspect the corpus before remediation
+  ansible.builtin.import_tasks: mechanisms/script_line/inspect.yml
+
+- name: Common script line | Fail closed on unreadable or overridden corpus
+  ansible.builtin.fail:
+    msg: >-
+      {{ cis_linux_common_script_managed_path }} cannot be established
+      automatically: unreadable_files={{ cis_linux_common_script_unreadable_files }},
+      overriding_files={{ cis_linux_common_script_forbidden_files | default([], true) }}.
+      The benchmark remediation requires reviewing and editing those entries
+      first; only then does the managed file become the winning setting.
+  when:
+    - cis_linux_common_script_unreadable_files | length > 0
+      or (cis_linux_common_script_forbidden_files | default([], true)) | length > 0
+
+- name: Common script line | Establish the managed corpus file
+  ansible.builtin.copy:
+    content: "{{ cis_linux_common_script_managed_content }}"
+    dest: "{{ cis_linux_common_script_managed_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Common script line | Inspect the corpus after remediation
+  ansible.builtin.import_tasks: mechanisms/script_line/inspect.yml
+
+- name: Common script line | Verify the remediated corpus
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_script_unreadable_files | length == 0
+      - cis_linux_common_script_managed_path in cis_linux_common_script_any_files
+      - (cis_linux_common_script_forbidden_files | default([], true)) | length == 0
+    fail_msg: >-
+      The managed shell file did not become the winning compliant setting:
+      compliant_files={{ cis_linux_common_script_any_files | default([], true) }},
+      overriding_files={{ cis_linux_common_script_forbidden_files | default([], true) }},
+      unreadable_files={{ cis_linux_common_script_unreadable_files }}.
+    success_msg: >-
+      Shell corpus remediation verified: {{ cis_linux_common_script_managed_path }}

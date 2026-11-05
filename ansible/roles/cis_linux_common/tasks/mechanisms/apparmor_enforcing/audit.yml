@@ -1,8 +1,7 @@
 ---
 - name: Common AppArmor enforcing | Report profile mode
   ansible.builtin.shell: |
-    set -o pipefail
-    aa-status 2>/dev/null | grep -E 'profiles are in' || echo 'no profiles'
+    aa-status 2>/dev/null | grep -E '^[1-9][0-9]* profiles are in' || echo 'no profiles'
   register: cis_aa_status
   changed_when: false
   failed_when: false

@@ -1,22 +1,21 @@
 ---
-- name: CIS 6.1.4.1 | Remediation | Inspect existing logfiles
-  ansible.builtin.stat:
-    path: "{{ item.path }}"
-  loop: "{{ cis_linux_common_fixed_file_entries }}"
-  register: cis_linux_common_logfile_stats
+- name: CIS 6.1.4.1 | Remediation | Cover every logfile discovered under /var/log
+  ansible.builtin.include_tasks:
+    file: mechanisms/fixed_file_permissions/remediation.yml
+    apply:
+      tags: always
 
-- name: CIS 6.1.4.1 | Remediation | Delegate existing logfiles to fixed-file mechanism
-  ansible.builtin.include_tasks: mechanisms/fixed_file_permissions/remediation.yml
-  loop: "{{ cis_linux_common_logfile_stats.results }}"
-  loop_control:
-    loop_var: cis_logfile
-  vars:
-    cis_linux_common_fixed_file_path: "{{ cis_logfile.item.path }}"
-    cis_linux_common_fixed_file_owner: "{{ cis_logfile.item.owner }}"
-    cis_linux_common_fixed_file_group: "{{ cis_logfile.item.group }}"
-    cis_linux_common_fixed_file_remediation_mode: "{{ cis_logfile.item.mode }}"
-    cis_linux_common_fixed_file_expected_mode_description: "{{ cis_logfile.item.description }}"
-    cis_linux_common_fixed_file_allowed_owner_digits: "{{ cis_logfile.item.owner_digits }}"
-    cis_linux_common_fixed_file_allowed_group_digits: "{{ cis_logfile.item.group_digits }}"
-    cis_linux_common_fixed_file_allowed_other_digits: "{{ cis_logfile.item.other_digits }}"
-  when: cis_logfile.stat.exists | default(false)
+# The sysstat sa1/sa2 scripts default to UMASK=0022 (world-readable sarDD/saDD
+# files), which CIS 6.1.4.1 rejects. Restrict the producer so future files are
+# 0640 instead of 0644; existing files are corrected by the mechanism above.
+- name: CIS 6.1.4.1 | Remediation | Gather package facts for producer config
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: CIS 6.1.4.1 | Remediation | Restrict sysstat log umask to 0027
+  ansible.builtin.lineinfile:
+    path: /etc/sysstat/sysstat
+    regexp: '^\s*UMASK='
+    line: 'UMASK=0027'
+    backup: true
+  when: '"sysstat" in ansible_facts.packages'

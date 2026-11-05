@@ -1,2 +1,40 @@
 ---
-- ansible.builtin.import_tasks: mechanisms/ufw_policy/audit.yml
+- name: CIS 4.2.4 | Audit | Read UFW rules
+  ansible.builtin.command:
+    argv: [ufw, status, verbose]
+  register: cis_linux_common_ufw_loopback_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: CIS 4.2.4 | Audit | Read built-in loopback rules
+  ansible.builtin.slurp:
+    src: /etc/ufw/before.rules
+  register: cis_linux_common_ufw_loopback_before
+  failed_when: false
+
+- name: CIS 4.2.4 | Audit | Classify loopback traffic
+  vars:
+    cis_linux_common_ufw_loopback_ipv4_deny: '(?m)^Anywhere\s+DENY IN\s+127\.0\.0\.0/8(?:\s|$)'
+    cis_linux_common_ufw_loopback_ipv6_deny: '(?m)^Anywhere(?: \(v6\))?\s+DENY IN\s+::1(?:/128)?(?:\s|$)'
+    cis_linux_common_ufw_loopback_input_allow: '(?m)^\s*-A\s+ufw-before-input\s+-i\s+lo\s+-j\s+ACCEPT\s*$'
+    cis_linux_common_ufw_loopback_output_allow: '(?m)^\s*-A\s+ufw-before-output\s+-o\s+lo\s+-j\s+ACCEPT\s*$'
+  ansible.builtin.set_fact:
+    cis_linux_common_ufw_loopback_compliant: >-
+      {{ cis_linux_common_ufw_loopback_status.rc == 0
+         and (cis_linux_common_ufw_loopback_status.stdout | default(''))
+           is search(cis_linux_common_ufw_loopback_ipv4_deny)
+         and (cis_linux_common_ufw_loopback_status.stdout | default(''))
+           is search(cis_linux_common_ufw_loopback_ipv6_deny)
+         and (cis_linux_common_ufw_loopback_before.content | default('') | b64decode)
+           is search(cis_linux_common_ufw_loopback_input_allow)
+         and (cis_linux_common_ufw_loopback_before.content | default('') | b64decode)
+           is search(cis_linux_common_ufw_loopback_output_allow) }}
+
+- name: CIS 4.2.4 | Audit | Report loopback traffic
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: "{{ 'PASS' if cis_linux_common_ufw_loopback_compliant else 'FAIL' }}"
+      changed_target: false

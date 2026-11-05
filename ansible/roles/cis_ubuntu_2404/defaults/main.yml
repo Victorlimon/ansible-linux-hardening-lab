@@ -7,6 +7,9 @@ cis_ubuntu_2404_execution_mode: remediation
 cis_ubuntu_2404_remediation_enabled: false
 cis_firewall: ufw
 cis_ufw_ssh_port: 22
+# SSH is not opened without an explicit, reviewed source profile.
+cis_ufw_ssh_allowed_sources: []
+cis_ufw_allowed_in_rules: []
 cis_ubuntu_2404_4_1_1_single_firewall_utility: true
 cis_ubuntu_2404_4_2_1_ufw_installed: true
 cis_ubuntu_2404_4_2_2_iptables_persistent_absent: true
@@ -73,22 +76,26 @@ cis_ubuntu_2404_2_4_2_1_at_restriction: true
 cis_ubuntu_2404_2_3_1_1_single_daemon: true
 cis_ubuntu_2404_2_3_2_1_timesyncd_config: true
 cis_ubuntu_2404_2_3_2_2_timesyncd_enabled: true
-cis_ubuntu_2404_2_3_3_1_chrony_config: true
-cis_ubuntu_2404_2_3_3_2_chrony_user: true
-cis_ubuntu_2404_2_3_3_3_chrony_enabled: true
+cis_ubuntu_2404_2_3_3_1_chrony_config: false
+cis_ubuntu_2404_2_3_3_2_chrony_user: false
+cis_ubuntu_2404_2_3_3_3_chrony_enabled: false
 cis_ubuntu_2404_6_1_1_1_journald_enabled: true
+cis_linux_common_logging_system: journald
 cis_ubuntu_2404_6_1_1_4_single_logging_system: true
 cis_ubuntu_2404_6_1_2_1_1_journal_remote_installed: true
 cis_ubuntu_2404_6_1_2_1_3_journal_upload_enabled: true
+# Leave journal upload inactive until the operator supplies a secure collector.
+cis_ubuntu_2404_journal_upload_url: ""
 cis_ubuntu_2404_6_1_2_1_4_journal_remote_disabled: true
 cis_ubuntu_2404_6_1_2_2_forward_to_syslog: true
 cis_ubuntu_2404_6_1_2_3_compress: true
 cis_ubuntu_2404_6_1_2_4_storage: true
-cis_ubuntu_2404_6_1_3_1_rsyslog_installed: true
-cis_ubuntu_2404_6_1_3_2_rsyslog_enabled: true
-cis_ubuntu_2404_6_1_3_3_journald_to_rsyslog: true
-cis_ubuntu_2404_6_1_3_4_rsyslog_file_mode: true
-cis_ubuntu_2404_6_1_3_7_rsyslog_no_remote_receiver: true
+# CIS 6.1.1.4: this profile chooses journald; the rsyslog subsection is alternative.
+cis_ubuntu_2404_6_1_3_1_rsyslog_installed: false
+cis_ubuntu_2404_6_1_3_2_rsyslog_enabled: false
+cis_ubuntu_2404_6_1_3_3_journald_to_rsyslog: false
+cis_ubuntu_2404_6_1_3_4_rsyslog_file_mode: false
+cis_ubuntu_2404_6_1_3_7_rsyslog_no_remote_receiver: false
 cis_ubuntu_2404_6_1_4_1_logfile_permissions: true
 cis_ubuntu_2404_6_2_1_1_auditd_packages: true
 cis_ubuntu_2404_6_2_1_2_auditd_enabled: true
@@ -138,6 +145,7 @@ cis_ubuntu_2404_6_2_3_2_user_emulation: true
 cis_ubuntu_2404_6_2_3_3_sudo_log: true
 cis_ubuntu_2404_6_2_3_4_time_change: true
 cis_ubuntu_2404_6_2_3_5_network_environment: true
+cis_ubuntu_2404_6_2_3_6_privileged_commands: true
 cis_ubuntu_2404_6_2_3_7_file_access: true
 cis_ubuntu_2404_6_2_3_8_identity: true
 cis_ubuntu_2404_6_2_3_9_perm_mod: true
@@ -244,6 +252,8 @@ cis_ubuntu_2404_3_2_4_sctp: true
 cis_ubuntu_2404_3_2_4_sctp_remediate: false
 cis_ubuntu_2404_5_2_7_su_restriction: true
 cis_ubuntu_2404_5_2_7_su_restriction_remediate: false
+# CIS 5.2.7 pam_wheel group named by site policy; must exist and stay empty.
+cis_ubuntu_2404_5_2_7_su_restriction_group: sugroup
 cis_ubuntu_2404_5_3_2_1_pam_unix_enabled: true
 cis_ubuntu_2404_5_3_2_1_pam_unix_enabled_remediate: false
 cis_ubuntu_2404_5_3_2_2_pam_faillock: true
@@ -262,6 +272,7 @@ cis_ubuntu_2404_5_3_3_2_1_pwquality_difok: true
 cis_ubuntu_2404_5_3_3_2_1_pwquality_difok_remediate: false
 cis_ubuntu_2404_5_3_3_2_2_pwquality_minlen: true
 cis_ubuntu_2404_5_3_3_2_2_pwquality_minlen_remediate: false
+cis_ubuntu_2404_5_3_3_2_3_pwquality_complexity: true
 cis_ubuntu_2404_5_3_3_2_4_pwquality_maxrepeat: true
 cis_ubuntu_2404_5_3_3_2_4_pwquality_maxrepeat_remediate: false
 cis_ubuntu_2404_5_3_3_2_5_pwquality_maxsequence: true
@@ -290,6 +301,7 @@ cis_ubuntu_2404_5_4_3_3_default_umask: true
 cis_ubuntu_2404_5_4_3_3_default_umask_remediate: false
 cis_ubuntu_2404_6_2_2_3_auditd_full_action: true
 cis_ubuntu_2404_6_2_2_3_auditd_full_action_remediate: false
+cis_ubuntu_2404_6_2_3_6_privileged_commands_remediate: false
 cis_ubuntu_2404_6_2_3_20_audit_immutable: true
 cis_ubuntu_2404_6_2_3_20_audit_immutable_remediate: false
 cis_ubuntu_2404_6_3_2_aide_scheduled: true
@@ -369,9 +381,9 @@ cis_ubuntu_2404_4_2_5_ufw_outbound: true
 cis_ubuntu_2404_6_1_1_2_journald_access: true
 cis_ubuntu_2404_6_1_1_3_journald_rotation: true
 cis_ubuntu_2404_6_1_2_1_2_journal_upload_auth: true
-cis_ubuntu_2404_6_1_3_5_rsyslog_logging: true
-cis_ubuntu_2404_6_1_3_6_rsyslog_remote_host: true
-cis_ubuntu_2404_6_1_3_8_logrotate_configured: true
+cis_ubuntu_2404_6_1_3_5_rsyslog_logging: false
+cis_ubuntu_2404_6_1_3_6_rsyslog_remote_host: false
+cis_ubuntu_2404_6_1_3_8_logrotate_configured: false
 cis_ubuntu_2404_2_2_1_nis_client: true
 cis_ubuntu_2404_2_2_1_nis_client_remediate: false
 cis_ubuntu_2404_2_2_2_rsh_client: true
@@ -396,26 +408,42 @@ cis_ubuntu_2404_5_4_3_1_nologin_shells: true
 cis_ubuntu_2404_5_4_3_1_nologin_shells_remediate: false
 cis_ubuntu_2404_5_4_1_2_min_password_days: true
 cis_ubuntu_2404_5_1_4_sshd_access: true
+cis_ubuntu_2404_5_1_4_sshd_access_remediate: false
+# CIS 1.1.2.x mount controls audit the LIVE mount table via findmnt
+# (mount_options mechanism). Remediation is opt-in per control
+# (<control>_remediate: false default) and only achievable for the
+# tmpfs mounts /tmp, /dev/shm and /var/tmp; /home, /var, /var/log
+# and /var/log/audit need a real partition (manual disposition).
 cis_ubuntu_2404_1_1_2_1_tmp_partition: true
+cis_ubuntu_2404_1_1_2_1_tmp_partition_remediate: false
 cis_ubuntu_2404_1_1_2_1_tmp_nodev: true
+cis_ubuntu_2404_1_1_2_1_tmp_nodev_remediate: false
 cis_ubuntu_2404_1_1_2_1_tmp_nosuid: true
+cis_ubuntu_2404_1_1_2_1_tmp_nosuid_remediate: false
 cis_ubuntu_2404_1_1_2_1_tmp_noexec: true
+cis_ubuntu_2404_1_1_2_1_tmp_noexec_remediate: false
 cis_ubuntu_2404_1_1_2_2_dev_shm_partition: true
+cis_ubuntu_2404_1_1_2_2_dev_shm_partition_remediate: false
 cis_ubuntu_2404_1_1_2_2_dev_shm_nodev: true
+cis_ubuntu_2404_1_1_2_2_dev_shm_nodev_remediate: false
 cis_ubuntu_2404_1_1_2_2_dev_shm_nosuid: true
+cis_ubuntu_2404_1_1_2_2_dev_shm_nosuid_remediate: false
 cis_ubuntu_2404_1_1_2_2_dev_shm_noexec: true
+cis_ubuntu_2404_1_1_2_2_dev_shm_noexec_remediate: false
 cis_ubuntu_2404_1_1_2_3_home_partition: true
 cis_ubuntu_2404_1_1_2_3_home_nodev: true
 cis_ubuntu_2404_1_1_2_3_home_nosuid: true
-cis_ubuntu_2404_1_1_2_3_home_noexec: true
 cis_ubuntu_2404_1_1_2_4_var_partition: true
 cis_ubuntu_2404_1_1_2_4_var_nodev: true
 cis_ubuntu_2404_1_1_2_4_var_nosuid: true
-cis_ubuntu_2404_1_1_2_4_var_noexec: true
 cis_ubuntu_2404_1_1_2_5_var_tmp_partition: true
+cis_ubuntu_2404_1_1_2_5_var_tmp_partition_remediate: false
 cis_ubuntu_2404_1_1_2_5_var_tmp_nodev: true
+cis_ubuntu_2404_1_1_2_5_var_tmp_nodev_remediate: false
 cis_ubuntu_2404_1_1_2_5_var_tmp_nosuid: true
+cis_ubuntu_2404_1_1_2_5_var_tmp_nosuid_remediate: false
 cis_ubuntu_2404_1_1_2_5_var_tmp_noexec: true
+cis_ubuntu_2404_1_1_2_5_var_tmp_noexec_remediate: false
 cis_ubuntu_2404_1_1_2_6_var_log_partition: true
 cis_ubuntu_2404_1_1_2_6_var_log_nodev: true
 cis_ubuntu_2404_1_1_2_6_var_log_nosuid: true
@@ -424,13 +452,28 @@ cis_ubuntu_2404_1_1_2_7_var_log_audit_partition: true
 cis_ubuntu_2404_1_1_2_7_var_log_audit_nodev: true
 cis_ubuntu_2404_1_1_2_7_var_log_audit_nosuid: true
 cis_ubuntu_2404_1_1_2_7_var_log_audit_noexec: true
-cis_ubuntu_2404_1_7_1_motd: true
-cis_ubuntu_2404_1_7_2_issue: true
-cis_ubuntu_2404_1_7_3_issue_net: true
-cis_ubuntu_2404_1_7_4_motd_permissions: true
-cis_ubuntu_2404_1_7_5_issue_permissions: true
-cis_ubuntu_2404_1_7_6_issue_net_permissions: true
-cis_ubuntu_2404_1_7_7_gdm_banner: true
-cis_ubuntu_2404_1_7_8_gdm_user_list: true
-cis_ubuntu_2404_1_7_9_gdm_xdmcp: true
-cis_ubuntu_2404_1_7_10_gdm_xdmcp2: true
+# CIS 1.7.x is the GDM section of the benchmark. Every control is audited;
+# each remediation is opt-in and defaults to false (<control>_remediate).
+cis_ubuntu_2404_1_7_1_gdm_removed: true
+cis_ubuntu_2404_1_7_1_gdm_removed_remediate: false
+cis_ubuntu_2404_1_7_2_gdm_banner: true
+cis_ubuntu_2404_1_7_2_gdm_banner_remediate: false
+cis_ubuntu_2404_1_7_3_gdm_user_list: true
+cis_ubuntu_2404_1_7_3_gdm_user_list_remediate: false
+cis_ubuntu_2404_1_7_4_gdm_screen_lock: true
+cis_ubuntu_2404_1_7_4_gdm_screen_lock_remediate: false
+cis_ubuntu_2404_1_7_5_gdm_screen_lock_lock: true
+cis_ubuntu_2404_1_7_5_gdm_screen_lock_lock_remediate: false
+cis_ubuntu_2404_1_7_6_gdm_automount: true
+cis_ubuntu_2404_1_7_6_gdm_automount_remediate: false
+cis_ubuntu_2404_1_7_7_gdm_automount_lock: true
+cis_ubuntu_2404_1_7_7_gdm_automount_lock_remediate: false
+cis_ubuntu_2404_1_7_8_gdm_autorun_never: true
+cis_ubuntu_2404_1_7_8_gdm_autorun_never_remediate: false
+cis_ubuntu_2404_1_7_9_gdm_autorun_never_lock: true
+cis_ubuntu_2404_1_7_9_gdm_autorun_never_lock_remediate: false
+cis_ubuntu_2404_1_7_10_gdm_xdmcp: true
+cis_ubuntu_2404_1_7_10_gdm_xdmcp_remediate: false
+# Site-policy text written by the 1.7.2 GDM banner remediation (the audit
+# only requires a non-empty banner-message-text; local site policy wins).
+cis_ubuntu_2404_gdm_banner_text: "Authorized uses only. All activity may be monitored and reported"

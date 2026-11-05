@@ -5,13 +5,17 @@
       - cis_linux_common_control_id | length > 0
       - cis_linux_common_platform | length > 0
       - cis_linux_common_benchmark | length > 0
-      - cis_linux_common_fixed_file_path is ansible.builtin.abs
-      - (cis_linux_common_fixed_file_expected_type | default('file')) in ['file', 'directory']
-      - cis_linux_common_fixed_file_owner | length > 0
-      - cis_linux_common_fixed_file_group | length > 0
-      - cis_linux_common_fixed_file_remediation_mode | length > 0
-      - cis_linux_common_fixed_file_expected_mode_description | length > 0
-      - cis_linux_common_fixed_file_allowed_owner_digits | length > 0
-      - cis_linux_common_fixed_file_allowed_group_digits | length > 0
-      - cis_linux_common_fixed_file_allowed_other_digits | length > 0
+      - cis_linux_common_fixed_file_path is defined
+        or cis_linux_common_fixed_file_paths is defined
+        or cis_linux_common_fixed_file_search is defined
+        or cis_linux_common_fixed_file_scopes is defined
+      - cis_linux_common_fixed_file_expected_type | default('file') in ['file', 'directory']
+      - cis_linux_common_fixed_file_owner | default('') | length > 0
+      - cis_linux_common_fixed_file_group | default('') | length > 0
+      - cis_linux_common_fixed_file_allowed_groups | default([cis_linux_common_fixed_file_group]) | length > 0
+      - (cis_linux_common_fixed_file_max_mode | default('x')) is match('^[0-7]{3,4}$')
+      - cis_linux_common_fixed_file_remediation_mode | default('') | length > 0
+      - cis_linux_common_fixed_file_expected_mode_description | default('') | length > 0
+      - (cis_linux_common_fixed_file_scopes is not defined)
+        or (cis_linux_common_fixed_file_scopes | list | length > 0)
     fail_msg: The platform adapter supplied an invalid fixed-file contract.

@@ -1,0 +1,21 @@
+---
+- name: Common login.defs parameter | Delegate to shared inspection
+  ansible.builtin.import_tasks: mechanisms/login_defs_parameter/inspect.yml
+
+- name: Common login.defs parameter | Verify the parameter
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_logindefs_ok
+    fail_msg: >-
+      {{ cis_linux_common_logindefs_param }} is not compliant:
+      active_lines={{ cis_linux_common_logindefs_active_lines | count }}
+      (the keyword must appear exactly once as an active line of
+      /etc/login.defs and that line must satisfy the benchmark value set),
+      compliant_lines={{ cis_linux_common_logindefs_compliant_lines | count }},
+      shadow_violations={{ cis_linux_common_logindefs_shadow_violations }}
+      (no password-bearing account may sit outside the bound),
+      unreadable_files={{ cis_linux_common_logindefs_unreadable }}
+      (required none).
+    success_msg: >-
+      login.defs parameter verification passed:
+      {{ cis_linux_common_logindefs_param }}

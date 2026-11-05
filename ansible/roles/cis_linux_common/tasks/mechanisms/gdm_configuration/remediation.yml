@@ -1,0 +1,81 @@
+---
+# CIS GDM configuration mechanism remediation.
+#
+# Writes the dconf artifacts from the benchmark section 1.7 remediation
+# (keyfiles under /etc/dconf/db/{gdm,local}.d, lock files under
+# /etc/dconf/db/local.d/locks, profile files under /etc/dconf/profile), then
+# runs `dconf update` whenever anything changed, exactly as the benchmark
+# step 3 requires. Every write is gated on the gate package (gdm3) being
+# installed: the benchmark skips section 1.7 remediation entirely when GDM
+# is absent. Opt-in is enforced upstream by the platform routing, which
+# requires <control> and <control>_remediate (default false) plus the global
+# remediation gate before importing this file.
+
+- name: Common GDM remediation | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common GDM remediation | Derive GDM applicability
+  ansible.builtin.set_fact:
+    cis_linux_common_gdm_installed: >-
+      {{ 'yes' if cis_linux_common_gdm_gate_package in ansible_facts.packages else 'no' }}
+
+- name: Common GDM remediation | Ensure the dconf directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: >-
+    {{ ((cis_linux_common_gdm_remediate_files | default([], true))
+        + (cis_linux_common_gdm_remediate_profiles | default([], true)))
+       | map(attribute='path') | map('dirname') | unique | list }}
+  become: true
+  when: cis_linux_common_gdm_installed == 'yes'
+
+- name: Common GDM remediation | Write the benchmark keyfiles and lock files
+  ansible.builtin.copy:
+    dest: "{{ item.path }}"
+    content: "{{ item.content }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ cis_linux_common_gdm_remediate_files | default([], true) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  become: true
+  when: cis_linux_common_gdm_installed == 'yes'
+  register: cis_linux_common_gdm_remediated_files
+
+- name: Common GDM remediation | Ensure the dconf profile database lines
+  ansible.builtin.lineinfile:
+    path: "{{ item.0.path }}"
+    line: "{{ item.1 }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  loop: >-
+    {{ (cis_linux_common_gdm_remediate_profiles | default([], true))
+       | subelements('lines') }}
+  loop_control:
+    label: "{{ item.0.path }}: {{ item.1 }}"
+  become: true
+  when: cis_linux_common_gdm_installed == 'yes'
+  register: cis_linux_common_gdm_remediated_profiles
+
+# Mirror the benchmark's third remediation step. It only runs when a write
+# actually changed state, so rerun remediations stay idempotent.
+- name: Common GDM remediation | Update the dconf system databases
+  ansible.builtin.command:
+    cmd: dconf update
+  become: true
+  changed_when: true
+  when:
+    - cis_linux_common_gdm_installed == 'yes'
+    - >-
+        (cis_linux_common_gdm_remediated_files.results | default([], true)
+         | selectattr('changed') | list | length > 0)
+        or (cis_linux_common_gdm_remediated_profiles.results | default([], true)
+            | selectattr('changed') | list | length > 0)

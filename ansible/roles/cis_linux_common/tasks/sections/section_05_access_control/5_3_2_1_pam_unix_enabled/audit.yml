@@ -2,5 +2,13 @@
 - name: Config line audit | Delegate to config_line
   ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
   vars:
-    cis_linux_common_config_line: 'auth [success=1 default=ignore] pam_unix.so nullok'
-    cis_linux_common_config_line_regexp: '^auth\s+\[success=1 default=ignore\]\s+pam_unix\.so'
+    # CIS 5.3.2.1 checks that the Unix authentication module is enabled in
+    # /etc/pam.d/common-auth. The jump target is NOT part of the control:
+    # [success=1] is the stock rendering, but once CIS 5.3.2.2 (pam_faillock
+    # preauth/authfail) is correctly deployed through pam-auth-update profiles,
+    # the module jumps over the extra faillock line and the distro renders
+    # [success=2]. Accept both so the control does not false-fail a compliant
+    # faillock-hardened stack; the faillock lines themselves are proven by
+    # 5.3.2.2, not here.
+    cis_linux_common_config_line: 'auth [success=2 default=ignore] pam_unix.so nullok try_first_pass'
+    cis_linux_common_config_line_regexp: '^auth\s+\[success=[12] default=ignore\]\s+pam_unix\.so'

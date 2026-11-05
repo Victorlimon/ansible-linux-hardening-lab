@@ -2,6 +2,9 @@
 - name: Common sysctl parameter | Load the remediation contract
   ansible.builtin.import_tasks: mechanisms/sysctl_parameter/validate.yml
 
+- name: Common sysctl parameter | Inspect UFW sysctl override
+  ansible.builtin.import_tasks: mechanisms/sysctl_parameter/inspect.yml
+
 - name: Common sysctl parameter | Apply runtime and persistent value
   ansible.posix.sysctl:
     name: "{{ cis_linux_common_sysctl_parameter }}"
@@ -10,3 +13,13 @@
     sysctl_file: "{{ cis_linux_common_sysctl_file }}"
     sysctl_set: true
     reload: true
+
+- name: Common sysctl parameter | Keep selected UFW sysctl file consistent
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_sysctl_ufw_path }}"
+    regexp: >-
+      ^[ \t]*{{ cis_linux_common_sysctl_parameter | replace('.', '[./]') }}[ \t]*=
+    line: >-
+      {{ cis_linux_common_sysctl_parameter | replace('.', '/') }}={{ cis_linux_common_sysctl_value }}
+  when:
+    - cis_linux_common_sysctl_ufw_path | length > 0

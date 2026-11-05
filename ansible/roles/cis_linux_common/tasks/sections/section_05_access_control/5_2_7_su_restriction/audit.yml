@@ -1,6 +1,20 @@
 ---
-- name: Config line audit | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
-  vars:
-    cis_linux_common_config_line: 'auth required pam_wheel.so use_uid'
-    cis_linux_common_config_line_regexp: '^auth\s+required\s+pam_wheel\.so\s+use_uid'
+- name: CIS 5.2.7 | Audit | Collect PAM line and empty-group evidence
+  ansible.builtin.import_tasks: sections/section_05_access_control/5_2_7_su_restriction/inspect.yml
+
+- name: CIS 5.2.7 | Audit | Report su restriction classification
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      classification: >-
+        {{ 'PASS' if cis_linux_common_su_restriction_compliant | bool else 'FAIL' }}
+      changed_target: false
+      evidence:
+        login_package_installed: "{{ cis_linux_common_config_line_package in ansible_facts.packages }}"
+        su_pam_file_readable: "{{ cis_linux_common_su_restriction_file_readable }}"
+        expected_pam_line: "{{ cis_linux_common_su_restriction_expected_line }}"
+        active_pam_wheel_lines: "{{ cis_linux_common_su_restriction_active_wheel_lines }}"
+        su_restriction_group: "{{ cis_linux_common_su_restriction_group }}"
+        group_supplementary_members: "{{ cis_linux_common_su_restriction_group_members }}"
+        group_primary_gid_holders: "{{ cis_linux_common_su_restriction_group_primary_holders }}"

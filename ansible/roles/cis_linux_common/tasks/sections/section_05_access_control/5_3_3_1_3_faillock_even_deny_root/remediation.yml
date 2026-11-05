@@ -1,6 +1,12 @@
 ---
-- name: Config line remediation | Delegate to config_line
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+- name: Faillock even_deny_root remediation | Delegate to faillock_parameter
+  ansible.builtin.import_tasks: mechanisms/faillock_parameter/remediation.yml
   vars:
-    cis_linux_common_config_line: 'even_deny_root'
-    cis_linux_common_config_line_regexp: '^even_deny_root'
+    cis_linux_common_faillock_param: even_deny_root
+    cis_linux_common_faillock_kind: flag
+    cis_linux_common_faillock_line: 'even_deny_root'
+    cis_linux_common_faillock_regexp: '^\s*even_deny_root\b'
+    cis_linux_common_faillock_name_regex: '\s*even_deny_root\b'
+    cis_linux_common_faillock_value_regex: '\s*even_deny_root\s*$'
+    cis_linux_common_faillock_companion_name_regex: '\s*root_unlock_time\s*='
+    cis_linux_common_faillock_companion_value_regex: '\s*root_unlock_time\s*=\s*(\d+)\s*$'

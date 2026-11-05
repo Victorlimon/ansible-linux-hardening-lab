@@ -2,37 +2,22 @@
 - name: Common fixed file permissions | Load verification contract
   ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/validate.yml
 
-- name: Common fixed file permissions | Inspect metadata for verification
-  ansible.builtin.stat:
-    path: "{{ cis_linux_common_fixed_file_path }}"
-  register: cis_linux_common_fixed_file_verification
+- name: Common fixed file permissions | Discover every benchmark target
+  ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/discover.yml
+
+- name: Common fixed file permissions | Evaluate every benchmark target
+  ansible.builtin.import_tasks: mechanisms/fixed_file_permissions/evaluate.yml
 
 - name: Common fixed file permissions | Assert declared metadata
   ansible.builtin.assert:
     that:
-      - cis_linux_common_fixed_file_verification.stat.exists | default(false)
-      - >-
-        (
-          (cis_linux_common_fixed_file_expected_type | default('file') == 'file'
-            and cis_linux_common_fixed_file_verification.stat.isreg | default(false))
-          or
-          (cis_linux_common_fixed_file_expected_type | default('file') == 'directory'
-            and cis_linux_common_fixed_file_verification.stat.isdir | default(false))
-        )
-      - >-
-        cis_linux_common_fixed_file_verification.stat.pw_name | default('') ==
-        cis_linux_common_fixed_file_owner
-      - >-
-        cis_linux_common_fixed_file_verification.stat.gr_name | default('') ==
-        cis_linux_common_fixed_file_group
-      - >-
-        (cis_linux_common_fixed_file_verification.stat.mode | default('9999'))[1]
-        in cis_linux_common_fixed_file_allowed_owner_digits
-      - >-
-        (cis_linux_common_fixed_file_verification.stat.mode | default('9999'))[2]
-        in cis_linux_common_fixed_file_allowed_group_digits
-      - >-
-        (cis_linux_common_fixed_file_verification.stat.mode | default('9999'))[3]
-        in cis_linux_common_fixed_file_allowed_other_digits
-    fail_msg: The fixed file does not satisfy the platform adapter contract.
-    success_msg: The fixed-file verification passed.
+      - cis_linux_common_fixed_file_compliant
+    fail_msg: >-
+      {{ 'The fixed-file set does not satisfy the platform adapter contract: '
+         ~ (cis_linux_common_fixed_file_violations
+            | map(attribute='path') | join(', '))
+         ~ ' [' ~ (cis_linux_common_fixed_file_violations
+                   | map(attribute='reasons') | map('join', '; ') | join(' | ')) ~ ']' }}
+    success_msg: >-
+      {{ 'The fixed-file verification passed for '
+         ~ cis_linux_common_fixed_file_checked ~ ' target(s).' }}

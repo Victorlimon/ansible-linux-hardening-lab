@@ -1,0 +1,62 @@
+---
+# CIS 5.3.3.1.1-.3 dedicated remediation: the managed pam_faillock arguments
+# live only in /etc/security/faillock.conf. The regexps anchor on the
+# parameter name (any value), so a noncompliant value is replaced instead of
+# duplicated at end of file.
+
+- name: Common faillock parameter | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common faillock parameter | Inspect PAM files before remediation
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/inspect.yml
+
+- name: Common faillock parameter | Compute pre-remediation evidence
+  ansible.builtin.import_tasks: mechanisms/faillock_parameter/evaluate.yml
+
+- name: Common faillock parameter | Set the managed parameter line
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_faillock_conf_path }}"
+    regexp: "{{ cis_linux_common_faillock_regexp }}"
+    line: "{{ cis_linux_common_faillock_line }}"
+    create: true
+    # An existing file keeps its ownership and mode: no CIS control of this
+    # benchmark family prescribes them, and forcing root:root 0644 over a
+    # site-hardened root:shadow 640 would silently loosen it. Only a created
+    # file is given the packaged default (root:root 0644).
+    owner: "{{ omit if cis_linux_common_faillock_conf_stat.stat.exists | default(false) else 'root' }}"
+    group: "{{ omit if cis_linux_common_faillock_conf_stat.stat.exists | default(false) else 'root' }}"
+    mode: "{{ omit if cis_linux_common_faillock_conf_stat.stat.exists | default(false) else '0644' }}"
+  when: cis_linux_common_faillock_package in ansible_facts.packages
+
+- name: Common faillock parameter | Raise a root_unlock_time value below 60 seconds
+  ansible.builtin.lineinfile:
+    path: "{{ cis_linux_common_faillock_conf_path }}"
+    regexp: '^\s*root_unlock_time\s*='
+    line: 'root_unlock_time = 900'
+    create: false
+  when:
+    - cis_linux_common_faillock_package in ansible_facts.packages
+    - cis_linux_common_faillock_kind == 'flag'
+    - cis_linux_common_faillock_root_unlock_invalid | default(false) | bool
+
+- name: Common faillock parameter | Inspect PAM files after remediation
+  ansible.builtin.import_tasks: mechanisms/pam_faillock_stack/inspect.yml
+
+- name: Common faillock parameter | Compute post-remediation evidence
+  ansible.builtin.import_tasks: mechanisms/faillock_parameter/evaluate.yml
+
+- name: Common faillock parameter | Verify the remediated parameter
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_faillock_package not in ansible_facts.packages or
+        cis_linux_common_faillock_parameter_ok
+    fail_msg: >-
+      {{ cis_linux_common_faillock_param }} could not be established in
+      {{ cis_linux_common_faillock_conf_path }}:
+      name_lines={{ cis_linux_common_faillock_name_count }},
+      compliant_lines={{ cis_linux_common_faillock_value_count }},
+      inline_override_files={{ cis_linux_common_faillock_override_files }},
+      unreadable_files={{ cis_linux_common_faillock_unreadable_files }}.
+      Duplicate or malformed parameter lines require manual consolidation.
+    success_msg: "Faillock parameter remediation verified: {{ cis_linux_common_faillock_line }}"

@@ -1,0 +1,34 @@
+---
+- name: Common pwhistory parameter | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common pwhistory parameter | Delegate to shared stack inspection
+  ansible.builtin.import_tasks: mechanisms/pam_pwhistory_stack/inspect.yml
+
+- name: Common pwhistory parameter | Compute parameter evidence
+  ansible.builtin.import_tasks: mechanisms/pwhistory_parameter/evaluate.yml
+
+- name: Common pwhistory parameter | Verify the owned parameter
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_pwhistory_package not in ansible_facts.packages or
+        cis_linux_common_pwhistory_parameter_ok
+    fail_msg: >-
+      pam_pwhistory {{ cis_linux_common_pwhistory_param }} is not owned by the
+      canonical profile line as rendered into /etc/pam.d/common-password:
+      named_lines={{ cis_linux_common_pwhistory_param_named_count }},
+      compliant_lines={{ cis_linux_common_pwhistory_param_compliant_count }}
+      (the parameter must appear exactly once, on the single rendered
+      pam_pwhistory password line, and that line must equal the canonical
+      benchmark line 'password requisite pam_pwhistory.so remember=24
+      enforce_for_root try_first_pass use_authtok'),
+      pwhistory_password_lines={{ cis_linux_common_pwhistory_line_total }}
+      (required exactly 1),
+      inline_override_files={{ cis_linux_common_pwhistory_override_files }}
+      (inline pam_pwhistory.so variants override the owned profile line and
+      are rejected), unreadable_files={{ cis_linux_common_pwhistory_unreadable_files }}.
+      Configure pam_pwhistory through the pam-auth-update profile
+      /usr/share/pam-configs/pwhistory, never by editing
+      /etc/pam.d/common-password directly.
+    success_msg: "Pwhistory parameter verification passed: {{ cis_linux_common_pwhistory_param }}"

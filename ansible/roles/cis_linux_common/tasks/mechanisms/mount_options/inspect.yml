@@ -1,0 +1,158 @@
+---
+# CIS mount-options mechanism (shared inspection, fail-closed).
+#
+# Proves the live mount state with findmnt, not the existence of a directory.
+# The previous observation-only wiring (`stat` + MANUAL report) could not tell a
+# hardened mount from a plain directory on /, and the benchmark's own
+# `findmnt -kn <path> | grep -v <opt>` audit becomes a FALSE PASS for an
+# unmounted path (the empty grep output "returns nothing"). Decision table:
+#
+#   partition control (X.1, "Ensure <path> is a separate partition"):
+#     - findmnt/unit evidence unreadable ............................. FAIL
+#     - path is not its own mount (single-disk lab default) .......... FAIL
+#     - boot unit masked or disabled (no boot mount) ................. FAIL
+#     - unit_required == 'yes' (the benchmark additionally runs
+#       `systemctl is-enabled <unit>.mount`; CIS 1.1.2.1.1 for /tmp)
+#       and the state is not one of generated/enabled/static/
+#       alias/linked/indirect ........................................ FAIL
+#     - everything else .............................................. PASS
+#   option controls (X.2/X.3/X.4, benchmark: "- IF - a separate partition
+#   exists for <path>"):
+#     - evidence unreadable .......................................... FAIL
+#     - path not mounted ................................... NOT_APPLICABLE
+#       (never PASS: the -IF- precondition is not met on single-disk hosts,
+#       and claiming PASS there would be the false pass this rewrite kills)
+#     - every findmnt OPTIONS row carries the option ................. PASS
+#     - otherwise .................................................... FAIL
+#
+# `systemctl is-enabled` differs across systemd versions: Debian 12 (252)
+# prints "Failed to get unit file state ...: No such file or directory" on
+# stderr with rc=1 and empty stdout, Ubuntu 24.04 (255) prints "not-found"
+# with rc=4 (verified on the lab nodes). The probe below whitelists the state
+# tokens on stdout; anything unrecognised or empty normalises to 'unreadable',
+# which fails closed whenever the control requires unit evidence and never
+# fabricates a PASS.
+#
+# Parameters (set by tasks/sections/.../<control>/ delegation):
+#   cis_linux_common_mount_path           e.g. /tmp
+#   cis_linux_common_mount_unit           e.g. tmp.mount
+#   cis_linux_common_mount_check          partition | nodev | nosuid | noexec
+#   cis_linux_common_mount_unit_required  'yes' only where the benchmark audits
+#                                         the boot unit (1.1.2.1.1 /tmp)
+# One fact per set_fact task: keys rendered inside a single set_fact cannot
+# reliably consume sibling keys, and the classification below is a chain.
+
+- name: Common mount options | Read the live mount table for the target path
+  ansible.builtin.shell:
+    cmd: |
+      set -u
+      out="$(findmnt -kn "$MNT_PATH" 2>/dev/null)"
+      rc=$?
+      if [ "$rc" -eq 0 ] && [ -n "$out" ]; then
+        echo MOUNTED
+      elif [ "$rc" -eq 1 ] && [ -z "$out" ]; then
+        echo UNMOUNTED
+      else
+        echo PROBE_ERROR
+      fi
+  environment:
+    MNT_PATH: "{{ cis_linux_common_mount_path }}"
+  register: cis_linux_common_mount_exists_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Common mount options | Read the live mount options for the target path
+  ansible.builtin.shell:
+    cmd: |
+      set -u
+      opts="$(findmnt -n -o OPTIONS "$MNT_PATH" 2>/dev/null)"
+      rc=$?
+      if [ "$rc" -eq 0 ] && [ -n "$opts" ]; then
+        printf '%s\n' "$opts"
+      elif [ "$rc" -eq 1 ] && [ -z "$opts" ]; then
+        echo UNMOUNTED
+      else
+        echo PROBE_ERROR
+      fi
+  environment:
+    MNT_PATH: "{{ cis_linux_common_mount_path }}"
+  register: cis_linux_common_mount_options_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Common mount options | Read the boot-mount unit state
+  ansible.builtin.shell:
+    cmd: |
+      set -u
+      st="$(systemctl is-enabled "$MNT_UNIT" 2>/dev/null | head -n 1)"
+      case "$st" in
+        generated|enabled|static|alias|linked|indirect|not-found|masked|disabled)
+          printf 'STATE:%s\n' "$st" ;;
+        *)
+          echo PROBE_ERROR ;;
+      esac
+  environment:
+    MNT_UNIT: "{{ cis_linux_common_mount_unit }}"
+  register: cis_linux_common_mount_unit_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Common mount options | Normalise mount presence
+  ansible.builtin.set_fact:
+    cis_linux_common_mount_exists_state: >-
+      {{ 'mounted' if (cis_linux_common_mount_exists_probe.stdout | default('') | trim) == 'MOUNTED'
+         else ('unmounted' if (cis_linux_common_mount_exists_probe.stdout | default('') | trim) == 'UNMOUNTED'
+               else 'error') }}
+
+- name: Common mount options | Normalise the boot-unit state token
+  ansible.builtin.set_fact:
+    cis_linux_common_mount_unit_state: >-
+      {{ (cis_linux_common_mount_unit_probe.stdout | default('') | trim).split('STATE:')[1]
+         if (cis_linux_common_mount_unit_probe.stdout | default('') | trim).startswith('STATE:')
+         else 'unreadable' }}
+
+- name: Common mount options | Require the probes to agree before any verdict
+  # Every fact here stays a string: a `>-` template over a list would render to
+  # its Python repr under plain Jinja, diverging the harness from Ansible's
+  # native-type passthrough, so the option rows are re-split in place instead.
+  ansible.builtin.set_fact:
+    cis_linux_common_mount_evidence_ok: >-
+      {{ 'yes' if ((cis_linux_common_mount_exists_state != 'error')
+                   and ((cis_linux_common_mount_exists_state == 'mounted'
+                         and ((cis_linux_common_mount_options_probe.stdout | default('') | trim) | length > 0)
+                         and 'PROBE_ERROR' not in (cis_linux_common_mount_options_probe.stdout | default(''))
+                         and 'UNMOUNTED' not in (cis_linux_common_mount_options_probe.stdout | default('')))
+                        or (cis_linux_common_mount_exists_state == 'unmounted'
+                            and (cis_linux_common_mount_options_probe.stdout | default('') | trim) == 'UNMOUNTED')))
+         else 'no' }}
+
+- name: Common mount options | Test the audited option across stacked mounts
+  ansible.builtin.set_fact:
+    cis_linux_common_mount_opt_present: >-
+      {{ 'yes' if (cis_linux_common_mount_evidence_ok == 'yes'
+                   and cis_linux_common_mount_exists_state == 'mounted'
+                   and ((cis_linux_common_mount_options_probe.stdout | default(''))
+                         .splitlines() | map('trim') | reject('equalto', '')
+                         | select('search', '(^|,)' ~ cis_linux_common_mount_check ~ '(,|$)')
+                         | list | length)
+                      == ((cis_linux_common_mount_options_probe.stdout | default(''))
+                          .splitlines() | map('trim') | reject('equalto', '') | list | length))
+         else 'no' }}
+
+- name: Common mount options | Classify the live mount state
+  ansible.builtin.set_fact:
+    cis_linux_common_mount_state: >-
+      {{ 'FAIL' if cis_linux_common_mount_evidence_ok == 'no'
+         else (('FAIL' if cis_linux_common_mount_exists_state != 'mounted'
+                else ('FAIL' if cis_linux_common_mount_unit_state in ['masked', 'disabled']
+                      else ('FAIL' if cis_linux_common_mount_unit_required == 'yes'
+                                  and cis_linux_common_mount_unit_state
+                                      not in ['generated', 'enabled', 'static',
+                                              'alias', 'linked', 'indirect']
+                            else 'PASS')))
+               if cis_linux_common_mount_check == 'partition'
+               else ('NOT_APPLICABLE' if cis_linux_common_mount_exists_state != 'mounted'
+                     else ('PASS' if cis_linux_common_mount_opt_present == 'yes' else 'FAIL'))) }}

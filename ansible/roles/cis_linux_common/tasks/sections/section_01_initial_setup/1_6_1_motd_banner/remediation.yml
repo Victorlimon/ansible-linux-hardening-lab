@@ -1,3 +1,12 @@
 ---
-- name: CIS 1.6.1 | Remediation | Delegate MOTD banner to the common config-line mechanism
-  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+# CIS 1.6.1 — Ensure the message of the day is configured properly.
+# Remediation replaces the file with the site warning banner, removing any
+# OS name/version/release disclosure (the benchmark requires the banner to
+# carry an authorized-access warning and no OS/software information).
+- name: CIS 1.6.1 | Remediation | Replace MOTD banner with clean warning
+  ansible.builtin.copy:
+    content: "{{ cis_linux_common_config_line }}\n"
+    dest: "{{ cis_linux_common_config_line_path }}"
+    owner: root
+    group: root
+    mode: '0644'

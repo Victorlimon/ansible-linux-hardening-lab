@@ -1,0 +1,12 @@
+---
+- name: CIS 1.7.8 | Remediation | Run common GDM configuration mechanism
+  ansible.builtin.import_role:
+    name: cis_linux_common
+    tasks_from: sections/section_01_initial_setup/1_7_8_gdm_autorun_never/remediation.yml
+  vars:
+    cis_linux_common_control_id: '1.7.8'
+    cis_linux_common_platform: debian_12
+    cis_linux_common_benchmark: 'CIS Debian Linux 12 Benchmark v1.1.0'
+    cis_linux_common_gdm_gate_package: gdm3
+    cis_linux_common_gdm_checks:
+      - 'gsettings|org.gnome.desktop.media-handling|autorun-never|^true$'

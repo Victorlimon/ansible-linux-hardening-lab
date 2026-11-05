@@ -3,4 +3,4 @@
   ansible.builtin.import_role:
     name: cis_linux_common
     tasks_from: sections/section_02_services/2_1_9_nfs_server/remediation.yml
-  vars: {cis_linux_common_control_id: "2.1.9", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_service_package: nfs-kernel-server, cis_linux_common_service_name: nfs-kernel-server.service}
+  vars: {cis_linux_common_control_id: "2.1.9", cis_linux_common_platform: debian_12, cis_linux_common_benchmark: CIS Debian Linux 12 Benchmark v1.1.0, cis_linux_common_service_package: nfs-kernel-server, cis_linux_common_service_name: nfs-server.service}

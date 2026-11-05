@@ -1,0 +1,167 @@
+---
+# CIS kernel-module-disabled mechanism (shared inspection, fail-closed).
+#
+# Proves the module is actually unavailable, not that a line exists in one
+# modprobe.d file. Per the benchmark, a control is compliant when:
+#   - kmod is not installed, or
+#   - the module is not available as a loadable .ko in ANY installed kernel
+#     (absent or built into the kernel): NOT_APPLICABLE, or
+#   - the module is loadable AND the effective `modprobe --showconfig`
+#     contains an install entry pointing at /bin/true|/bin/false AND a
+#     blacklist entry AND `lsmod` does not show it loaded: PASS.
+# Unreadable state (failed probes) classifies FAIL; a loadable-but-unconfigured
+# or a loaded module always classifies FAIL.
+#
+# Name resolution follows the benchmark: the 1.1.1.6 overlayfs -> overlay
+# mapping is carried by the per-control cis_linux_common_kernel_module var,
+# and `modprobe --showconfig` / `lsmod` use the underscore spelling of module
+# names (kmod normalizes dashes to underscores, verified empirically).
+
+- name: Common kernel module disabled | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common kernel module disabled | Derive module name resolution
+  ansible.builtin.set_fact:
+    # Benchmark l_mod_chk_name and its modprobe/lsmod spelling.
+    cis_linux_common_kernel_module_under: >-
+      {{ cis_linux_common_kernel_module | replace('-', '_') }}
+    # ansible-core >= 2.19/2.21 does not interpret Python-style escapes inside
+    # Jinja string literals (verified empirically on the 2.21.2 runtime), so
+    # '\s' and '\b' here reach the regex engine as the literal two-character
+    # sequences intended. Plain Jinja (unit harness) collapses them, which the
+    # test emulation must mirror.
+    cis_linux_common_kernel_module_effective_install_regexp: >-
+      {{ '^install\s+' ~ (cis_linux_common_kernel_module | replace('-', '_'))
+         ~ '\s+(/usr)?/bin/(true|false)\b' }}
+    cis_linux_common_kernel_module_effective_blacklist_regexp: >-
+      {{ '^blacklist\s+' ~ (cis_linux_common_kernel_module | replace('-', '_')) ~ '\b' }}
+
+- name: Common kernel module disabled | Read loaded kernel modules
+  ansible.builtin.command:
+    cmd: lsmod
+  register: cis_linux_common_kernel_module_lsmod_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+- name: Common kernel module disabled | Resolve effective modprobe configuration
+  ansible.builtin.command:
+    cmd: modprobe --showconfig
+  register: cis_linux_common_kernel_module_showconfig_probe
+  become: true
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+- name: Common kernel module disabled | Detect loadable module files in installed kernels
+  ansible.builtin.shell:
+    cmd: |
+      set -u
+      scanned=0
+      found=0
+      error=0
+      for tree in /lib/modules/*/kernel; do
+        [ -d "$tree" ] || continue
+        scanned=$((scanned + 1))
+        hits="$(find "$tree" \( -name "${MOD_NAME}.ko*" -o -name "${MOD_UNDER}.ko*" \) -print 2>/dev/null)" || error=1
+        if [ "$error" -eq 1 ]; then
+          break
+        fi
+        if [ -n "$hits" ]; then
+          found=1
+          break
+        fi
+      done
+      if [ "$error" -eq 1 ]; then
+        echo 'PROBE_ERROR'
+      elif [ "$found" -eq 1 ]; then
+        echo 'LOADABLE'
+      elif [ "$scanned" -eq 0 ]; then
+        echo 'NO_KERNEL_TREE'
+      else
+        echo 'NOT_LOADABLE'
+      fi
+  environment:
+    MOD_NAME: "{{ cis_linux_common_kernel_module }}"
+    MOD_UNDER: "{{ cis_linux_common_kernel_module_under }}"
+  register: cis_linux_common_kernel_module_availability_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+- name: Common kernel module disabled | Detect built-in kernel modules
+  ansible.builtin.shell:
+    cmd: |
+      set -u
+      builtin_file="/lib/modules/$(uname -r)/modules.builtin"
+      if [ ! -r "$builtin_file" ]; then
+        echo 'UNREADABLE'
+      elif grep -Eq "(^|/)(${MOD_NAME}|${MOD_UNDER})\.ko$" "$builtin_file"; then
+        echo 'BUILTIN'
+      else
+        echo 'NOT_BUILTIN'
+      fi
+  environment:
+    MOD_NAME: "{{ cis_linux_common_kernel_module }}"
+    MOD_UNDER: "{{ cis_linux_common_kernel_module_under }}"
+  register: cis_linux_common_kernel_module_builtin_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: cis_linux_common_config_line_package in ansible_facts.packages
+
+- name: Common kernel module disabled | Normalize module state evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_kernel_module_probes_ok: >-
+      {{ 'yes' if ((cis_linux_common_kernel_module_lsmod_probe | default({})).rc | default(1) == 0
+                   and (cis_linux_common_kernel_module_availability_probe | default({})).rc | default(1) == 0
+                   and ((cis_linux_common_kernel_module_availability_probe
+                         | default({})).stdout | default('') | trim)
+                       in ['LOADABLE', 'NOT_LOADABLE', 'NO_KERNEL_TREE']) else 'no' }}
+    cis_linux_common_kernel_module_config_ok: >-
+      {{ 'yes' if (cis_linux_common_kernel_module_showconfig_probe
+                   | default({})).rc | default(1) == 0 else 'no' }}
+    cis_linux_common_kernel_module_loaded: >-
+      {{ 'yes' if ((cis_linux_common_kernel_module_lsmod_probe | default({})).rc | default(1) == 0
+                   and (cis_linux_common_kernel_module_lsmod_probe
+                        | default({})).stdout | default('')
+                       is search('^' ~ cis_linux_common_kernel_module_under ~ '\s',
+                                  multiline=True)) else 'no' }}
+    cis_linux_common_kernel_module_loadable: >-
+      {{ 'yes' if ((cis_linux_common_kernel_module_availability_probe
+                    | default({})).stdout | default('') | trim) == 'LOADABLE' else 'no' }}
+    cis_linux_common_kernel_module_builtin: >-
+      {{ 'yes' if ((cis_linux_common_kernel_module_builtin_probe
+                    | default({})).stdout | default('') | trim) == 'BUILTIN' else 'no' }}
+    cis_linux_common_kernel_module_effective_install: >-
+      {{ 'yes' if ((cis_linux_common_kernel_module_showconfig_probe
+                    | default({})).rc | default(1) == 0
+                   and (cis_linux_common_kernel_module_showconfig_probe
+                        | default({})).stdout | default('')
+                       is search(cis_linux_common_kernel_module_effective_install_regexp,
+                                 multiline=True)) else 'no' }}
+    cis_linux_common_kernel_module_effective_blacklist: >-
+      {{ 'yes' if ((cis_linux_common_kernel_module_showconfig_probe
+                    | default({})).rc | default(1) == 0
+                   and (cis_linux_common_kernel_module_showconfig_probe
+                        | default({})).stdout | default('')
+                       is search(cis_linux_common_kernel_module_effective_blacklist_regexp,
+                                 multiline=True)) else 'no' }}
+
+- name: Common kernel module disabled | Classify effective module availability
+  ansible.builtin.set_fact:
+    cis_linux_common_kernel_module_state: >-
+      {{ 'NOT_APPLICABLE' if cis_linux_common_config_line_package
+                          not in ansible_facts.packages else
+         ('FAIL' if cis_linux_common_kernel_module_probes_ok == 'no' or
+                   cis_linux_common_kernel_module_loaded == 'yes' or
+                   (cis_linux_common_kernel_module_loadable == 'yes' and
+                    (cis_linux_common_kernel_module_config_ok == 'no' or
+                     cis_linux_common_kernel_module_effective_install == 'no' or
+                     cis_linux_common_kernel_module_effective_blacklist == 'no')) else
+          ('NOT_APPLICABLE' if cis_linux_common_kernel_module_loadable == 'no'
+           else 'PASS')) }}

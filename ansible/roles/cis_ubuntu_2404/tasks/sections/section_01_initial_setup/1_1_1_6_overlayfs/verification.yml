@@ -1,6 +1,7 @@
 ---
+# CIS scripts map the overlayfs control name to the kernel module "overlay".
 - name: CIS 1.1.1.6 | Verification | Run common mechanism
   ansible.builtin.import_role:
     name: cis_linux_common
     tasks_from: sections/section_01_initial_setup/1_1_1_6_overlayfs/verification.yml
-  vars: {cis_linux_common_control_id: "1.1.1.6", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_kernel_module: overlayfs, cis_linux_common_config_line_path: /etc/modprobe.d/overlayfs.conf, cis_linux_common_config_line_package: kmod}
+  vars: {cis_linux_common_control_id: "1.1.1.6", cis_linux_common_platform: ubuntu_2404, cis_linux_common_benchmark: CIS Ubuntu Linux 24.04 LTS Benchmark v1.0.0, cis_linux_common_kernel_module: overlay, cis_linux_common_config_line_path: /etc/modprobe.d/overlayfs.conf, cis_linux_common_config_line_package: kmod}

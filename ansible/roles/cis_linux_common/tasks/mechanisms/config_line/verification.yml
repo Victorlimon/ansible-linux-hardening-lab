@@ -1,18 +1,56 @@
 ---
+# Optional cis_linux_common_config_line_effective_command switches this
+# mechanism from single-file presence to effective-configuration resolution
+# (for example `sshd -T`, which applies Include files, duplicates, and Match
+# blocks), closing the false-PASS gap where a correct line in sshd_config is
+# overridden by an earlier Include/sshd_config.d drop-in. Without the variable
+# the verification keeps the historical stat + slurp behavior.
 - name: Common config line | Gather package facts
   ansible.builtin.package_facts:
     manager: auto
+
+- name: Common config line | Resolve effective configuration
+  ansible.builtin.command:
+    cmd: "{{ cis_linux_common_config_line_effective_command }}"
+  register: cis_linux_common_config_line_effective
+  become: true
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_config_line_effective_command | default('') | trim | length > 0
+
+- name: Common config line | Inspect existing configuration file
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_config_line_path }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: cis_linux_common_config_line_stat
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_config_line_effective_command | default('') | trim | length == 0
 
 - name: Common config line | Read configuration
   ansible.builtin.slurp:
     src: "{{ cis_linux_common_config_line_path }}"
   register: cis_linux_common_config_line_content
-  when: cis_linux_common_config_line_package in ansible_facts.packages
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_config_line_effective_command | default('') | trim | length == 0
+    - cis_linux_common_config_line_stat.stat.exists | default(false)
+    - cis_linux_common_config_line_stat.stat.isreg | default(false)
+    - cis_linux_common_config_line_stat.stat.readable | default(false)
 
 - name: Common config line | Verify authorized configuration line
   ansible.builtin.assert:
     that:
       - cis_linux_common_config_line_package not in ansible_facts.packages or
-        (cis_linux_common_config_line_content.content | default('') | b64decode) is search(cis_linux_common_config_line_regexp, multiline=True)
-    fail_msg: The authorized time synchronization configuration line is missing.
+        ((cis_linux_common_config_line_effective | default({})).stdout | default('') is
+         search(cis_linux_common_config_line_regexp, ignorecase=True, multiline=True)
+         if cis_linux_common_config_line_effective_command | default('') | trim | length > 0
+         else (cis_linux_common_config_line_content.content | default('') | b64decode) is
+         search(cis_linux_common_config_line_regexp, multiline=True))
+    fail_msg: "The required configuration line is missing or the file is absent/unreadable: pattern {{ cis_linux_common_config_line_regexp }} in {{ cis_linux_common_config_line_path }}"
     success_msg: Configuration line verification passed.

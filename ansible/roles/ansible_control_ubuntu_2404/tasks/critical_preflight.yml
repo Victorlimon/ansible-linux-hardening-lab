@@ -1,0 +1,67 @@
+---
+- name: Require an explicit complete critical-stage policy
+  ansible.builtin.assert:
+    that:
+      - controller_policy_approved | bool
+      - controller_repository_path == (role_path | dirname | dirname | realpath)
+      - controller_repository_path == (controller_repository_path | realpath)
+      - controller_repository_path is match('^/(home|opt|srv)/[^/]+')
+      - controller_repository_owner | length > 0
+      - controller_repository_group | length > 0
+      - controller_repository_mode in ['0700', '0750']
+      - controller_private_paths | length > 0
+    fail_msg: Critical stage requires the canonical current Ansible checkout under /home, /opt or /srv and an explicit audit policy.
+
+- name: Check the approved controller repository path
+  ansible.builtin.stat:
+    path: "{{ controller_repository_path }}"
+    follow: false
+  register: controller_repository_stat
+
+- name: Reject a missing or linked controller repository
+  ansible.builtin.assert:
+    that:
+      - controller_repository_stat.stat.isdir | default(false)
+      - not (controller_repository_stat.stat.islnk | default(false))
+      - controller_repository_stat.stat.pw_name | default('') == controller_repository_owner
+      - controller_repository_stat.stat.gr_name | default('') == controller_repository_group
+    fail_msg: The repository must be a real directory already owned by the approved user and group.
+
+- name: Validate every private-path policy entry
+  ansible.builtin.assert:
+    that:
+      - item.path is string
+      - item.path | length > 1
+      - item.path.startswith('/')
+      - "'..' not in item.path.split('/')"
+      - item.owner is string
+      - item.owner | length > 0
+      - item.group is string
+      - item.group | length > 0
+      - item.mode in ['0600', '0640']
+    fail_msg: Each private path needs an absolute file path, owner, group and restrictive mode.
+  loop: "{{ controller_private_paths }}"
+  loop_control:
+    label: "{{ item.path | default('invalid path') }}"
+
+- name: Check every approved private file before changing permissions
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+    follow: false
+  loop: "{{ controller_private_paths }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: controller_private_stat
+
+- name: Reject missing or linked private files
+  ansible.builtin.assert:
+    that:
+      - item.stat.isreg | default(false)
+      - not (item.stat.islnk | default(false))
+      - item.stat.pw_name | default('') == item.item.owner
+      - item.stat.gr_name | default('') == item.item.group
+      - item.stat.mode | default('') == item.item.mode
+    fail_msg: Every private path must already be a regular file with the approved owner, group and mode; this role does not alter it.
+  loop: "{{ controller_private_stat.results }}"
+  loop_control:
+    label: "{{ item.item.path }}"

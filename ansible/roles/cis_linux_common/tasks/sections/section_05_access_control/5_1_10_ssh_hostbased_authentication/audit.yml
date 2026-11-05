@@ -1,4 +1,6 @@
 ---
 - name: CIS 5.1.10 | Audit | Delegate to config-line mechanism
   ansible.builtin.import_tasks: mechanisms/config_line/audit.yml
-  vars: {cis_linux_common_config_line_regexp: '^HostbasedAuthentication no$'}
+  vars:
+    cis_linux_common_config_line_effective_command: 'sshd -T'
+    cis_linux_common_config_line_regexp: '^[ \t]*hostbasedauthentication[ \t]+no[ \t]*$'

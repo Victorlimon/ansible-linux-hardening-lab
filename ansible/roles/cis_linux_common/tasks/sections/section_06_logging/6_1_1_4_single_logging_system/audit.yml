@@ -2,7 +2,12 @@
 - name: CIS 6.1.1.4 | Audit | Gather logging service facts
   ansible.builtin.service_facts:
 
-- name: CIS 6.1.1.4 | Audit | Count active logging daemons
+- name: CIS 6.1.1.4 | Audit | Validate selected logging system
+  ansible.builtin.assert:
+    that: cis_linux_common_logging_system in ['journald', 'rsyslog']
+    fail_msg: Select journald or rsyslog as the single logging system.
+
+- name: CIS 6.1.1.4 | Audit | Evaluate selected logging system
   ansible.builtin.set_fact:
     cis_linux_common_logging_daemon_count: >-
       {{ [
@@ -10,12 +15,30 @@
         ansible_facts.services.get('rsyslog.service', {}).get('state') == 'running',
         ansible_facts.services.get('syslog-ng.service', {}).get('state') == 'running'
       ] | select('equalto', true) | list | length }}
+    cis_linux_common_logging_selected_running: >-
+      {{
+        ansible_facts.services.get(
+          'systemd-journald.service' if cis_linux_common_logging_system == 'journald'
+          else 'rsyslog.service', {}
+        ).get('state') == 'running'
+      }}
+    cis_linux_common_logging_competing_running: >-
+      {{
+        ansible_facts.services.get('syslog-ng.service', {}).get('state') == 'running'
+        or (
+          cis_linux_common_logging_system == 'journald' and
+          ansible_facts.services.get('rsyslog.service', {}).get('state') == 'running'
+        )
+      }}
 
 - name: CIS 6.1.1.4 | Audit | Report logging exclusivity
   ansible.builtin.debug:
     msg:
       control: "{{ cis_linux_common_control_id }}"
       platform: "{{ cis_linux_common_platform }}"
-      classification: "{{ 'PASS' if cis_linux_common_logging_daemon_count <= 1 else 'FAIL' }}"
+      classification: "{{ 'PASS' if cis_linux_common_logging_selected_running and not cis_linux_common_logging_competing_running else 'FAIL' }}"
+      selected_system: "{{ cis_linux_common_logging_system }}"
+      selected_running: "{{ cis_linux_common_logging_selected_running }}"
+      competing_running: "{{ cis_linux_common_logging_competing_running }}"
       active_daemons: "{{ cis_linux_common_logging_daemon_count }}"
       changed_target: false

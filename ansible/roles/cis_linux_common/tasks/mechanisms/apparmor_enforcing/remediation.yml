@@ -1,4 +1,16 @@
 ---
+- name: Common AppArmor enforcing | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Common AppArmor enforcing | Ensure apparmor-utils provides aa-enforce
+  ansible.builtin.apt:
+    name: apparmor-utils
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: '"apparmor-utils" not in ansible_facts.packages'
+
 - name: Common AppArmor enforcing | Set profiles to enforcing mode
   ansible.builtin.shell: aa-enforce /etc/apparmor.d/*
   when: cis_linux_common_apparmor_strict | bool

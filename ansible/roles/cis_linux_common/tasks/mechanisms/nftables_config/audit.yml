@@ -7,12 +7,20 @@
   failed_when: false
 
 - name: Common nftables | Report ruleset state
+  vars:
+    cis_linux_common_nftables_patterns_present: >-
+      {%- set matches = namespace(all=true) -%}
+      {%- for pattern in cis_linux_common_nftables_expected_patterns -%}
+        {%- if cis_linux_common_nftables_ruleset.stdout | default('') is not search(pattern) -%}
+          {%- set matches.all = false -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ matches.all }}
   ansible.builtin.debug:
     msg:
       control: "{{ cis_linux_common_control_id }}"
       platform: "{{ cis_linux_common_platform }}"
       classification: >-
         {{ 'PASS' if cis_linux_common_nftables_ruleset.rc == 0 and
-           (cis_linux_common_nftables_expected_patterns | select('search', cis_linux_common_nftables_ruleset.stdout) | list | length)
-           == (cis_linux_common_nftables_expected_patterns | length) else 'FAIL' }}
+           cis_linux_common_nftables_patterns_present | bool else 'FAIL' }}
       changed_target: false

@@ -1,0 +1,101 @@
+---
+# CIS 5.2.7 evidence collector shared by audit and verification. The benchmark
+# requires BOTH an active PAM line `auth required|requisite pam_wheel.so
+# use_uid group=<group_name>` in /etc/pam.d/su AND that the named group exists
+# with no users. A group-members list alone is the benchmark check; the
+# primary-GID check below is stronger on purpose because Linux-PAM's
+# pam_wheel (pam_modutil_user_in_group_uid_gid) also grants access to users
+# whose primary GID is the named group.
+- name: CIS 5.2.7 | Inspect | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+- name: CIS 5.2.7 | Inspect | Stat su PAM configuration
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_config_line_path }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: cis_linux_common_su_restriction_pam_stat
+- name: CIS 5.2.7 | Inspect | Read su PAM configuration
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_config_line_path }}"
+  register: cis_linux_common_su_restriction_pam_content
+  failed_when: false
+  when:
+    - cis_linux_common_su_restriction_pam_stat.stat.exists | default(false)
+    - cis_linux_common_su_restriction_pam_stat.stat.isreg | default(false)
+    - cis_linux_common_su_restriction_pam_stat.stat.readable | default(false)
+- name: CIS 5.2.7 | Inspect | Query su-restriction group from NSS
+  ansible.builtin.getent:
+    database: group
+    key: "{{ cis_linux_common_su_restriction_group }}"
+    fail_key: false
+  register: cis_linux_common_su_restriction_group_entry
+  failed_when: false
+- name: CIS 5.2.7 | Inspect | Enumerate passwd database from NSS
+  ansible.builtin.getent:
+    database: passwd
+  register: cis_linux_common_su_restriction_passwd_entries
+  failed_when: false
+- name: CIS 5.2.7 | Inspect | Extract PAM line evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_su_restriction_file_readable: >-
+      {{ cis_linux_common_su_restriction_pam_stat.stat.exists | default(false)
+         and cis_linux_common_su_restriction_pam_stat.stat.isreg | default(false)
+         and cis_linux_common_su_restriction_pam_stat.stat.readable | default(false) }}
+    cis_linux_common_su_restriction_expected_line: "{{ 'auth required pam_wheel.so use_uid group=' ~ cis_linux_common_su_restriction_group }}"
+    cis_linux_common_su_restriction_active_wheel_lines: >-
+      {{ (cis_linux_common_su_restriction_pam_content.content | default('', true) | b64decode).splitlines()
+         | map('trim')
+         | map('regex_replace', '\s+', ' ')
+         | select('match', '^auth (required|requisite) pam_wheel\.so( |$)')
+         | reject('search', '#')
+         | list }}
+- name: CIS 5.2.7 | Inspect | Extract group evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_su_restriction_group_record: >-
+      {{ ((cis_linux_common_su_restriction_group_entry.ansible_facts | default({}, true))
+          .get('getent_group', {}))
+         .get(cis_linux_common_su_restriction_group) }}
+- name: CIS 5.2.7 | Inspect | Derive group membership evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_su_restriction_group_gid: >-
+      {{ (cis_linux_common_su_restriction_group_record[1] | string)
+         if (cis_linux_common_su_restriction_group_record is not none
+             and cis_linux_common_su_restriction_group_record | length >= 3)
+         else '' }}
+    cis_linux_common_su_restriction_group_members: >-
+      {{ ((cis_linux_common_su_restriction_group_record[2] | replace(' ', '')).split(','))
+         | reject('equalto', '') | list
+         if (cis_linux_common_su_restriction_group_record is not none
+             and cis_linux_common_su_restriction_group_record | length >= 3)
+         else ([] if cis_linux_common_su_restriction_group_record is none
+             else ['<unreadable group record>']) }}
+- name: CIS 5.2.7 | Inspect | Find users holding the group as primary GID
+  ansible.builtin.set_fact:
+    cis_linux_common_su_restriction_group_primary_holders: >-
+      {{ ((cis_linux_common_su_restriction_passwd_entries.ansible_facts
+           | default({}, true)).get('getent_passwd', {})) | dict2items
+         | selectattr('value.2', 'equalto', cis_linux_common_su_restriction_group_gid)
+         | map(attribute='key') | list
+         if cis_linux_common_su_restriction_group_gid | length > 0 else [] }}
+- name: CIS 5.2.7 | Inspect | Summarize compliance findings
+  ansible.builtin.set_fact:
+    cis_linux_common_su_restriction_line_compliant: >-
+      {{ cis_linux_common_su_restriction_active_wheel_lines | length == 1
+         and cis_linux_common_su_restriction_active_wheel_lines[0]
+            == cis_linux_common_su_restriction_expected_line }}
+    cis_linux_common_su_restriction_group_empty: >-
+      {{ cis_linux_common_su_restriction_group_record is not none
+         and (cis_linux_common_su_restriction_group_gid | length > 0)
+         and (cis_linux_common_su_restriction_group_members | length == 0)
+         and (cis_linux_common_su_restriction_group_primary_holders | length == 0) }}
+    cis_linux_common_su_restriction_compliant: >-
+      {{ cis_linux_common_su_restriction_file_readable
+         and cis_linux_common_su_restriction_active_wheel_lines | length == 1
+         and cis_linux_common_su_restriction_active_wheel_lines[0]
+            == cis_linux_common_su_restriction_expected_line
+         and cis_linux_common_su_restriction_group_record is not none
+         and (cis_linux_common_su_restriction_group_gid | length > 0)
+         and (cis_linux_common_su_restriction_group_members | length == 0)
+         and (cis_linux_common_su_restriction_group_primary_holders | length == 0) }}

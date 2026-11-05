@@ -1,4 +1,33 @@
 ---
+# Specific safe remediations first; the generic no-op fallback stays manual for
+# the account-integrity checks whose automated fix could lock accounts.
+
+- name: Common account integrity | Set inactive password lock default
+  ansible.builtin.lineinfile:
+    path: /etc/default/useradd
+    regexp: '^\s*#?\s*INACTIVE='
+    line: 'INACTIVE=45'
+    backup: true
+  when: cis_linux_common_account_check == 'inactive_lock'
+
+- name: Common account integrity | Set root shell umask in bashrc
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    regexp: '^\s*umask\s+'
+    line: 'umask 027'
+    create: true
+    mode: '0644'
+  when: cis_linux_common_account_check == 'root_umask'
+
+- name: Common account integrity | Set root shell umask in profile
+  ansible.builtin.lineinfile:
+    path: /root/.profile
+    regexp: '^\s*umask\s+'
+    line: 'umask 027'
+    create: true
+    mode: '0644'
+  when: cis_linux_common_account_check == 'root_umask'
+
 - name: Common account integrity | Report manual remediation
   ansible.builtin.debug:
     msg: >-
@@ -6,3 +35,4 @@
       requires operator review; automated remediation is intentionally withheld
       because it can lock accounts or break authentication.
   changed_when: false
+  when: cis_linux_common_account_check not in ['inactive_lock', 'root_umask']

@@ -1,0 +1,97 @@
+---
+# Shared read-only inspection for the CIS shadow-password-suite controls
+# configured through /etc/login.defs (5.4.1.1 PASS_MAX_DAYS, 5.4.1.3
+# PASS_WARN_AGE, 5.4.1.4 ENCRYPT_METHOD). The generic config_line mechanism
+# cannot express the benchmark semantics of this family: the audit accepts a
+# BOUNDED VALUE SET (PASS_MAX_DAYS 1..365, PASS_WARN_AGE 7+, ENCRYPT_METHOD
+# SHA512|YESCRYPT), not one pinned string, and the audit has a second corpus:
+# per-user settings already frozen in /etc/shadow that the login.defs line
+# alone does not prove. A pinned config_line regexp both false-fails stricter
+# site values and false-passes a replaced-but-appended line, because
+# shadow-utils keeps the FIRST occurrence of a duplicated login.defs keyword:
+# appending "PASS_MAX_DAYS 365" under the packaged "PASS_MAX_DAYS 99999"
+# changes nothing yet would match a pinned regexp.
+#
+# Inputs supplied by the delegating control:
+#   cis_linux_common_logindefs_param         - keyword name, for evidence.
+#   cis_linux_common_logindefs_active_regex  - (?im) regex matching any active
+#     (uncommented) line starting with the keyword; the whole line is
+#     captured (group-free).
+#   cis_linux_common_logindefs_value_regex   - (?i) regex the single active
+#     line must satisfy to be compliant (the benchmark value set).
+#   cis_linux_common_logindefs_line_regexp   - lineinfile regexp for the same
+#     keyword (single-line semantics).
+#   cis_linux_common_logindefs_shadow_cmd    - the benchmark /etc/shadow
+#     awk probe (read-only, empty stdout = compliant); '' when the control
+#     has no shadow dimension (5.4.1.4).
+#
+# Verdict semantics (deterministic): the keyword must appear EXACTLY once as
+# an active line and that line must match the value set; with a shadow
+# dimension, every password-bearing account must already satisfy the bound
+# (benchmark second audit command). A missing/unreadable /etc/login.defs, an
+# unreadable probe, or duplicate active lines fail closed with evidence:
+# duplicates require manual consolidation, mirroring the pwquality family.
+# Nothing here writes anything.
+
+- name: Common login.defs parameter | Inspect /etc/login.defs
+  ansible.builtin.stat:
+    path: /etc/login.defs
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: cis_linux_common_logindefs_stat
+
+- name: Common login.defs parameter | Read /etc/login.defs
+  ansible.builtin.slurp:
+    src: /etc/login.defs
+  when:
+    - cis_linux_common_logindefs_stat.stat.exists | default(false)
+    - cis_linux_common_logindefs_stat.stat.isreg | default(false)
+    - cis_linux_common_logindefs_stat.stat.readable | default(false)
+  failed_when: false
+  register: cis_linux_common_logindefs_slurp
+
+- name: Common login.defs parameter | Derive unreadable evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_logindefs_unreadable: >-
+      {{ ['/etc/login.defs']
+         if (cis_linux_common_logindefs_slurp.content is not defined)
+         else [] }}
+
+- name: Common login.defs parameter | Collect the active keyword lines
+  ansible.builtin.set_fact:
+    cis_linux_common_logindefs_active_lines: >-
+      {{ (cis_linux_common_logindefs_slurp.content | default('') | b64decode)
+         | regex_findall(cis_linux_common_logindefs_active_regex) }}
+    cis_linux_common_logindefs_compliant_lines: >-
+      {{ ((cis_linux_common_logindefs_slurp.content | default('') | b64decode)
+          | regex_findall(cis_linux_common_logindefs_active_regex))
+         | select('search', cis_linux_common_logindefs_value_regex)
+         | list }}
+
+- name: Common login.defs parameter | Probe the /etc/shadow dimension
+  ansible.builtin.shell: "{{ cis_linux_common_logindefs_shadow_cmd }}"
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when:
+    - cis_linux_common_logindefs_unreadable | length == 0
+    - cis_linux_common_logindefs_shadow_cmd | length > 0
+  register: cis_linux_common_logindefs_shadow_probe
+
+- name: Common login.defs parameter | Freeze the shadow violation evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_logindefs_shadow_violations: >-
+      {{ cis_linux_common_logindefs_shadow_probe.stdout_lines
+         | reject('match', '^[ \t]*$') | list
+         if (cis_linux_common_logindefs_unreadable | length == 0
+             and cis_linux_common_logindefs_shadow_cmd | length > 0)
+         else [] }}
+
+- name: Common login.defs parameter | Aggregate the parameter verdict
+  ansible.builtin.set_fact:
+    cis_linux_common_logindefs_ok: >-
+      {{ cis_linux_common_logindefs_unreadable | length == 0
+         and cis_linux_common_logindefs_active_lines | length == 1
+         and cis_linux_common_logindefs_compliant_lines | length == 1
+         and cis_linux_common_logindefs_shadow_violations | length == 0 }}

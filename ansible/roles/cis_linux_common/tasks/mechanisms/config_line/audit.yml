@@ -1,14 +1,32 @@
 ---
+# Optional cis_linux_common_config_line_effective_command switches this
+# mechanism from single-file presence to effective-configuration resolution
+# (for example `sshd -T`, which applies Include files, duplicates, and Match
+# blocks). Without the variable the audit keeps the historical slurp behavior.
 - name: Common config line | Gather package facts
   ansible.builtin.package_facts:
     manager: auto
+
+- name: Common config line | Resolve effective configuration
+  ansible.builtin.command:
+    cmd: "{{ cis_linux_common_config_line_effective_command }}"
+  register: cis_linux_common_config_line_effective
+  become: true
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_config_line_effective_command | default('') | trim | length > 0
 
 - name: Common config line | Read configuration
   ansible.builtin.slurp:
     src: "{{ cis_linux_common_config_line_path }}"
   register: cis_linux_common_config_line_content
   failed_when: false
-  when: cis_linux_common_config_line_package in ansible_facts.packages
+  when:
+    - cis_linux_common_config_line_package in ansible_facts.packages
+    - cis_linux_common_config_line_effective_command | default('') | trim | length == 0
 
 - name: Common config line | Report line state
   ansible.builtin.debug:
@@ -17,5 +35,9 @@
       platform: "{{ cis_linux_common_platform }}"
       classification: >-
         {{ 'NOT_APPLICABLE' if cis_linux_common_config_line_package not in ansible_facts.packages else
-           ('PASS' if (cis_linux_common_config_line_content.content | default('') | b64decode) is search(cis_linux_common_config_line_regexp, multiline=True) else 'FAIL') }}
+           ('PASS' if ((cis_linux_common_config_line_effective | default({})).stdout | default('') is
+              search(cis_linux_common_config_line_regexp, ignorecase=True, multiline=True)
+              if cis_linux_common_config_line_effective_command | default('') | trim | length > 0
+              else (cis_linux_common_config_line_content.content | default('') | b64decode) is
+              search(cis_linux_common_config_line_regexp, multiline=True)) else 'FAIL') }}
       changed_target: false

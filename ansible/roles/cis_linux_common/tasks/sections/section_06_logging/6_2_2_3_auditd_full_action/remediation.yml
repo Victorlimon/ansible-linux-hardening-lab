@@ -1,6 +1,10 @@
 ---
-- name: Config line remediation | Delegate to config_line
+# Remediation writes the benchmark example values (disk_full_action = halt,
+# disk_error_action = halt); the matching regexp is intentionally broad so an
+# existing non-compliant value (for example suspend) is replaced in place.
+- name: CIS 6.2.2.3 | Remediation | Set disk-full action
   ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
-  vars:
-    cis_linux_common_config_line: 'space_left_action = email'
-    cis_linux_common_config_line_regexp: '^space_left_action\s*=\s*email'
+  vars: {cis_linux_common_config_line: 'disk_full_action = halt', cis_linux_common_config_line_regexp: '(?i)^\s*disk_full_action\s*=', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}
+- name: CIS 6.2.2.3 | Remediation | Set disk-error action
+  ansible.builtin.import_tasks: mechanisms/config_line/remediation.yml
+  vars: {cis_linux_common_config_line: 'disk_error_action = halt', cis_linux_common_config_line_regexp: '(?i)^\s*disk_error_action\s*=', cis_linux_common_config_line_path: /etc/audit/auditd.conf, cis_linux_common_config_line_package: auditd}

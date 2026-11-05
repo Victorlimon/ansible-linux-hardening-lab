@@ -1,3 +1,15 @@
 ---
+- name: CIS 1.5.5 | Remediation | Inspect Apport package
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: CIS 1.5.5 | Remediation | Disable automatic error reporting persistently
+  ansible.builtin.lineinfile:
+    path: /etc/default/apport
+    regexp: '^\s*enabled\s*='
+    line: enabled=0
+    create: false
+  when: "'apport' in ansible_facts.packages"
+
 - name: service_disabled remediation | Delegate to mechanism
   ansible.builtin.import_tasks: mechanisms/service_disabled/remediation.yml

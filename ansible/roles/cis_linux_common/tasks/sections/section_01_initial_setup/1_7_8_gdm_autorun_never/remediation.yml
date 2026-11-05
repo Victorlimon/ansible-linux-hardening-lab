@@ -1,0 +1,22 @@
+---
+# CIS 1.7.8 remediation: benchmark machine-wide branch — a local.d keyfile
+# setting autorun-never=true (the value the gsettings audit reads) plus the
+# local dconf user profile, then dconf update. The benchmark page's "locks/"
+# wording is an upstream errata: lock files hold paths, not values, so they
+# can never change what 1.7.8's gsettings audit reads. Keyfile path is the
+# one used by the upstream CIS remediation script. No-op while gdm3 is
+# absent; opt-in behind the
+# cis_<platform>_1_7_8_gdm_autorun_never_remediate gate (default false).
+- name: CIS 1.7.8 | Remediation | Delegate the GDM autorun-never dconf artifacts
+  ansible.builtin.import_tasks: mechanisms/gdm_configuration/remediation.yml
+  vars:
+    cis_linux_common_gdm_remediate_files:
+      - path: /etc/dconf/db/local.d/00-media-autorun
+        content: |
+          [org/gnome/desktop/media-handling]
+          autorun-never=true
+    cis_linux_common_gdm_remediate_profiles:
+      - path: /etc/dconf/profile/user
+        lines:
+          - user-db:user
+          - system-db:local

@@ -1,0 +1,15 @@
+---
+- name: Common GDM configuration | Inspect benchmark state
+  ansible.builtin.import_tasks: mechanisms/gdm_configuration/inspect.yml
+
+- name: Common GDM configuration | Report benchmark state
+  ansible.builtin.debug:
+    msg:
+      control: "{{ cis_linux_common_control_id }}"
+      platform: "{{ cis_linux_common_platform }}"
+      benchmark: "{{ cis_linux_common_benchmark }}"
+      classification: "{{ cis_linux_common_gdm_state }}"
+      gate_package: "{{ cis_linux_common_gdm_gate_package }}"
+      gdm_installed: "{{ cis_linux_common_gdm_installed }}"
+      evidence: "{{ cis_linux_common_gdm_evidence }}"
+      changed_target: false

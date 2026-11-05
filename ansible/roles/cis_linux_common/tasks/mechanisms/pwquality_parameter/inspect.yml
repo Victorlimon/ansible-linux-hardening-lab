@@ -1,0 +1,140 @@
+---
+# Shared read-only inspection for the CIS pwquality family (5.3.3.2.1, .2,
+# .4, .5, .6, .7, .8). The benchmark audit corpus is
+# /etc/security/pwquality.conf plus every *.conf file in
+# /etc/security/pwquality.conf.d: a named line is an active
+# (uncommented) line starting with the parameter name, mirroring the
+# benchmark greps '^\h*<param>...' (case-insensitive, tab-or-space
+# horizontal whitespace). Inline arguments on a rendered pam_pwquality.so
+# password line override the configuration files (empirically verified on
+# both lab platforms), so the per-control forbidden inline regex —
+# translated verbatim from each benchmark Audit section — is scanned across
+# /etc/pam.d and /usr/share/pam-configs. An unreadable file cannot prove
+# the absence of a forbidden value, so it fails closed with evidence.
+# Nothing here writes anything.
+
+- name: Common pwquality parameter | Reset the per-inspection accumulators
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_named_by_source: []
+    cis_linux_common_pwq_inline_override_files: []
+
+- name: Common pwquality parameter | Inspect the main configuration file
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_pwq_main_file }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: cis_linux_common_pwq_main_stat
+
+- name: Common pwquality parameter | Read the main configuration file
+  ansible.builtin.slurp:
+    src: "{{ cis_linux_common_pwq_main_file }}"
+  when:
+    - cis_linux_common_pwq_main_stat.stat.exists | default(false)
+    - cis_linux_common_pwq_main_stat.stat.isreg | default(false)
+    - cis_linux_common_pwq_main_stat.stat.readable | default(false)
+  failed_when: false
+  register: cis_linux_common_pwq_main_slurp
+
+- name: Common pwquality parameter | Inspect the managed drop-in file
+  ansible.builtin.stat:
+    path: "{{ cis_linux_common_pwq_managed_path }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: cis_linux_common_pwq_managed_stat
+
+- name: Common pwquality parameter | Discover conf.d configuration files
+  ansible.builtin.find:
+    paths: "{{ cis_linux_common_pwq_conf_d }}"
+    file_type: file
+    hidden: false
+    recurse: false
+    patterns:
+      - '*.conf'
+  register: cis_linux_common_pwq_confd_find
+
+- name: Common pwquality parameter | Read every conf.d configuration file
+  ansible.builtin.slurp:
+    src: "{{ item.path }}"
+  loop: "{{ cis_linux_common_pwq_confd_find.files | default([], true) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  failed_when: false
+  register: cis_linux_common_pwq_confd_scan
+
+- name: Common pwquality parameter | Discover PAM configuration files
+  ansible.builtin.find:
+    paths: "{{ item }}"
+    file_type: file
+    hidden: false
+    recurse: false
+  loop:
+    - /etc/pam.d
+    - /usr/share/pam-configs
+  register: cis_linux_common_pwq_pam_find
+
+- name: Common pwquality parameter | Read every PAM configuration file
+  ansible.builtin.slurp:
+    src: "{{ item.1.path }}"
+  loop: >-
+    {{ cis_linux_common_pwq_pam_find.results
+       | subelements('files', skip_missing=true) }}
+  loop_control:
+    label: "{{ item.1.path }}"
+  failed_when: false
+  register: cis_linux_common_pwq_pam_scan
+
+- name: Common pwquality parameter | Derive uninspectable evidence
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_unreadable_files: >-
+      {{ (
+           ([cis_linux_common_pwq_main_file]
+            if cis_linux_common_pwq_main_stat.stat.exists | default(false)
+               and cis_linux_common_pwq_main_slurp.content is not defined
+            else [])
+           + (cis_linux_common_pwq_confd_find.files | default([], true)
+              | map(attribute='path') | list
+              | difference(cis_linux_common_pwq_confd_scan.results
+                          | default([], true)
+                          | selectattr('content', 'defined')
+                          | map(attribute='source') | unique | list))
+           + (cis_linux_common_pwq_pam_find.results
+              | subelements('files', skip_missing=true)
+              | map(attribute='1.path') | list
+              | difference(cis_linux_common_pwq_pam_scan.results
+                          | default([], true)
+                          | selectattr('content', 'defined')
+                          | map(attribute='source') | unique | list))
+         ) | unique | sort }}
+
+- name: Common pwquality parameter | Collect named lines per configuration source
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_named_by_source: >-
+      {{ cis_linux_common_pwq_named_by_source
+         + [{'path': item.source,
+             'named': (item.content | b64decode)
+                      | regex_findall(cis_linux_common_pwq_name_regex)}] }}
+  loop: >-
+    {{ ( [cis_linux_common_pwq_main_slurp]
+         + (cis_linux_common_pwq_confd_scan.results | default([], true)) )
+       | selectattr('content', 'defined') | list }}
+  loop_control:
+    label: "{{ item.source }}"
+
+- name: Common pwquality parameter | Flag files with forbidden inline overrides
+  ansible.builtin.set_fact:
+    cis_linux_common_pwq_inline_override_files: >-
+      {{ cis_linux_common_pwq_inline_override_files
+         + [item.source]
+         if (item.content | b64decode)
+            is search(cis_linux_common_pwq_inline_bad_regex)
+         else cis_linux_common_pwq_inline_override_files }}
+  loop: >-
+    {{ cis_linux_common_pwq_pam_scan.results
+       | default([], true)
+       | selectattr('content', 'defined')
+       | list }}
+  loop_control:
+    label: "{{ item.source }}"
+  when: cis_linux_common_pwq_inline_bad_regex != ''
