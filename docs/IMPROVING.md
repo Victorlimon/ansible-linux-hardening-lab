@@ -73,13 +73,15 @@ plantillas de producción.
 Cosas detectadas en el relevamiento que conviene corregir (no bloquean, pero
 ensucian):
 
-1. **Variables de firewall legadas sin consumir.** En
+1. **Variables de firewall legadas parcialmente sin consumir.** En
    `ansible/inventories/local/group_vars/ubuntu_2404.yml` hay
    `cis_section4_firewall`, `cis_firewall_engine`,
-   `cis_ufw_ssh_allowed_sources`, `cis_ufw_authoritative_reset_confirmed`,
-   `cis_ufw_allowed_in_rules` y `cis_ufw_allowed_out_ports` que **ninguna tarea
-   consume**. El motor real es `cis_firewall` (+ `cis_ufw_ssh_port`). Hay que
-   reconciliar esas variables con el código o eliminarlas.
+   `cis_ufw_authoritative_reset_confirmed` y `cis_ufw_allowed_out_ports` que
+   **ninguna tarea consume**. `cis_ufw_ssh_allowed_sources` y
+   `cis_ufw_allowed_in_rules` ahora alimentan exclusivamente la remediación
+   UFW 4.2.6 de Ubuntu, sin reiniciar ni depurar reglas previas. El motor
+   real sigue siendo `cis_firewall`. Hay que reconciliar las otras variables
+   con el código o eliminarlas.
 2. **Patrón de hosts inconsistente en `verify`.** Los plays `verify` de Ubuntu
    apuntan al grupo `ubuntu_2404` mientras `audit`/`hardening` usan `ubuntu`.
    Revisá `playbooks/verify/cis_ubuntu_2404.yml`.

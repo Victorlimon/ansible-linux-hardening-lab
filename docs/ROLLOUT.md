@@ -133,6 +133,19 @@ exacto de cada selector antes de habilitarlo.
 4. Abrí una **conexión SSH nueva** y confirmá login antes de cerrar la sesión
    vieja. Si falla, recuperás desde consola o la sesión de respaldo.
 
+### Production-operator note: faillock remediation (5.3.2.2, 5.3.3.1.1–.3)
+
+The remediation pins the benchmark values `deny = 5` and `unlock_time = 900`
+in `/etc/security/faillock.conf`: stricter site values for those parameters
+are normalized back to the pinned line. Under `even_deny_root`, a
+`root_unlock_time` below 60 seconds is raised to `900`. The stack remediation
+enables the faillock profiles through `pam-auth-update`, which re-renders
+`/etc/pam.d/common-auth` and `common-account`; the forced re-render stays
+behind the explicit operator gate
+`cis_linux_common_faillock_pam_auth_update_force` (default `false`). Apply
+this family only with console or other out-of-band access ready for rollback,
+and confirm a fresh login before closing the backup session.
+
 ## Debian 12 — doble gate canario
 
 Debian usa los mismos playbooks pero exige el gate canario además del master:

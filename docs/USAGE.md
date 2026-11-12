@@ -157,11 +157,20 @@ La auditoría de esos controles sigue activa aunque la remediación esté apagad
 | `cis_ubuntu_2404_ipv6_site_policy` | `enabled` | defaults | Política de sitio IPv6 Ubuntu |
 | `cis_debian_12_ipv6_site_policy` | `undecided` | defaults | Política de sitio IPv6 Debian |
 
-⚠️ En `inventories/local/group_vars/ubuntu_2404.yml` hay variables de firewall
-legadas (`cis_section4_firewall`, `cis_firewall_engine`,
-`cis_ufw_ssh_allowed_sources`, etc.) que **no se consumen** en el código actual.
-El motor real es `cis_firewall`. (Ver [IMPROVING.md](IMPROVING.md) — deuda
-conocida.)
+En Ubuntu, la remediación UFW 4.2.6 exige al menos una red de administración
+IPv4/CIDR en `cis_ufw_ssh_allowed_sources` y aplica las reglas de servicios
+de `cis_ufw_allowed_in_rules` (`from_ip`, puerto numérico y protocolo TCP/UDP).
+Una lista SSH vacía o valores inválidos detienen el control antes de modificar
+UFW. Esta ruta no habilita UFW ni elimina reglas preexistentes: verificá la
+política efectiva y el acceso por consola antes de activar el firewall.
+`from_ip: any` en una regla de servicio abre ese puerto a cualquier origen;
+requiere revisión explícita. Una regla amplia ya existente puede seguir
+permitiendo SSH aunque la nueva allowlist sea restrictiva.
+
+⚠️ `cis_section4_firewall`, `cis_firewall_engine`,
+`cis_ufw_authoritative_reset_confirmed` y `cis_ufw_allowed_out_ports` siguen
+sin consumirse. El motor real es `cis_firewall`; Debian usa nftables por
+defecto. Ver [IMPROVING.md](IMPROVING.md).
 
 ## Inventario y usuarios
 

@@ -40,7 +40,9 @@ perfil" ni certificación de terceros.
 
 ## Requisitos
 
-- **Ansible Core 2.16 o posterior** en el nodo de control.
+- **Ansible Core 2.21.2** en el nodo de control para el laboratorio y la
+  implantación prevista. Verificá el ejecutable efectivo con
+  `ansible-playbook --version`.
 - Python 3 en los objetivos remotos.
 - Acceso SSH y `sudo` sin contraseña para el usuario remoto `ansible` (laboratorio).
 - Colecciones fijadas en `ansible/requirements.yml`:
@@ -61,9 +63,10 @@ ansible-galaxy collection install -r requirements.yml
 | [docs/ROLLOUT.md](docs/ROLLOUT.md) | Procedimiento de hardening por secciones gated |
 | [docs/LAB.md](docs/LAB.md) | Cómo se trabaja en el laboratorio Vagrant |
 | [docs/WAZUH.md](docs/WAZUH.md) | Integración con Wazuh y almacenamiento de logs |
+| [docs/PREPRODUCCION_WAZUH.md](docs/PREPRODUCCION_WAZUH.md) | Selección desde Wazuh y puerta de entrada a preproducción |
+| [docs/INTEGRACION_WAZUH_ANSIBLE.md](docs/INTEGRACION_WAZUH_ANSIBLE.md) | Evidencia comprobada en el laboratorio Wazuh 4.12.0 |
 | [docs/IMPROVING.md](docs/IMPROVING.md) | Cómo mejorar: calificación, mecanismos y nuevos controles |
 | [docs/SUPPORT.md](docs/SUPPORT.md) | Autoridad normativa de soporte y evidencia |
-| [docs/adr/](docs/adr/) | Decisiones de arquitectura versionadas |
 
 ## Ejecución segura rápida
 

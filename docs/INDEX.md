@@ -9,9 +9,10 @@ La documentación mantenida del proyecto es:
 | [ROLLOUT.md](ROLLOUT.md) | Procedimiento de hardening por secciones gated |
 | [LAB.md](LAB.md) | Cómo se trabaja en el laboratorio Vagrant |
 | [WAZUH.md](WAZUH.md) | Integración con Wazuh y almacenamiento de logs |
+| [PREPRODUCCION_WAZUH.md](PREPRODUCCION_WAZUH.md) | Orden desde Wazuh, selección y criterios de entrada a preproducción |
+| [INTEGRACION_WAZUH_ANSIBLE.md](INTEGRACION_WAZUH_ANSIBLE.md) | Evidencia FULL del laboratorio Wazuh 4.12.0 y sus límites |
 | [IMPROVING.md](IMPROVING.md) | Cómo mejorar: calificación, mecanismos, nuevos controles |
 | [SUPPORT.md](SUPPORT.md) | Autoridad normativa de soporte, evidencia y límites de afirmación |
-| [adr/README.md](adr/README.md) | Decisiones de arquitectura versionadas |
 | [SECURITY.md](../SECURITY.md) | Reporte de vulnerabilidades y respuesta ante secretos |
 
 ## Fuente de verdad de implementación
@@ -38,7 +39,7 @@ sigue vigente, revisá:
 
 - **Normativo:** `SUPPORT.md` y la política de seguridad.
 - **Operativo:** `USAGE.md`, `ROLLOUT.md`, `LAB.md`, `WAZUH.md`.
-- **Referencia:** `IMPROVING.md` y las decisiones de arquitectura en `adr/`.
+- **Referencia:** `IMPROVING.md` y la evidencia de integración.
 
 La referencia `ansible-documentation/` es documentación oficial local de consulta
 (Ansible) y no forma parte de la documentación editable del proyecto. Los
