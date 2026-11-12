@@ -13,6 +13,16 @@
     mode: '0600'
   when: cis_linux_common_restriction_package in ansible_facts.packages
 
+# The copy above never touches an existing file (force: false keeps its
+# authorized user list), so ownership and mode are enforced separately.
+- name: Common allow-deny restriction | Enforce allow file ownership and mode
+  ansible.builtin.file:
+    path: "{{ cis_linux_common_allow_path }}"
+    owner: root
+    group: root
+    mode: '0600'
+  when: cis_linux_common_restriction_package in ansible_facts.packages
+
 - name: Common allow-deny restriction | Remove deny file
   ansible.builtin.file:
     path: "{{ cis_linux_common_deny_path }}"

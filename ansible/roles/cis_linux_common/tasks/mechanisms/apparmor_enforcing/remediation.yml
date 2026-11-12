@@ -11,13 +11,30 @@
     cache_valid_time: 3600
   when: '"apparmor-utils" not in ansible_facts.packages'
 
+# aa-enforce rewrites every profile file on each call, so it only runs while
+# some loaded profile is still in complain or kill mode. Special unconfined
+# profiles are intentional and left as shipped. Otherwise the task reports ok
+# and leaves the files untouched.
 - name: Common AppArmor enforcing | Set profiles to enforcing mode
-  ansible.builtin.shell: aa-enforce /etc/apparmor.d/*
+  ansible.builtin.shell: |
+    if [ "$(aa-status --complaining)" = "0" ] && [ "$(aa-status --kill)" = "0" ]; then
+      echo UNCHANGED
+      exit 0
+    fi
+    aa-enforce /etc/apparmor.d/*
+    echo CHANGED
   when: cis_linux_common_apparmor_strict | bool
-  changed_when: true
+  register: cis_linux_common_apparmor_enforce_strict
+  changed_when: "'CHANGED' in cis_linux_common_apparmor_enforce_strict.stdout_lines"
 
 - name: Common AppArmor enforcing | Ensure profiles are loaded (enforce/complain)
   ansible.builtin.shell: |
+    if [ "$(aa-status --complaining 2>/dev/null)" = "0" ] && [ "$(aa-status --kill 2>/dev/null)" = "0" ]; then
+      echo UNCHANGED
+      exit 0
+    fi
     aa-enforce /etc/apparmor.d/* 2>/dev/null || true
+    echo CHANGED
   when: not (cis_linux_common_apparmor_strict | bool)
-  changed_when: true
+  register: cis_linux_common_apparmor_enforce_lenient
+  changed_when: "'CHANGED' in cis_linux_common_apparmor_enforce_lenient.stdout_lines"

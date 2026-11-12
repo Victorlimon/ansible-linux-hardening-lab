@@ -1,5 +1,9 @@
 ---
 - name: Common world-writable files | Remove world-writable bit
   ansible.builtin.shell: |
-    df --local -P | awk 'NR>1 {print $6}' | xargs -I '{}' find '{}' -xdev -type f -perm -0002 -print0 2>/dev/null | xargs -0 -r chmod o-w
-  changed_when: true
+    if df --local -P | awk 'NR>1 {print $6}' | xargs -I '{}' find '{}' -xdev -type f -perm -0002 -print -quit 2>/dev/null | grep -q .; then
+      df --local -P | awk 'NR>1 {print $6}' | xargs -I '{}' find '{}' -xdev -type f -perm -0002 -print0 2>/dev/null | xargs -0 -r chmod o-w
+      echo CHANGED
+    fi
+  register: cis_linux_common_world_writable_remediation
+  changed_when: "'CHANGED' in cis_linux_common_world_writable_remediation.stdout_lines"

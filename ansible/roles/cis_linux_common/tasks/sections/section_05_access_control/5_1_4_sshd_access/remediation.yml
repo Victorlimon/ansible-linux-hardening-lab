@@ -10,8 +10,10 @@
     line: "AllowUsers {{ cis_linux_common_sshd_allow_users }}"
     insertafter: '^\s*#?\s*PermitRootLogin'
     backup: true
+  register: cis_linux_common_sshd_allow_users_line
 
 - name: CIS 5.1.4 | Remediation | Reload sshd
   ansible.builtin.systemd:
     name: ssh
     state: reloaded
+  when: cis_linux_common_sshd_allow_users_line is changed
