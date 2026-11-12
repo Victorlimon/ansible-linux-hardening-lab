@@ -15,6 +15,11 @@ cis_ufw_ssh_allowed_sources:
   - 10.0.2.2/32
 # Añadir puertos sólo después de desplegar el servicio y aprobar sus orígenes.
 cis_ufw_allowed_in_rules: []
+# CIS 5.1.4: cuentas autorizadas por SSH (AllowUsers). Debe incluir el usuario
+# de conexión de Ansible; vagrant se mantiene para la consola del laboratorio.
+cis_ubuntu_2404_sshd_allow_users:
+  - vagrant
+  - ansible
 # EXCEPCIÓN de laboratorio VirtualBox (LAB EXCEPTION explícita; nunca es un
 # PASS ni declara conformidad CIS 2.3): VBoxService sincroniza el reloj con el
 # host y entra en conflicto con systemd-timesyncd (enabled pero inactivo; sin

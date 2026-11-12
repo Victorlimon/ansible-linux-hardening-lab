@@ -14,6 +14,10 @@ cis_production_min_root_free_mb: 2048
 cis_debian_12_remediation_enabled: false
 cis_debian_12_canary_confirmed: false
 
+# CIS 5.1.4 (AllowUsers): the remediation refuses to run while this is empty.
+# List every administrator plus the Ansible connection user.
+cis_debian_12_sshd_allow_users: []  # REPLACE, e.g. [admin1, ansible]
+
 # Banner changes require a separately approved local policy.
 cis_debian_12_banner_remediation_enabled: false
 cis_debian_12_banner_text_approved: false

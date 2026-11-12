@@ -18,6 +18,10 @@ cis_ufw_ssh_port: 22
 cis_ufw_ssh_allowed_sources: []  # REEMPLAZAR por redes reales de administración
 cis_ufw_allowed_in_rules: []  # Declarar cada servicio publicado y su origen
 
+# CIS 5.1.4 (AllowUsers): sin valor, la remediación se niega a ejecutarse.
+# Incluir todos los administradores y el usuario de conexión de Ansible.
+cis_ubuntu_2404_sshd_allow_users: []  # REEMPLAZAR, p. ej. [admin1, ansible]
+
 # Autenticación: habilitar PAM solo tras prueba de consola, SSH y sudo.
 cis_section5_3_pam: false
 # Si se sobrescribe cis_ssh_config, copiar el diccionario completo desde

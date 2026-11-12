@@ -1,14 +1,33 @@
 ---
 # CIS 5.1.4 — Ensure sshd access is configured. Requires at least one of
 # AllowUsers/AllowGroups/DenyUsers/DenyGroups. We enforce AllowUsers from the
-# site-policy variable cis_linux_common_sshd_allow_users (lab default below is
-# set in the platform wrapper); production must override it with its own list.
+# site-policy list cis_linux_common_sshd_allow_users, which each platform
+# wrapper maps from cis_<platform>_sshd_allow_users in the inventory. The
+# list has no default value: a wrong list locks every other account out.
+- name: CIS 5.1.4 | Remediation | Refuse an unsafe AllowUsers policy
+  ansible.builtin.assert:
+    that:
+      - cis_linux_common_sshd_allow_users is sequence
+      - cis_linux_common_sshd_allow_users is not string
+      - cis_linux_common_sshd_allow_users | length > 0
+      - cis_linux_common_sshd_allow_users | select('match', '^[a-z_][a-z0-9_.-]*$') | list | length
+        == cis_linux_common_sshd_allow_users | length
+      - ansible_user is not defined or ansible_user in cis_linux_common_sshd_allow_users
+    fail_msg: >-
+      CIS 5.1.4 needs cis_{{ cis_linux_common_platform }}_sshd_allow_users in the
+      inventory: a non-empty list of valid account names that includes the Ansible
+      connection user ({{ ansible_user | default('undefined') }}). Got
+      {{ cis_linux_common_sshd_allow_users }}. Applying AllowUsers without it
+      would lock the administrators out of SSH.
+    quiet: true
+
 - name: CIS 5.1.4 | Remediation | Restrict SSH access to authorized users
   ansible.builtin.lineinfile:
     path: "{{ cis_linux_common_config_line_path }}"
     regexp: '^\s*AllowUsers\s'
-    line: "AllowUsers {{ cis_linux_common_sshd_allow_users }}"
+    line: "AllowUsers {{ cis_linux_common_sshd_allow_users | join(' ') }}"
     insertafter: '^\s*#?\s*PermitRootLogin'
+    validate: /usr/sbin/sshd -t -f %s
     backup: true
   register: cis_linux_common_sshd_allow_users_line
 

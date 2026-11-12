@@ -415,6 +415,10 @@ cis_debian_12_5_4_3_1_nologin_shells_remediate: false
 cis_debian_12_5_4_1_2_min_password_days: true
 cis_debian_12_5_1_4_sshd_access: true
 cis_debian_12_5_1_4_sshd_access_remediate: false
+# Site policy for CIS 5.1.4: accounts allowed to log in over SSH (AllowUsers).
+# Empty on purpose: the remediation refuses to run until the inventory lists
+# the authorized administrators, including the Ansible connection user.
+cis_debian_12_sshd_allow_users: []
 # CIS 1.1.2.x mount controls audit the LIVE mount table via findmnt
 # (mount_options mechanism). Remediation is opt-in per control
 # (<control>_remediate: false default) and only achievable for the

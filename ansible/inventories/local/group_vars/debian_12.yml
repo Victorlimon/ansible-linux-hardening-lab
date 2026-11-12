@@ -7,6 +7,11 @@
 # agente de Wazuh y el gestor de paquetes; no es una lista de destinos.
 # No abrir otros puertos entrantes hasta desplegar y aprobar cada servicio.
 cis_debian_12_2_1_12_rpcbind_remediate: true
+# CIS 5.1.4: cuentas autorizadas por SSH (AllowUsers). Debe incluir el usuario
+# de conexión de Ansible; vagrant se mantiene para la consola del laboratorio.
+cis_debian_12_sshd_allow_users:
+  - vagrant
+  - ansible
 # EXCEPCIÓN del laboratorio VirtualBox (LAB EXCEPTION explícita; nunca es un
 # PASS ni declara conformidad): Guest Additions sincroniza con el host y su
 # servicio entra en conflicto con systemd-timesyncd. CIS 2.3 permite omitir
