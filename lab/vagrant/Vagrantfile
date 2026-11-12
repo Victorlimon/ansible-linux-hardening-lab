@@ -20,8 +20,8 @@ Vagrant.configure("2") do |config|
       mount_options: ["dmode=755,fmode=644"]
     node.vm.provider "virtualbox" do |vb|
       vb.name = "lab-ansible-control"
-      vb.memory = 2048
-      vb.cpus = 2
+      vb.memory = 1024
+      vb.cpus = 1
     end
   end
 
@@ -33,8 +33,8 @@ Vagrant.configure("2") do |config|
     node.vm.network "private_network", ip: "192.168.56.11"
     node.vm.provider "virtualbox" do |vb|
       vb.name = "lab-debian12"
-      vb.memory = 2048
-      vb.cpus = 2
+      vb.memory = 1024
+      vb.cpus = 1
     end
   end
 
@@ -46,8 +46,21 @@ Vagrant.configure("2") do |config|
     node.vm.network "private_network", ip: "192.168.56.12"
     node.vm.provider "virtualbox" do |vb|
       vb.name = "lab-ubuntu24"
-      vb.memory = 2048
-      vb.cpus = 2
+      vb.memory = 1024
+      vb.cpus = 1
     end
   end
+
+  # Ubuntu 24 - Wazuh
+  #config.vm.define "wazuh" do |node|
+  #  node.vm.box = "bento/ubuntu-24.04"
+  #  node.vm.box_version = "202510.26.0"
+  #  node.vm.hostname = "wazuh"
+  #  node.vm.network "private_network", ip: "192.168.56.13"
+  #  node.vm.provider "virtualbox" do |vb|
+  #    vb.name = "lab-wazuh"
+  #    vb.memory = 6144
+  #    vb.cpus = 2
+  #  end
+  #end
 end
