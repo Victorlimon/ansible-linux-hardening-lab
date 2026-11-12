@@ -1,0 +1,5 @@
+<command>
+  <name>ansible-job</name>
+  <executable>ansible-job</executable>
+  <timeout_allowed>no</timeout_allowed>
+</command>

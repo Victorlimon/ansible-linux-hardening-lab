@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "release_id": "approved_v1",
+  "ansible_root": "/opt/ansible-hardening/releases/approved_v1/payload/ansible",
+  "ansible_bin_dir": "/opt/ansible-hardening/releases/approved_v1/payload/runtime/bin",
+  "inventory": "/opt/ansible-hardening/releases/approved_v1/payload/inventory/hosts.yml",
+  "service_user": "ansible-wazuh",
+  "targets": {
+    "approved_target_01": {"host": "inventory_alias_01", "os": "ubuntu24"}
+  },
+  "controls": {
+    "cron_hourly": {"tag": "cis_2_4_1_3", "os": ["ubuntu24"]}
+  }
+}

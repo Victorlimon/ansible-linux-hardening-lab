@@ -1,0 +1,38 @@
+<group name="ansible_preview_lab,">
+  <rule id="100110" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="source" type="pcre2">^ansible-wazuh-preview$</field>
+    <field name="mode" type="pcre2">^check$</field>
+    <field name="host" type="pcre2">^(ubuntu24|debian12)$</field>
+    <field name="section" type="pcre2">^(cron_hourly|cron_daily)$</field>
+    <match type="pcre2">"status"\s*:\s*"(accepted|completed|failed)"</match>
+    <description>Evento de vista previa Ansible del laboratorio</description>
+  </rule>
+  <rule id="100115" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="source" type="pcre2">^ansible-wazuh-preview$</field>
+    <field name="mode" type="pcre2">^check$</field>
+    <match type="pcre2">"status"\s*:\s*"rejected"</match>
+    <description>Solicitud de vista previa Ansible rechazada</description>
+  </rule>
+  <rule id="100111" level="3">
+    <if_sid>100110</if_sid>
+    <match type="pcre2">"status"\s*:\s*"accepted"</match>
+    <description>Vista previa Ansible aceptada</description>
+  </rule>
+  <rule id="100112" level="5">
+    <if_sid>100110</if_sid>
+    <match type="pcre2">"status"\s*:\s*"completed"</match>
+    <description>Vista previa Ansible completada en modo de comprobación</description>
+  </rule>
+  <rule id="100113" level="8">
+    <if_sid>100110</if_sid>
+    <match type="pcre2">"status"\s*:\s*"failed"</match>
+    <description>Vista previa Ansible fallida</description>
+  </rule>
+  <rule id="100114" level="6">
+    <if_sid>100115</if_sid>
+    <match type="pcre2">"status"\s*:\s*"rejected"</match>
+    <description>Solicitud de vista previa Ansible rechazada</description>
+  </rule>
+</group>

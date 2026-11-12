@@ -1,0 +1,75 @@
+{
+  "releases": {
+    "lab_v10": {
+      "inventory_profiles": {
+        "ubuntu_lab": {
+          "platform": "ubuntu24",
+          "aliases": [
+            "ubuntu24"
+          ]
+        },
+        "debian_lab": {
+          "platform": "debian12",
+          "aliases": ["debian12"]
+        }
+      },
+      "host_profiles": {
+        "ubuntu24": {
+          "inventory_profile": "ubuntu_lab",
+          "platform": "ubuntu24",
+          "alias": "ubuntu24"
+        },
+        "debian12": {
+          "inventory_profile": "debian_lab",
+          "platform": "debian12",
+          "alias": "debian12"
+        }
+      },
+      "section_profiles": {
+        "ubuntu_cron_hourly": {
+          "host_profile": "ubuntu24", "section": "cron_hourly",
+          "tags": ["cis_2_4_1_3"],
+          "gates": ["cis_ubuntu_2404_remediation_enabled"],
+          "disposition": "automated", "network_rules": []
+        },
+        "ubuntu_cron_daily": {
+          "host_profile": "ubuntu24", "section": "cron_daily",
+          "tags": ["cis_2_4_1_4"],
+          "gates": ["cis_ubuntu_2404_remediation_enabled"],
+          "disposition": "automated", "network_rules": []
+        },
+        "debian_cron_hourly": {
+          "host_profile": "debian12", "section": "cron_hourly",
+          "tags": ["cis_2_4_1_3"],
+          "gates": ["cis_debian_12_remediation_enabled", "cis_debian_12_canary_confirmed"],
+          "disposition": "automated", "network_rules": []
+        },
+        "debian_cron_daily": {
+          "host_profile": "debian12", "section": "cron_daily",
+          "tags": ["cis_2_4_1_4"],
+          "gates": ["cis_debian_12_remediation_enabled", "cis_debian_12_canary_confirmed"],
+          "disposition": "automated", "network_rules": []
+        },
+        "ssh_baseline": {
+          "host_profile": "ubuntu24",
+          "section": "ssh",
+          "tags": [
+            "cis_5_2_1"
+          ],
+          "gates": [
+            "ssh_access_confirmed"
+          ],
+          "disposition": "gated_unsafe",
+          "network_rules": [
+            {
+              "service": "ssh",
+              "port": 22,
+              "protocol": "tcp",
+              "cidr": "10.20.30.0/24"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

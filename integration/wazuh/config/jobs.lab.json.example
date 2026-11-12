@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "release_id": "lab_v1",
+  "ansible_root": "/opt/ansible-hardening/releases/lab_v1/payload/ansible",
+  "ansible_bin_dir": "/opt/ansible-hardening/releases/lab_v1/payload/runtime/bin",
+  "inventory": "/opt/ansible-hardening/releases/lab_v1/payload/inventory/hosts.yml",
+  "service_user": "ansible-wazuh",
+  "targets": {
+    "ubuntu24": {"host": "ubuntu24", "os": "ubuntu24"},
+    "debian12": {"host": "debian12", "os": "debian12"}
+  },
+  "controls": {
+    "cron_hourly": {"tag": "cis_2_4_1_3", "os": ["ubuntu24", "debian12"]},
+    "cron_daily": {"tag": "cis_2_4_1_4", "os": ["ubuntu24", "debian12"]}
+  }
+}

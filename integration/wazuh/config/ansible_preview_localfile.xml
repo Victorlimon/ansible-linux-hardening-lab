@@ -1,0 +1,5 @@
+<localfile>
+  <log_format>json</log_format>
+  <location>/var/log/ansible-wazuh-preview.jsonl</location>
+  <only-future-events>yes</only-future-events>
+</localfile>

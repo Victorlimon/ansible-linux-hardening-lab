@@ -1,0 +1,60 @@
+<group name="ansible_job_manual,">
+  <rule id="100120" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="source" type="pcre2">^ansible-wazuh-job$</field>
+    <field name="job_id" type="pcre2">^(debian_preflight|ubuntu_audit|debian_audit|ubuntu_verify|debian_verify|ubuntu_hardening|debian_hardening)$</field>
+    <match type="pcre2">"status"\s*:\s*"(accepted|started|progress|recap|verification|completed|failed|ambiguous)"</match>
+    <description>Trabajo Ansible manual</description>
+  </rule>
+  <rule id="100121" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="source" type="pcre2">^ansible-wazuh-job$</field>
+    <match type="pcre2">"status"\s*:\s*"rejected"</match>
+    <description>Trabajo Ansible manual rechazado</description>
+  </rule>
+  <rule id="100122" level="5">
+    <if_sid>100120</if_sid>
+    <match type="pcre2">"status"\s*:\s*"accepted"</match>
+    <description>Trabajo Ansible manual aceptado</description>
+  </rule>
+  <rule id="100123" level="7">
+    <if_sid>100120</if_sid>
+    <match type="pcre2">"status"\s*:\s*"completed"</match>
+    <description>Trabajo Ansible manual completado; no acredita conformidad CIS</description>
+  </rule>
+  <rule id="100124" level="10">
+    <if_sid>100120</if_sid>
+    <match type="pcre2">"status"\s*:\s*"failed"</match>
+    <description>Trabajo Ansible manual fallido</description>
+  </rule>
+  <rule id="100125" level="8">
+    <if_sid>100121</if_sid>
+    <match type="pcre2">"status"\s*:\s*"rejected"</match>
+    <description>Trabajo Ansible manual rechazado</description>
+  </rule>
+  <rule id="100126" level="5">
+    <if_sid>100120</if_sid>
+    <match type="pcre2">"status"\s*:\s*"started"</match>
+    <description>Trabajo Ansible iniciado; el resultado sigue pendiente</description>
+  </rule>
+  <rule id="100127" level="5">
+    <if_sid>100120</if_sid>
+    <match type="pcre2">"status"\s*:\s*"recap"</match>
+    <description>Recapitulación Ansible sin salida privada</description>
+  </rule>
+  <rule id="100128" level="10">
+    <if_sid>100120</if_sid>
+    <match type="pcre2">"status"\s*:\s*"ambiguous"</match>
+    <description>Trabajo Ansible ambiguo; requiere reconciliación manual</description>
+  </rule>
+  <rule id="100129" level="3">
+    <if_sid>100120</if_sid>
+    <match type="pcre2">"status"\s*:\s*"progress"</match>
+    <description>Progreso resumido de tareas Ansible</description>
+  </rule>
+  <rule id="100130" level="5">
+    <if_sid>100120</if_sid>
+    <match type="pcre2">"status"\s*:\s*"verification"</match>
+    <description>Estado de verificación CIS; pendiente no equivale a conformidad</description>
+  </rule>
+</group>
