@@ -1,0 +1,31 @@
+---
+# Equality covers the entire active flow, not just the presence of modules.
+# Only blank lines, full-line comments and horizontal spacing are ignored.
+- name: Require the explicitly modeled PAM flow or the expected fixture refusal
+  ansible.builtin.assert:
+    that:
+      - >-
+        (hardening_contract_active in
+        ([hardening_contract_after] +
+        ((hardening_contract_allow_before | bool) | ternary([hardening_contract_before], []))))
+        == (hardening_contract_expected | bool)
+    quiet: true
+    fail_msg: Unmodeled PAM flow or broken refusal fixture; no stack rewrite is authorized.
+    success_msg: 'PAM contract expectation satisfied: {{ hardening_contract_label }}'
+  vars:
+    hardening_contract_active: >-
+      {{ hardening_contract_text.splitlines() | map('trim')
+      | reject('match', '^#') | reject('equalto', '')
+      | map('regex_replace', '[ \t]+', ' ') | list }}
+    hardening_contract_before:
+      - password requisite pam_pwquality.so retry=3
+      - password [success=1 default=ignore] pam_unix.so obscure use_authtok try_first_pass yescrypt
+      - password requisite pam_deny.so
+      - password required pam_permit.so
+    hardening_contract_after:
+      - password requisite pam_pwquality.so retry=3
+      - 'password requisite pam_pwhistory.so remember={{ wazuh_hardening_remember }} enforce_for_root try_first_pass use_authtok'
+      - password [success=1 default=ignore] pam_unix.so obscure use_authtok try_first_pass yescrypt
+      - password requisite pam_deny.so
+      - password required pam_permit.so
+  tags: always

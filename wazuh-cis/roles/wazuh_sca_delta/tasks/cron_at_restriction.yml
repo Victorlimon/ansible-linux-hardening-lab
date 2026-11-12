@@ -1,0 +1,29 @@
+---
+# Wazuh CIS v1.0.0 cron/at restriction (33136/33137 / 35600/35601). Restricts
+# cron/at to authorized users via the allow-list files.
+
+- name: Cron | Ensure cron.allow contains root
+  ansible.builtin.copy:
+    dest: /etc/cron.allow
+    content: "root\n"
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: Cron | Remove cron.deny
+  ansible.builtin.file:
+    path: /etc/cron.deny
+    state: absent
+
+- name: At | Ensure at.allow contains root
+  ansible.builtin.copy:
+    dest: /etc/at.allow
+    content: "root\n"
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: At | Remove at.deny
+  ansible.builtin.file:
+    path: /etc/at.deny
+    state: absent

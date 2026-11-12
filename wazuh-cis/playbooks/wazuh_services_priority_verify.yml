@@ -1,0 +1,92 @@
+---
+- name: Verify rsync absence and retained management on the authorized lab
+  hosts: wazuh_delta_targets
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  environment:
+    LC_ALL: C
+  tasks:
+    - name: Require the exact authorized lab inventory and hosts
+      ansible.builtin.assert:
+        that:
+          - inventory_file == (playbook_dir | dirname) + '/inventory/lab/hosts.yml'
+          - ansible_play_hosts_all | sort == ['debian12', 'ubuntu24']
+          - ansible_user == 'ansible'
+          - ansible_host == {'debian12':'192.168.56.11', 'ubuntu24':'192.168.56.12'}[inventory_hostname]
+
+    - name: Gather only platform facts
+      ansible.builtin.setup:
+        gather_subset: ['!all', '!min', distribution]
+
+    - name: Require the corresponding supported platform
+      ansible.builtin.assert:
+        that:
+          - >-
+            (inventory_hostname == 'debian12' and ansible_facts.distribution == 'Debian'
+            and ansible_facts.distribution_major_version == '12' and wazuh_delta_platform == 'debian_12')
+            or (inventory_hostname == 'ubuntu24' and ansible_facts.distribution == 'Ubuntu'
+            and ansible_facts.distribution_version == '24.04' and wazuh_delta_platform == 'ubuntu_2404')
+
+    - name: Check noninstalled package state while allowing retained conffiles
+      ansible.builtin.command:
+        argv: [dpkg-query, -W, '-f=${db:Status-Status}', rsync]
+        expand_argument_vars: false
+      register: services_package_status
+      changed_when: false
+      failed_when: >-
+        not ((services_package_status.rc == 0 and services_package_status.stdout in ['config-files', 'not-installed'])
+        or (services_package_status.rc == 1 and 'no packages found matching rsync' in services_package_status.stderr))
+
+    - name: Require removed executable and vendor unit
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        get_checksum: false
+        get_mime: false
+      loop: [/usr/bin/rsync, /lib/systemd/system/rsync.service, /usr/lib/systemd/system/rsync.service]
+      register: services_removed_paths
+
+    - name: Assert persistent executable and vendor unit absence
+      ansible.builtin.assert:
+        that: not item.stat.exists
+      loop: "{{ services_removed_paths.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Require no running rsync process
+      ansible.builtin.command: pgrep -x rsync
+      register: services_process_status
+      changed_when: false
+      failed_when: services_process_status.rc != 1
+
+    - name: Require rsync service and socket to remain inactive
+      ansible.builtin.command: systemctl show {{ item }} -p ActiveState --value
+      loop: [rsync.service, rsync.socket]
+      register: services_unit_status
+      changed_when: false
+      failed_when: services_unit_status.rc != 0 or services_unit_status.stdout != 'inactive'
+
+    - name: Reopen SSH rather than relying only on the earlier session
+      ansible.builtin.meta: reset_connection
+
+    - name: Prove retained Ansible SSH and become
+      ansible.builtin.command: id -u
+      register: services_root_check
+      changed_when: false
+      failed_when: services_root_check.rc != 0 or services_root_check.stdout != '0'
+
+    - name: Require the core Wazuh agent service active
+      ansible.builtin.command: systemctl is-active wazuh-agent.service
+      register: services_agent_status
+      changed_when: false
+      failed_when: services_agent_status.rc != 0 or services_agent_status.stdout != 'active'
+
+    - name: Require core Wazuh collection processes running
+      ansible.builtin.command: /var/ossec/bin/wazuh-control status
+      register: services_wazuh_processes
+      changed_when: false
+      failed_when: >-
+        services_wazuh_processes.rc != 0 or
+        'wazuh-agentd is running' not in services_wazuh_processes.stdout or
+        'wazuh-logcollector is running' not in services_wazuh_processes.stdout or
+        'wazuh-syscheckd is running' not in services_wazuh_processes.stdout

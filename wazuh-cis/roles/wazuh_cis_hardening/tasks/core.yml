@@ -1,0 +1,63 @@
+---
+- name: Locate existing suid dump configuration to avoid competing settings
+  ansible.builtin.command:
+    argv: [/usr/bin/grep, -RlE, '^[[:space:]]*fs\.suid_dumpable[[:space:]]*=', /etc/sysctl.conf, /etc/sysctl.d]
+  register: hardening_core_sources
+  changed_when: false
+  failed_when: hardening_core_sources.rc not in [0, 1]
+
+- name: Refuse ambiguous existing dump configuration
+  ansible.builtin.assert:
+    that: hardening_core_sources.stdout_lines | length <= 1
+
+- name: Restrict suid dumps in the existing authoritative file when present
+  ansible.posix.sysctl:
+    name: fs.suid_dumpable
+    value: '0'
+    sysctl_file: '{{ hardening_core_sources.stdout_lines | first | default("/etc/sysctl.d/60-wazuh-cis-core.conf") }}'
+    sysctl_set: true
+    reload: false
+
+- name: Disable core dumps for ordinary users and root
+  ansible.builtin.copy:
+    dest: /etc/security/limits.d/60-wazuh-cis-core.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+    content: |
+      # Managed crash-data policy. Root requires an explicit limit entry.
+      * hard core 0
+      root hard core 0
+
+- name: Gather package facts for optional crash collectors
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Restrict the installed systemd collector without installing one
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/coredump.conf
+    regexp: '^\s*#?\s*{{ item.key }}='
+    line: '{{ item.key }}={{ item.value }}'
+    backup: true
+  loop:
+    - {key: Storage, value: none}
+    - {key: ProcessSizeMax, value: 0}
+  when: "'systemd-coredump' in ansible_facts.packages"
+  notify: Wazuh hardening | Reload systemd unit configuration
+
+- name: Disable installed Ubuntu error reporting without removing application packages
+  ansible.builtin.lineinfile:
+    path: /etc/default/apport
+    regexp: '^\s*enabled='
+    line: enabled=0
+    backup: true
+  when: "'apport' in ansible_facts.packages"
+
+- name: Stop and mask the installed error collector
+  ansible.builtin.systemd_service:
+    name: apport.service
+    state: stopped
+    enabled: false
+    masked: true
+  when: "'apport' in ansible_facts.packages"

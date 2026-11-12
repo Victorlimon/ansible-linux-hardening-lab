@@ -1,0 +1,194 @@
+---
+- name: Apply isolated priority controls in the authorized lab
+  hosts: wazuh_delta_targets
+  become: true
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: true
+  vars:
+    priority_aide_config: |
+      # Deliberately scoped to persistent OS configuration, binaries and boot files.
+      database_in=file:/var/lib/wazuh-priority-aide/aide.db
+      database_out=file:/var/lib/wazuh-priority-aide/aide.db.new
+      database_attrs=E
+      report_url=stdout
+      report_level=summary
+      gzip_dbout=no
+      OS = p+u+g+ftype+n+i+s+m+c+sha256
+      /etc OS
+      /usr OS
+      /boot OS
+  tasks:
+    - name: Require the supported lab platforms
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname in ['debian12', 'ubuntu24']
+          - >-
+            (ansible_facts.distribution == 'Debian' and ansible_facts.distribution_major_version == '12')
+            or (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_version == '24.04')
+      tags: always
+
+    - name: Install AIDE without starting checks before initialization
+      ansible.builtin.apt:
+        name: [aide, aide-common]
+        state: present
+        install_recommends: false
+        fail_on_autoremove: true
+        policy_rc_d: 101
+      tags: priority_packages
+
+    - name: Validate the complete existing sudoers policy before editing
+      ansible.builtin.command: /usr/sbin/visudo -c
+      changed_when: false
+
+    - name: Inspect sensitive paths without reading their contents
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+        get_checksum: false
+        get_mime: false
+      loop:
+        - /etc/sudoers
+        - /boot/grub/grub.cfg
+        - /var/lib/wazuh-priority-aide/aide.db
+        - /var/lib/wazuh-priority-aide/aide.db.new
+      register: priority_paths
+
+    - name: Refuse unexpected sensitive paths or an unfinished initialization
+      ansible.builtin.assert:
+        that:
+          - priority_paths.results[0].stat.isreg | default(false)
+          - priority_paths.results[1].stat.isreg | default(false)
+          - not priority_paths.results[2].stat.exists or (priority_paths.results[2].stat.isreg | default(false))
+          - not priority_paths.results[3].stat.exists
+        fail_msg: Unexpected file type or leftover AIDE candidate; manual investigation required.
+
+    - name: Expose the existing logging destination directly to both policy checks
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        regexp: '^Defaults\s+logfile='
+        line: 'Defaults logfile="/var/log/sudo.log"'
+        insertafter: EOF
+        owner: root
+        group: root
+        mode: '0440'
+        validate: /usr/sbin/visudo -cf %s
+
+    - name: Validate sudoers including all unchanged access drop-ins
+      ansible.builtin.command: /usr/sbin/visudo -c
+      changed_when: false
+
+    - name: Restrict only the existing GRUB configuration file
+      ansible.builtin.file:
+        path: /boot/grub/grub.cfg
+        state: file
+        follow: false
+        owner: root
+        group: root
+        mode: '0400'
+
+    - name: Create the private isolated AIDE database directory
+      ansible.builtin.file:
+        path: /var/lib/wazuh-priority-aide
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Predict configuration changes without changing an established baseline scope
+      ansible.builtin.copy:
+        dest: /etc/aide/wazuh-priority.conf
+        content: "{{ priority_aide_config }}"
+        owner: root
+        group: root
+        mode: '0600'
+      check_mode: true
+      register: priority_config_prediction
+
+    - name: Require explicit review before changing scope under an existing database
+      ansible.builtin.assert:
+        that:
+          - not priority_paths.results[2].stat.exists or not priority_config_prediction.changed
+        fail_msg: Existing AIDE scope differs; do not silently replace its trusted baseline.
+
+    - name: Install and validate the scoped AIDE configuration
+      ansible.builtin.copy:
+        dest: /etc/aide/wazuh-priority.conf
+        content: "{{ priority_aide_config }}"
+        owner: root
+        group: root
+        mode: '0600'
+        validate: /usr/bin/aide --config %s --config-check
+
+    - name: Create the isolated scheduler override directory
+      ansible.builtin.file:
+        path: /etc/systemd/system/dailyaidecheck.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Run read-only scoped checks through the vendor daily timer
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/dailyaidecheck.service.d/wazuh-priority.conf
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Service]
+          User=root
+          Group=root
+          AmbientCapabilities=
+          UMask=0077
+          Nice=19
+          IOSchedulingClass=idle
+          TimeoutStartSec=610
+          ExecStart=
+          ExecStart=/usr/bin/aide --config=/etc/aide/wazuh-priority.conf --workers=1 --check
+      register: priority_aide_unit
+
+    - name: Initialize a candidate once in a bounded foreground run
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/timeout
+          - --kill-after=10s
+          - 600s
+          - /usr/bin/aide
+          - --config=/etc/aide/wazuh-priority.conf
+          - --workers=1
+          - --init
+        creates: /var/lib/wazuh-priority-aide/aide.db.new
+      when: not priority_paths.results[2].stat.exists
+      no_log: true
+      failed_when: false
+      register: priority_aide_init
+
+    - name: Require successful initialization before trusting any candidate
+      ansible.builtin.assert:
+        that: priority_aide_init.rc == 0
+        fail_msg: "AIDE initialization failed (rc={{ priority_aide_init.rc }}); candidate was not trusted."
+      when: not priority_paths.results[2].stat.exists
+
+    - name: Trust only this run's successful initial candidate without replacing a baseline
+      ansible.builtin.copy:
+        src: /var/lib/wazuh-priority-aide/aide.db.new
+        dest: /var/lib/wazuh-priority-aide/aide.db
+        remote_src: true
+        force: false
+        owner: root
+        group: root
+        mode: '0600'
+      when: not priority_paths.results[2].stat.exists
+
+    - name: Remove only the successfully promoted candidate
+      ansible.builtin.file:
+        path: /var/lib/wazuh-priority-aide/aide.db.new
+        state: absent
+      when: not priority_paths.results[2].stat.exists
+
+    - name: Enable the vendor timer only after a trusted database exists
+      ansible.builtin.systemd_service:
+        name: dailyaidecheck.timer
+        daemon_reload: "{{ priority_aide_unit.changed }}"
+        enabled: true
+        state: started

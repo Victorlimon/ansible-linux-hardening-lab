@@ -1,0 +1,12 @@
+---
+- name: Independently verify selected Wazuh CIS hardening groups
+  hosts: wazuh_delta_targets
+  become: true
+  gather_facts: true
+  serial: 1
+  any_errors_fatal: true
+  tasks:
+    - name: Load read-only verification without running remediation
+      ansible.builtin.import_role:
+        name: wazuh_cis_hardening
+        tasks_from: verify

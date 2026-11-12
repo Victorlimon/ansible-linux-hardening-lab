@@ -1,0 +1,185 @@
+---
+- name: Remove only unused rsync on the explicitly confirmed disposable lab
+  hosts: wazuh_delta_targets
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  environment:
+    LC_ALL: C
+  vars:
+    services_priority_site_confirms_unused: false
+    # Invoking this isolated playbook confirms the documented disposable-lab choice.
+    services_priority_lab_confirms_unused: true
+  tasks:
+    - name: Require the exact authorized inventory and removal confirmation
+      ansible.builtin.assert:
+        that:
+          - inventory_file == (playbook_dir | dirname) + '/inventory/lab/hosts.yml'
+          - ansible_play_hosts_all | sort == ['debian12', 'ubuntu24']
+          - ansible_user == 'ansible'
+          - ansible_host == {'debian12':'192.168.56.11', 'ubuntu24':'192.168.56.12'}[inventory_hostname]
+          - services_priority_site_confirms_unused | bool or services_priority_lab_confirms_unused | bool
+          - not ansible_check_mode
+
+    - name: Gather only platform facts
+      ansible.builtin.setup:
+        gather_subset: ['!all', '!min', distribution]
+
+    - name: Require the exact lab platform mapping
+      ansible.builtin.assert:
+        that:
+          - >-
+            (inventory_hostname == 'debian12' and ansible_facts.distribution == 'Debian'
+            and ansible_facts.distribution_major_version == '12' and wazuh_delta_platform == 'debian_12')
+            or (inventory_hostname == 'ubuntu24' and ansible_facts.distribution == 'Ubuntu'
+            and ansible_facts.distribution_version == '24.04' and wazuh_delta_platform == 'ubuntu_2404')
+
+    - name: Refuse running rsync processes
+      ansible.builtin.command: pgrep -x rsync
+      register: services_rsync_process
+      changed_when: false
+      failed_when: services_rsync_process.rc != 1
+
+    - name: Refuse rsync references in bounded system job locations
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -rlIE
+          - --
+          - rsync
+          - /etc/crontab
+          - /etc/cron.d
+          - /etc/cron.daily
+          - /etc/cron.weekly
+          - /etc/cron.hourly
+          - /etc/cron.monthly
+          - /etc/systemd/system
+          - /usr/local/bin
+          - /usr/local/sbin
+          - /var/spool/cron
+      register: services_rsync_jobs
+      changed_when: false
+      failed_when: services_rsync_jobs.rc != 1
+
+    - name: Refuse daemon or alternate scheduler configuration needing review
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        get_checksum: false
+        get_mime: false
+      loop: [/etc/rsyncd.conf, /etc/anacrontab, /etc/inetd.conf]
+      register: services_optional_config
+
+    - name: Require absent optional configurations
+      ansible.builtin.assert:
+        that: not item.stat.exists
+      loop: "{{ services_optional_config.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Refuse unexpected vendor unit consumers of rsync
+      ansible.builtin.command: grep -rlIE -- rsync /usr/lib/systemd/system
+      register: services_vendor_references
+      changed_when: false
+      failed_when: >-
+        services_vendor_references.rc not in [0, 1] or
+        services_vendor_references.stdout_lines | difference(['/usr/lib/systemd/system/rsync.service']) | length > 0
+
+    - name: Require inactive rsync service and socket
+      ansible.builtin.command: systemctl show {{ item }} -p ActiveState --value
+      loop: [rsync.service, rsync.socket]
+      register: services_rsync_units
+      changed_when: false
+      failed_when: services_rsync_units.rc != 0 or services_rsync_units.stdout != 'inactive'
+
+    - name: Inspect installed reverse dependencies
+      ansible.builtin.command: apt-cache rdepends --installed rsync
+      register: services_reverse_dependencies
+      changed_when: false
+
+    - name: Require no installed reverse dependencies
+      ansible.builtin.assert:
+        that: services_reverse_dependencies.stdout_lines == ['rsync', 'Reverse Depends:']
+
+    - name: Snapshot package state without expanding dpkg format variables
+      ansible.builtin.command:
+        argv: [dpkg-query, -W, '-f=${binary:Package}\t${db:Status-Status}\t${Version}\n']
+        expand_argument_vars: false
+      register: services_packages_before
+      changed_when: false
+
+    - name: Record retained configuration checksums
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        checksum_algorithm: md5
+        get_mime: false
+      loop: [/etc/default/rsync, /etc/init.d/rsync]
+      register: services_config_before
+
+    - name: Refuse customized daemon defaults or init scripts
+      ansible.builtin.assert:
+        that:
+          - services_config_before.results[0].stat.checksum | default('') == 'b8fd9efa75e2bda2583b0d7c0892a073'
+          - services_config_before.results[1].stat.checksum | default('') == '59aa13cd1a70ff254a2991ad0c522ea5'
+
+    - name: Require healthy Wazuh before removal
+      ansible.builtin.command: systemctl is-active wazuh-agent.service
+      changed_when: false
+
+    - name: Simulate the exact removal with automatic removals disabled
+      ansible.builtin.command: apt-get --simulate --no-auto-remove remove rsync
+      register: services_simulation
+      changed_when: false
+
+    - name: Refuse any transaction beyond removal of rsync
+      ansible.builtin.assert:
+        that:
+          - services_simulation.stdout_lines | select('match', '^(Inst|Conf|Purg) ') | list | length == 0
+          - services_simulation.stdout_lines | select('match', '^Remv ') | reject('match', '^Remv rsync ') | list | length == 0
+          - services_simulation.stdout_lines | select('match', '^Remv rsync ') | list | length <= 1
+          - "'0 upgraded, 0 newly installed,' in services_simulation.stdout"
+
+    - name: Remove only rsync while retaining configuration and dependencies
+      ansible.builtin.apt:
+        name: rsync
+        state: absent
+        purge: false
+        autoremove: false
+        update_cache: false
+        force_apt_get: true
+        auto_install_module_deps: false
+
+    - name: Read package state after removal
+      ansible.builtin.command:
+        argv: [dpkg-query, -W, '-f=${binary:Package}\t${db:Status-Status}\t${Version}\n']
+        expand_argument_vars: false
+      register: services_packages_after
+      changed_when: false
+
+    - name: Require every other package state and version to remain identical
+      ansible.builtin.assert:
+        that:
+          - >-
+            (services_packages_before.stdout_lines | reject('match', '^rsync\s') | list)
+            == (services_packages_after.stdout_lines | reject('match', '^rsync\s') | list)
+
+    - name: Inspect retained configuration after removal
+      ansible.builtin.stat:
+        path: "{{ item.item }}"
+        checksum_algorithm: md5
+        get_mime: false
+      loop: "{{ services_config_before.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      register: services_config_after
+
+    - name: Require unchanged existing conffiles
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists == item.item.stat.exists
+          - item.stat.checksum | default('') == item.item.stat.checksum | default('')
+      loop: "{{ services_config_after.results }}"
+      loop_control:
+        label: "{{ item.item.item }}"
+
+- name: Verify the isolated removal after apply
+  ansible.builtin.import_playbook: wazuh_services_priority_verify.yml

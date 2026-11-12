@@ -15,6 +15,11 @@ wazuh_delta_platform_supported_controls:
   - rsyslog
   - journald_rotation
   - apparmor_enforce_all
+  - audit_rules
+  - password_aging
+  - sudo_logfile
+  - cron_at
+  - ssh_macs
 
 # /bin/false on Ubuntu (policy regex ^install /bin/false); Debian uses /bin/true.
 wazuh_delta_kernel_module_install_target: /bin/false
@@ -75,3 +80,112 @@ wazuh_delta_legacy_client_packages:
   - ftp
   - tnftp
   - inetutils-ftp
+
+# Ubuntu's hash check (35697) reads login.defs ENCRYPT_METHOD (already SHA512
+# on the node); there is no pam sha512$ rule — leave the yescrypt stack alone.
+wazuh_delta_pam_password_file: ""
+
+# ---------------------------------------------------------------------------
+# Wazuh CIS v1.0.0 auditd collection rules still missing on the node.
+# Ubuntu 24.04 policy variants differ from Debian: b32 AND b64 are separate
+# condition:all rules, clock_settime needs -F a0=0x0, login watches use
+# /var/run/faillock, kernel modules want key=kernel_modules + the kmod path
+# rule, and the identity watch set includes nsswitch.conf/pam.conf/pam.d.
+# cis_6_2_3_*.rules (repo CIS v1.1.0) already carries: sudoers/scope,
+# user_emulation b64, sudo_log_file, time-change b64 (adjtimex,settimeofday),
+# system-locale b64, access b64-EACCES, identity group, mounts b64, delete
+# b64, session utmp, logins lastlog, MAC-policy /etc/apparmor, kernel_modules
+# b64 syscalls — this file adds only what Wazuh still needs.
+wazuh_delta_audit_rule_lines:
+  # 35731 — scope
+  - rule: "-w /etc/sudoers.d -p wa -k scope"
+    comment: "Wazuh 35731 sudoers.d"
+  # 35732 — user_emulation (b64 ships in cis_6_2_3_2; policy needs b32 too)
+  - rule: "-a always,exit -F arch=b32 -C euid!=uid -F auid!=unset -S execve -k user_emulation"
+    comment: "Wazuh 35732 actions-as-another-user b32"
+  # 35734 — time-change (b64 adjtimex,settimeofday ships in cis_6_2_3_4)
+  - rule: "-a always,exit -F arch=b32 -S adjtimex,settimeofday -F key=time-change"
+    comment: "Wazuh 35734 adjtimex,settimeofday b32"
+  - rule: "-a always,exit -F arch=b64 -S clock_settime -F a0=0x0 -F key=time-change"
+    comment: "Wazuh 35734 clock_settime b64 with a0=0x0"
+  - rule: "-a always,exit -F arch=b32 -S clock_settime -F a0=0x0 -F key=time-change"
+    comment: "Wazuh 35734 clock_settime b32 with a0=0x0"
+  - rule: "-w /etc/localtime -p wa -k time-change"
+    comment: "Wazuh 35734 /etc/localtime watch"
+  # 35735 — system-locale (b64 sethostname/setdomainname ships in cis_6_2_3_5)
+  - rule: "-a always,exit -F arch=b32 -S sethostname,setdomainname -F key=system-locale"
+    comment: "Wazuh 35735 sethostname/setdomainname b32"
+  - rule: "-w /etc/issue -p wa -k system-locale"
+    comment: "Wazuh 35735 /etc/issue"
+  - rule: "-w /etc/issue.net -p wa -k system-locale"
+    comment: "Wazuh 35735 /etc/issue.net"
+  - rule: "-w /etc/hosts -p wa -k system-locale"
+    comment: "Wazuh 35735 /etc/hosts"
+  - rule: "-w /etc/networks -p wa -k system-locale"
+    comment: "Wazuh 35735 /etc/networks"
+  - rule: "-w /etc/network -p wa -k system-locale"
+    comment: "Wazuh 35735 /etc/network"
+  - rule: "-w /etc/netplan -p wa -k system-locale"
+    comment: "Wazuh 35735 /etc/netplan"
+  # 35736 — access (b64 EACCES ships in cis_6_2_3_7)
+  - rule: "-a always,exit -F arch=b32 -S creat,open,openat,truncate,ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=unset -k access"
+    comment: "Wazuh 35736 EACCES b32"
+  - rule: "-a always,exit -F arch=b64 -S creat,open,openat,truncate,ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=unset -k access"
+    comment: "Wazuh 35736 EPERM b64"
+  - rule: "-a always,exit -F arch=b32 -S creat,open,openat,truncate,ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=unset -k access"
+    comment: "Wazuh 35736 EPERM b32"
+  # 35737 — identity (/etc/group ships in cis_6_2_3_8)
+  - rule: "-w /etc/passwd -p wa -k identity"
+    comment: "Wazuh 35737 passwd"
+  - rule: "-w /etc/shadow -p wa -k identity"
+    comment: "Wazuh 35737 shadow"
+  - rule: "-w /etc/gshadow -p wa -k identity"
+    comment: "Wazuh 35737 gshadow"
+  - rule: "-w /etc/security/opasswd -p wa -k identity"
+    comment: "Wazuh 35737 opasswd"
+  - rule: "-w /etc/nsswitch.conf -p wa -k identity"
+    comment: "Wazuh 35737 nsswitch.conf"
+  - rule: "-w /etc/pam.conf -p wa -k identity"
+    comment: "Wazuh 35737 pam.conf (present on Ubuntu, verified before shipping)"
+  - rule: "-w /etc/pam.d -p wa -k identity"
+    comment: "Wazuh 35737 pam.d"
+  # 35738 — perm_mod (b64 chmod ships in cis_6_2_3_9; policy wants the
+  # b32 twins plus the chown/xattr families, each arch as its own rule)
+  - rule: "-a always,exit -F arch=b64 -S chown,fchown,lchown,fchownat -F auid>=1000 -F auid!=unset -k perm_mod"
+    comment: "Wazuh 35738 chown family b64"
+  - rule: "-a always,exit -F arch=b32 -S chmod,fchmod,fchmodat -F auid>=1000 -F auid!=unset -k perm_mod"
+    comment: "Wazuh 35738 chmod family b32"
+  - rule: "-a always,exit -F arch=b32 -S chown,fchown,lchown,fchownat -F auid>=1000 -F auid!=unset -k perm_mod"
+    comment: "Wazuh 35738 chown family b32"
+  - rule: "-a always,exit -F arch=b64 -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=unset -k perm_mod"
+    comment: "Wazuh 35738 xattr family b64"
+  - rule: "-a always,exit -F arch=b32 -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=unset -k perm_mod"
+    comment: "Wazuh 35738 xattr family b32"
+  # 35739 — mounts (b64 ships in cis_6_2_3_10)
+  - rule: "-a always,exit -F arch=b32 -S mount -F auid>=1000 -F auid!=unset -k mounts"
+    comment: "Wazuh 35739 mount b32"
+  # 35740 — session (utmp ships in cis_6_2_3_11)
+  - rule: "-w /var/log/wtmp -p wa -k session"
+    comment: "Wazuh 35740 wtmp"
+  - rule: "-w /var/log/btmp -p wa -k session"
+    comment: "Wazuh 35740 btmp"
+  # 35741 — logins (lastlog ships in cis_6_2_3_12; /var/run/faillock needs
+  # the tmpfiles entry because /run is tmpfs)
+  - rule: "-w /var/run/faillock -p wa -k logins"
+    comment: "Wazuh 35741 faillock dir (tmpfiles-preseeded)"
+  # 35742 — delete (b64 ships in cis_6_2_3_13)
+  - rule: "-a always,exit -F arch=b32 -S rename,unlink,unlinkat,renameat -F auid>=1000 -F auid!=unset -k delete"
+    comment: "Wazuh 35742 delete b32"
+  # 35743 — MAC-policy (/etc/apparmor ships in cis_6_2_3_14)
+  - rule: "-w /etc/apparmor.d -p wa -k MAC-policy"
+    comment: "Wazuh 35743 /etc/apparmor.d"
+  # 35748 — kernel_modules (b64 syscalls ship in cis_6_2_3_19; the kmod path
+  # rule is the missing half)
+  - rule: "-a always,exit -F path=/usr/bin/kmod -F perm=x -F auid>=1000 -F auid!=unset -F key=kernel_modules"
+    comment: "Wazuh 35748 kmod execution path rule"
+
+# All Ubuntu watch targets exist on the nodes; preseed stays empty but the
+# tmpfiles entry guarantees /var/run/faillock survives every boot.
+wazuh_delta_audit_preseed_files: []
+wazuh_delta_audit_tmpfiles_lines:
+  - "d /var/run/faillock 0755 root root -"

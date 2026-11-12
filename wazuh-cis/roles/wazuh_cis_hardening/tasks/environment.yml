@@ -1,0 +1,61 @@
+---
+- name: Set the account creation mask in the existing main configuration
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^\s*UMASK\s+'
+    line: 'UMASK {{ wazuh_hardening_umask }}'
+    backup: true
+
+- name: Configure both login and interactive non-login Bash environments
+  ansible.builtin.blockinfile:
+    path: '{{ item }}'
+    marker: '# {mark} WAZUH CIS INTERACTIVE ENVIRONMENT'
+    backup: true
+    validate: /bin/bash -n %s
+    block: |
+      umask {{ wazuh_hardening_umask }}
+      case $- in
+        *i*)
+          if [ -n "${BASH_VERSION-}" ]; then
+            case ${TMOUT-} in
+              ''|0*|*[!0-9]*|????*)
+                case ${TMOUT@a} in
+                  *r*) printf '%s\n' 'Readonly TMOUT violates the approved interactive policy.' >&2; exit 1 ;;
+                esac
+                TMOUT={{ wazuh_hardening_tmout }}
+                ;;
+              *)
+                if [ "$TMOUT" -gt {{ wazuh_hardening_tmout }} ]; then
+                  case ${TMOUT@a} in
+                    *r*) printf '%s\n' 'Readonly TMOUT violates the approved interactive policy.' >&2; exit 1 ;;
+                  esac
+                  TMOUT={{ wazuh_hardening_tmout }}
+                fi
+                ;;
+            esac
+            readonly TMOUT
+            export TMOUT
+          fi
+          ;;
+      esac
+  loop: [/etc/profile, /etc/bash.bashrc]
+
+- name: Set root's interactive mask before distribution early returns
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    regexp: '^umask\s+'
+    line: 'umask {{ wazuh_hardening_umask }}'
+    insertbefore: BOF
+    backup: true
+    validate: /bin/bash -n %s
+
+- name: Set root's existing login mask without introducing a shadowing bash_profile
+  ansible.builtin.lineinfile:
+    path: /root/.profile
+    regexp: '^umask\s+'
+    line: 'umask {{ wazuh_hardening_umask }}'
+    backup: true
+    validate: /bin/bash -n %s
+
+- name: Prove fresh SSH and sudo after environment changes
+  ansible.builtin.import_tasks: access.yml

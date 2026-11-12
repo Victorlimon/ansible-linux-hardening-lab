@@ -1,0 +1,52 @@
+---
+- name: Validate the complete original SSH configuration
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+
+- name: Find pre-existing access selectors including conditional drop-ins
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/grep
+      - -RniE
+      - '^[[:space:]]*(AllowUsers|AllowGroups|DenyUsers|DenyGroups|Match)[[:space:]]'
+      - /etc/ssh/sshd_config
+      - /etc/ssh/sshd_config.d
+  changed_when: false
+  failed_when: hardening_ssh_selectors.rc not in [0, 1]
+  register: hardening_ssh_selectors
+
+- name: Refuse competing or conditional access policy rather than broadening it
+  ansible.builtin.assert:
+    that:
+      - >-
+        hardening_ssh_selectors.stdout_lines | reject('match',
+        '^/etc/ssh/sshd_config:[0-9]+:AllowUsers ' ~ (wazuh_hardening_admin_users | join(' ')) ~ '$') | list | length == 0
+
+- name: Preserve original SSH configuration once
+  ansible.builtin.copy:
+    src: /etc/ssh/sshd_config
+    dest: '{{ wazuh_hardening_backup_dir }}/sshd_config.original'
+    remote_src: true
+    force: false
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Set an explicit global allowlist before includes and Match sections
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^AllowUsers\s+'
+    line: "AllowUsers {{ wazuh_hardening_admin_users | join(' ') }}"
+    insertbefore: BOF
+    backup: true
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Wazuh hardening | Reload validated SSH
+
+- name: Validate the complete effective SSH policy before reload
+  ansible.builtin.import_tasks: verify_ssh.yml
+
+- name: Apply the validated SSH handler before the fresh-session test
+  ansible.builtin.meta: flush_handlers
+
+- name: Prove new SSH and sudo access after the allowlist
+  ansible.builtin.import_tasks: access.yml

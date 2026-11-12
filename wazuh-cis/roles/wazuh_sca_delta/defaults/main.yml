@@ -16,12 +16,34 @@ wazuh_delta_rsyslog_enabled: false
 wazuh_delta_journald_rotation_enabled: false
 wazuh_delta_logrotate_permissions_enabled: false
 wazuh_delta_apparmor_enforce_all_enabled: false
+# --- Gates added for the second delta wave (audit/aging/sudo/cron/ssh-macs) --
+wazuh_delta_audit_rules_enabled: false
+wazuh_delta_password_aging_enabled: false
+wazuh_delta_sudo_logfile_enabled: false
+wazuh_delta_cron_at_restriction_enabled: false
+wazuh_delta_ssh_macs_enabled: false
 
 # --- Inputs ---------------------------------------------------------------
 # crypt(3) password hash ($6$...) written as root's shadow entry so that
 # single-user mode (sulogin) requires authentication. In production this MUST
 # come from ansible-vault / a secret store; there is no safe default.
 wazuh_delta_root_password_hash: ""
+
+# Password-aging inputs (Wazuh 33165-33167 / 35695 / 35698). 30 satisfies the
+# Debian <=30 limit and the Ubuntu <=45 limit simultaneously.
+wazuh_delta_pass_min_days: 1
+wazuh_delta_pass_warn_age: 7
+wazuh_delta_inactive_days: 30
+wazuh_delta_encrypt_method: SHA512
+# Empty string disables the pam sha512 rewrite (Ubuntu: its hash check reads
+# login.defs ENCRYPT_METHOD and already passes; Debian sets this to
+# /etc/pam.d/common-password).
+wazuh_delta_pam_password_file: ""
+
+wazuh_delta_sudo_logfile_path: /var/log/sudo.log
+
+# Strong-only MAC list (Wazuh 33150/35654 weak-algorithm condition:none rule).
+wazuh_delta_sshd_macs: "hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256,hmac-sha2-512"
 
 # Fallbacks used when vars/<platform>.yml is missing (deliberately inert).
 wazuh_delta_kernel_module_install_target: /bin/true
@@ -30,3 +52,6 @@ wazuh_delta_platform_supported_controls: []
 wazuh_delta_legacy_client_packages: []
 wazuh_delta_journald_forward_to_syslog: "yes"
 wazuh_delta_journald_rotation_settings: []
+wazuh_delta_audit_rule_lines: []
+wazuh_delta_audit_preseed_files: []
+wazuh_delta_audit_tmpfiles_lines: []

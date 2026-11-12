@@ -1,0 +1,66 @@
+---
+- name: Read the whole password flow before configuration writes
+  ansible.builtin.slurp:
+    src: /etc/pam.d/common-password
+  register: hardening_password_before
+
+- name: Validate the live flow with the shared complete-flow contract
+  ansible.builtin.include_tasks: pam_contract.yml
+  vars:
+    hardening_contract_text: '{{ hardening_password_before.content | b64decode }}'
+    hardening_contract_allow_before: true
+    hardening_contract_expected: true
+    hardening_contract_label: live pre-mutation flow
+
+- name: Exercise accepted and rejected flow fixtures without touching PAM files
+  ansible.builtin.include_tasks: pam_contract.yml
+  vars:
+    hardening_contract_text: '{{ hardening_pam_fixture.text }}'
+    hardening_contract_allow_before: '{{ hardening_pam_fixture.allow_before | default(true) }}'
+    hardening_contract_expected: '{{ hardening_pam_fixture.accepted }}'
+    hardening_contract_label: '{{ hardening_pam_fixture.name }}'
+    hardening_fixture_before: |
+      password requisite pam_pwquality.so retry=3
+      password [success=1 default=ignore] pam_unix.so obscure use_authtok try_first_pass yescrypt
+      password requisite pam_deny.so
+      password required pam_permit.so
+    hardening_fixture_after: |
+      password requisite pam_pwquality.so retry=3
+      password requisite pam_pwhistory.so remember={{ wazuh_hardening_remember }} enforce_for_root try_first_pass use_authtok
+      password [success=1 default=ignore] pam_unix.so obscure use_authtok try_first_pass yescrypt
+      password requisite pam_deny.so
+      password required pam_permit.so
+  loop:
+    - {name: supported-before, text: '{{ hardening_fixture_before }}', accepted: true}
+    - {name: supported-after, text: '{{ hardening_fixture_after }}', accepted: true}
+    - name: supported-comments-and-tabs
+      text: "{{ '# Full-line comment\n\n' ~ (hardening_fixture_after | replace('password ', 'password\t')) }}"
+      accepted: true
+    - name: unexpected-module-before-quality
+      text: "{{ 'password optional pam_exec.so /bin/true\n' ~ hardening_fixture_after }}"
+      accepted: false
+    - name: unexpected-module-after-permit
+      text: "{{ hardening_fixture_after ~ 'password optional pam_extra.so\n' }}"
+      accepted: false
+    - name: altered-unix-success-jump
+      text: "{{ hardening_fixture_before | replace('success=1', 'success=2') }}"
+      accepted: false
+    - name: earlier-jump-across-history
+      text: "{{ hardening_fixture_before | replace('requisite pam_pwquality', '[success=2 default=die] pam_pwquality') }}"
+      accepted: false
+    - name: include-directive
+      text: "{{ '@include other-password\n' ~ hardening_fixture_after }}"
+      accepted: false
+    - name: password-substack
+      text: "{{ hardening_fixture_after ~ 'password substack other-password\n' }}"
+      accepted: false
+    - name: incorrect-fallback-control
+      text: "{{ hardening_fixture_after | replace('requisite pam_deny', 'required pam_deny') }}"
+      accepted: false
+    - name: verifier-rejects-missing-history
+      text: '{{ hardening_fixture_before }}'
+      allow_before: false
+      accepted: false
+  loop_control:
+    loop_var: hardening_pam_fixture
+    label: '{{ hardening_pam_fixture.name }}'

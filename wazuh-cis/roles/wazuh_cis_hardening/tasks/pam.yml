@@ -1,0 +1,127 @@
+---
+- name: Inspect existing PAM files before package hooks or profile changes
+  ansible.builtin.stat:
+    path: '{{ item }}'
+    get_checksum: false
+    get_mime: false
+  loop:
+    - /etc/pam.d/common-auth
+    - /etc/pam.d/common-account
+    - /etc/pam.d/common-password
+    - /etc/pam.d/common-session
+    - /etc/pam.d/common-session-noninteractive
+    - /usr/share/pam-configs/unix
+    - /usr/share/pam-configs/pwquality
+    - /etc/security/pwquality.conf
+  register: hardening_pam_originals
+
+- name: Preserve existing affected PAM files once, including on a clean site
+  ansible.builtin.copy:
+    src: '{{ item.item }}'
+    dest: '{{ wazuh_hardening_backup_dir }}/{{ item.item | basename }}.original'
+    remote_src: true
+    force: false
+    owner: root
+    group: root
+    mode: '0600'
+  loop: '{{ hardening_pam_originals.results }}'
+  loop_control:
+    label: '{{ item.item }}'
+  when: item.stat.exists
+
+- name: Ensure required PAM providers are installed without removing packages
+  ansible.builtin.apt:
+    name: [libpam-modules, libpam-pwquality]
+    state: present
+    install_recommends: false
+    fail_on_autoremove: true
+
+- name: Set the quality parameters in the existing authoritative main file
+  ansible.builtin.lineinfile:
+    path: /etc/security/pwquality.conf
+    regexp: '^\s*#?\s*{{ item.key }}\s*='
+    line: '{{ item.key }} = {{ item.value }}'
+    backup: true
+  loop:
+    - {key: minlen, value: '{{ wazuh_hardening_minlen }}'}
+    - {key: difok, value: '{{ wazuh_hardening_difok }}'}
+    - {key: minclass, value: '{{ wazuh_hardening_minclass }}'}
+    - {key: maxrepeat, value: '{{ wazuh_hardening_maxrepeat }}'}
+    - {key: maxsequence, value: '{{ wazuh_hardening_maxsequence }}'}
+    - {key: dcredit, value: 0}
+    - {key: ucredit, value: 0}
+    - {key: lcredit, value: 0}
+    - {key: ocredit, value: 0}
+    - {key: dictcheck, value: 1}
+    - {key: enforcing, value: 1}
+
+- name: Enforce quality for root without changing any existing password
+  ansible.builtin.lineinfile:
+    path: /etc/security/pwquality.conf
+    regexp: '^\s*#?\s*enforce_for_root\s*$'
+    line: enforce_for_root
+    backup: true
+
+- name: Remove only the unsafe nullok token from the distro Unix profile
+  ansible.builtin.replace:
+    path: /usr/share/pam-configs/unix
+    regexp: '(^[ \t]*[^#\n]*pam_unix\.so[^\n]*?)[ \t]+nullok\b'
+    replace: '\1'
+    backup: true
+  register: hardening_unix_profile
+
+- name: Install a history profile after quality and before Unix token consumption
+  ansible.builtin.copy:
+    dest: /usr/share/pam-configs/wazuh-cis-pwhistory
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+    content: |
+      Name: Wazuh CIS local password history
+      Default: no
+      Priority: 1000
+      Password-Type: Primary
+      Password:
+              requisite pam_pwhistory.so remember={{ wazuh_hardening_remember }} enforce_for_root try_first_pass use_authtok
+  register: hardening_history_profile
+
+- name: Activate only required profiles without force or arbitrary stack replacement
+  ansible.builtin.command: /usr/sbin/pam-auth-update --package --enable unix pwquality wazuh-cis-pwhistory
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when:
+    - not (wazuh_hardening_pam_preserve_local_stack | bool)
+    - >-
+      hardening_unix_profile.changed or hardening_history_profile.changed
+      or 'pam_pwhistory.so' not in (hardening_password_before.content | b64decode)
+  changed_when: true
+
+- name: Preserve an explicitly approved local stack and insert history before Unix
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^[ \t]*password[ \t]+requisite[ \t]+pam_pwhistory\.so\b'
+    line: 'password requisite pam_pwhistory.so remember={{ wazuh_hardening_remember }} enforce_for_root try_first_pass use_authtok'
+    insertbefore: '^[ \t]*password[ \t]+.*pam_unix\.so\b'
+    backup: true
+  when: wazuh_hardening_pam_preserve_local_stack | bool
+
+- name: Remove only Unix nullok tokens from explicitly approved local stacks
+  ansible.builtin.replace:
+    path: '{{ item }}'
+    regexp: '(^[ \t]*[^#\n]*pam_unix\.so[^\n]*?)[ \t]+nullok\b'
+    replace: '\1'
+    backup: true
+  loop:
+    - /etc/pam.d/common-auth
+    - /etc/pam.d/common-account
+    - /etc/pam.d/common-password
+    - /etc/pam.d/common-session
+    - /etc/pam.d/common-session-noninteractive
+  when: wazuh_hardening_pam_preserve_local_stack | bool
+
+- name: Validate effective module order and options immediately
+  ansible.builtin.import_tasks: verify_pam.yml
+
+- name: Prove fresh SSH and sudo after PAM changes
+  ansible.builtin.import_tasks: access.yml

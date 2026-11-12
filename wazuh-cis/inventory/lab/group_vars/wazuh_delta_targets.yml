@@ -1,0 +1,17 @@
+---
+# Lab policy only. Preproduction must supply its own inventory and approvals.
+wazuh_hardening_pam_enabled: true
+# Existing locally modified common-password is intentionally not force-rendered.
+wazuh_hardening_pam_preserve_local_stack: true
+wazuh_hardening_ssh_enabled: true
+wazuh_hardening_account_defaults_enabled: true
+wazuh_hardening_environment_enabled: true
+wazuh_hardening_core_enabled: true
+wazuh_hardening_shm_enabled: true
+wazuh_hardening_shm_compatible: true
+wazuh_hardening_priority_enabled: true
+wazuh_hardening_admin_users: [ansible, vagrant]
+wazuh_hardening_account_report_users: [root, ansible, vagrant]
+# No existing credential timestamps, expiration, locks or passwords are changed.
+# Routing and IPv6 dependencies have not been approved for this batch.
+wazuh_hardening_network_enabled: false

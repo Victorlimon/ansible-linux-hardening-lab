@@ -1,0 +1,101 @@
+---
+- name: Verify priority controls without changing the lab configuration
+  hosts: wazuh_delta_targets
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Prove the inventory account retains noninteractive root access
+      ansible.builtin.command: /usr/bin/sudo -n -u root /usr/bin/true
+      become: false
+      changed_when: false
+
+    - name: Validate the complete sudoers policy
+      ansible.builtin.command: /usr/sbin/visudo -c
+      changed_when: false
+
+    - name: Read the policy-visible logging directive
+      ansible.builtin.command:
+        argv: [/usr/bin/grep, '-Fx', 'Defaults logfile="/var/log/sudo.log"', /etc/sudoers]
+      changed_when: false
+
+    - name: Confirm effective sudo defaults for the inventory account
+      ansible.builtin.command: /usr/bin/sudo -l -U ansible
+      changed_when: false
+      register: priority_sudo
+
+    - name: Require the effective logging destination
+      ansible.builtin.assert:
+        that: "'logfile=/var/log/sudo.log' in priority_sudo.stdout"
+
+    - name: Inspect protected files without returning hashes or file contents
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+        get_checksum: false
+        get_mime: false
+      loop:
+        - /boot/grub/grub.cfg
+        - /var/lib/wazuh-priority-aide/aide.db
+        - /var/log/sudo.log
+      register: priority_files
+
+    - name: Require root-only boot configuration and a private nonempty trusted database
+      ansible.builtin.assert:
+        that:
+          - item.stat.isreg | default(false)
+          - item.stat.uid == 0
+          - item.stat.gid == 0
+          - item.stat.mode == ('0400' if item.item == '/boot/grub/grub.cfg' else '0600')
+          - item.stat.size > 0
+      loop: "{{ priority_files.results[:2] }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Require a real nonempty sudo log
+      ansible.builtin.assert:
+        that:
+          - priority_files.results[2].stat.isreg | default(false)
+          - priority_files.results[2].stat.size > 0
+
+    - name: Confirm both AIDE packages are installed
+      ansible.builtin.command: /usr/bin/dpkg-query -s aide aide-common
+      changed_when: false
+      register: priority_packages
+
+    - name: Require both package status records
+      ansible.builtin.assert:
+        that: "priority_packages.stdout | regex_findall('Status: install ok installed') | length == 2"
+
+    - name: Read effective service configuration and timer state
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - systemctl show dailyaidecheck.service -p LoadState -p UnitFileState -p ExecStart -p User
+        - systemctl show dailyaidecheck.timer -p LoadState -p UnitFileState -p ActiveState -p NextElapseUSecRealtime
+      changed_when: false
+      register: priority_scheduler
+
+    - name: Require a real scheduled read-only check using the isolated configuration
+      ansible.builtin.assert:
+        that:
+          - "'LoadState=loaded' in priority_scheduler.results[0].stdout"
+          - "'UnitFileState=static' in priority_scheduler.results[0].stdout"
+          - "'User=root' in priority_scheduler.results[0].stdout"
+          - "'--config=/etc/aide/wazuh-priority.conf --workers=1 --check' in priority_scheduler.results[0].stdout"
+          - "'ActiveState=active' in priority_scheduler.results[1].stdout"
+          - "'UnitFileState=enabled' in priority_scheduler.results[1].stdout"
+          - priority_scheduler.results[1].stdout is search('NextElapseUSecRealtime=.+')
+
+    - name: Perform a bounded real integrity comparison without disclosing database attributes
+      ansible.builtin.command:
+        argv: [/usr/bin/timeout, '--kill-after=10s', 600s, /usr/bin/aide,
+               '--config=/etc/aide/wazuh-priority.conf', '--workers=1', '--check']
+      changed_when: false
+      failed_when: false
+      no_log: true
+      register: priority_integrity
+
+    - name: Require an unchanged integrity baseline
+      ansible.builtin.assert:
+        that: priority_integrity.rc == 0
+        fail_msg: "AIDE comparison failed (rc={{ priority_integrity.rc }}); investigate without replacing the database."

@@ -10,6 +10,11 @@
 # documented mismatch (MAPPING.md); only FILE-BACKED profiles are enforced,
 # which also keeps the task idempotent (no futile aa-enforce churn per run).
 
+- name: Delta apparmor | Ensure apparmor-utils is installed
+  ansible.builtin.package:
+    name: apparmor-utils
+    state: present
+
 - name: Delta apparmor | Read current profile modes
   ansible.builtin.command: aa-status --json
   register: wazuh_delta_apparmor_status

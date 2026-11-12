@@ -1,0 +1,32 @@
+---
+- name: Set future password aging without touching existing shadow entries
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^\s*{{ item.key }}\s+'
+    line: '{{ item.key }} {{ item.value }}'
+    backup: true
+  loop:
+    - {key: PASS_MAX_DAYS, value: '{{ wazuh_hardening_pass_max_days }}'}
+    - {key: PASS_MIN_DAYS, value: '{{ wazuh_hardening_pass_min_days }}'}
+    - {key: PASS_WARN_AGE, value: '{{ wazuh_hardening_pass_warn_age }}'}
+
+- name: Set future account inactivity without changing current account locks
+  ansible.builtin.lineinfile:
+    path: /etc/default/useradd
+    regexp: '^\s*INACTIVE='
+    line: 'INACTIVE={{ wazuh_hardening_inactive_days }}'
+    backup: true
+
+- name: Report current credential ages without reading or printing password hashes
+  ansible.builtin.command:
+    argv: [/usr/bin/chage, --list, '{{ item }}']
+  loop: '{{ wazuh_hardening_account_report_users }}'
+  changed_when: false
+  register: hardening_aging
+
+- name: Expose aging evidence without resetting old credentials
+  ansible.builtin.debug:
+    msg: '{{ item.item }}: {{ item.stdout_lines }}'
+  loop: '{{ hardening_aging.results }}'
+  loop_control:
+    label: '{{ item.item }}'

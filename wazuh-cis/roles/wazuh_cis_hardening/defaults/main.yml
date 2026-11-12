@@ -1,0 +1,27 @@
+---
+wazuh_hardening_pam_enabled: false
+wazuh_hardening_pam_preserve_local_stack: false
+wazuh_hardening_ssh_enabled: false
+wazuh_hardening_account_defaults_enabled: false
+wazuh_hardening_environment_enabled: false
+wazuh_hardening_core_enabled: false
+wazuh_hardening_shm_enabled: false
+wazuh_hardening_shm_compatible: false
+wazuh_hardening_priority_enabled: false
+wazuh_hardening_network_enabled: false
+wazuh_hardening_admin_users: []
+wazuh_hardening_account_report_users: []
+wazuh_hardening_backup_dir: /var/backups/wazuh-cis-hardening
+wazuh_hardening_minlen: 14
+wazuh_hardening_difok: 2
+wazuh_hardening_minclass: 4
+wazuh_hardening_maxrepeat: 3
+wazuh_hardening_maxsequence: 3
+wazuh_hardening_remember: 24
+wazuh_hardening_pass_max_days: 365
+wazuh_hardening_pass_min_days: 1
+wazuh_hardening_pass_warn_age: 7
+wazuh_hardening_inactive_days: 30
+wazuh_hardening_umask: '0027'
+wazuh_hardening_tmout: 900
+wazuh_hardening_sudo_logfile: /var/log/sudo.log

@@ -1,0 +1,58 @@
+---
+- name: Read the effective PAM password stack
+  ansible.builtin.slurp:
+    src: /etc/pam.d/common-password
+  register: hardening_password
+
+- name: Require the complete hardened flow using the shared contract
+  ansible.builtin.include_tasks: pam_contract.yml
+  vars:
+    hardening_contract_text: '{{ hardening_password.content | b64decode }}'
+    hardening_contract_allow_before: false
+    hardening_contract_expected: true
+    hardening_contract_label: live hardened flow
+
+- name: Require quality then history then Unix and preserve yescrypt
+  ansible.builtin.assert:
+    that:
+      - "hardening_password.content | b64decode is search('(?s)password[^\\n]*requisite[^\\n]*pam_pwquality[.]so[^\\n]*retry=3.*password[^\\n]*requisite[^\\n]*pam_pwhistory[.]so[^\\n]*remember=' ~ wazuh_hardening_remember ~ '[^\\n]*enforce_for_root[^\\n]*use_authtok.*password[^\\n]*pam_unix[.]so[^\\n]*use_authtok[^\\n]*yescrypt')"
+      - "(hardening_password.content | b64decode | regex_findall('(?m)^[ \\t]*password[^\\n]*pam_pwhistory[.]so') | length) == 1"
+
+- name: Check every effective common stack for unsafe Unix nullok
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/grep
+      - -nE
+      - '^[[:space:]]*[^#].*pam_unix\.so.*\bnullok\b'
+      - /etc/pam.d/common-auth
+      - /etc/pam.d/common-account
+      - /etc/pam.d/common-password
+      - /etc/pam.d/common-session
+      - /etc/pam.d/common-session-noninteractive
+  register: hardening_nullok
+  changed_when: false
+  failed_when: hardening_nullok.rc != 1
+
+- name: Read the effective main quality configuration
+  ansible.builtin.slurp:
+    src: /etc/security/pwquality.conf
+  register: hardening_quality
+
+- name: Require exact quality settings and root enforcement
+  ansible.builtin.assert:
+    that:
+      - "hardening_quality.content | b64decode is search('(?m)^' ~ item.key ~ ' = ' ~ item.value ~ '$')"
+      - "(hardening_quality.content | b64decode | regex_findall('(?m)^[ \\t]*' ~ item.key ~ '[ \\t]*=') | length) == 1"
+      - "hardening_quality.content | b64decode is search('(?m)^enforce_for_root$')"
+  loop:
+    - {key: minlen, value: '{{ wazuh_hardening_minlen }}'}
+    - {key: difok, value: '{{ wazuh_hardening_difok }}'}
+    - {key: minclass, value: '{{ wazuh_hardening_minclass }}'}
+    - {key: maxrepeat, value: '{{ wazuh_hardening_maxrepeat }}'}
+    - {key: maxsequence, value: '{{ wazuh_hardening_maxsequence }}'}
+    - {key: dcredit, value: 0}
+    - {key: ucredit, value: 0}
+    - {key: lcredit, value: 0}
+    - {key: ocredit, value: 0}
+    - {key: dictcheck, value: 1}
+    - {key: enforcing, value: 1}

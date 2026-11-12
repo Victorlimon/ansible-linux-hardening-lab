@@ -1,0 +1,14 @@
+---
+# Wazuh CIS v1.0.0 sudo log file (33027 / 35664). Requires a `Defaults logfile=`
+# directive reachable from the sudoers corpus.
+
+- name: Sudo | Write logfile directive
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers.d/cis_logfile
+    regexp: '^\s*Defaults\s+logfile='
+    line: 'Defaults logfile={{ wazuh_delta_sudo_logfile_path }}'
+    create: true
+    owner: root
+    group: root
+    mode: '0440'
+    validate: visudo -cf %s

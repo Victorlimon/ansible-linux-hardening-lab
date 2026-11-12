@@ -75,3 +75,38 @@
     - wazuh_delta_apparmor_enforce_all_enabled | bool
     - "'apparmor_enforce_all' in wazuh_delta_platform_supported_controls"
   tags: [wazuh_delta, delta_apparmor]
+
+- name: Delta | auditd — Wazuh CIS v1.0.0 event-collection rules (33108-33120 / 35731-35748)
+  ansible.builtin.import_tasks: audit_rules.yml
+  when:
+    - wazuh_delta_audit_rules_enabled | bool
+    - "'audit_rules' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_audit_rules]
+
+- name: Delta | Password aging + sha512 backend (33163/33165-33167 / 35695/35698)
+  ansible.builtin.import_tasks: password_aging.yml
+  when:
+    - wazuh_delta_password_aging_enabled | bool
+    - "'password_aging' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_password_aging]
+
+- name: Delta | sudo log file in the main sudoers (33027 / 35664)
+  ansible.builtin.import_tasks: sudo_logfile.yml
+  when:
+    - wazuh_delta_sudo_logfile_enabled | bool
+    - "'sudo_logfile' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_sudo_logfile]
+
+- name: Delta | cron/at allow-lists, deny files removed (33136/33137 / 35600/35601)
+  ansible.builtin.import_tasks: cron_at_restriction.yml
+  when:
+    - wazuh_delta_cron_at_restriction_enabled | bool
+    - "'cron_at' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_cron_at]
+
+- name: Delta | sshd strong-only MACs (33150 / 35654)
+  ansible.builtin.import_tasks: ssh_macs.yml
+  when:
+    - wazuh_delta_ssh_macs_enabled | bool
+    - "'ssh_macs' in wazuh_delta_platform_supported_controls"
+  tags: [wazuh_delta, delta_ssh_macs]

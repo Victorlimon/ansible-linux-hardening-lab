@@ -1,0 +1,9 @@
+---
+- name: Apply explicitly selected Wazuh CIS hardening groups
+  hosts: wazuh_delta_targets
+  become: true
+  gather_facts: true
+  serial: 1
+  any_errors_fatal: true
+  roles:
+    - wazuh_cis_hardening

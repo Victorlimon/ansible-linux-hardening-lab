@@ -1,0 +1,24 @@
+---
+- name: Validate complete sudo policy before editing
+  ansible.builtin.command: /usr/sbin/visudo -c
+  changed_when: false
+
+- name: Maintain existing sudo logging in its established configuration location
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    regexp: '^Defaults\s+logfile='
+    line: 'Defaults logfile="{{ wazuh_hardening_sudo_logfile }}"'
+    backup: true
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Maintain existing GRUB file protection without setting boot passwords
+  ansible.builtin.file:
+    path: /boot/grub/grub.cfg
+    state: file
+    follow: false
+    owner: root
+    group: root
+    mode: '0400'
+
+- name: Prove fresh SSH and sudo after validating sudo configuration
+  ansible.builtin.import_tasks: access.yml

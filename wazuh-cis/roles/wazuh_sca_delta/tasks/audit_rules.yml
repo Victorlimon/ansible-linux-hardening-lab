@@ -1,0 +1,71 @@
+---
+# Wazuh CIS v1.0.0 auditd collection rules (33108-33120 / 35731-35748).
+# Writes the platform-specific rule lines from vars/<platform>.yml into a
+# dedicated rules file (additive to the repo's cis_6_2_3_*.rules), pre-seeds
+# any watch targets, guarantees tmpfiles-owned directories, then loads.
+
+- name: Audit | Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Audit | Ensure rules.d directory
+  ansible.builtin.file:
+    path: /etc/audit/rules.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+  when: '"auditd" in ansible_facts.packages'
+
+- name: Audit | Write Wazuh CIS v1.0.0 rules
+  ansible.builtin.copy:
+    dest: /etc/audit/rules.d/50-cis-wazuh.rules
+    owner: root
+    group: root
+    mode: '0640'
+    content: |
+      {% for item in wazuh_delta_audit_rule_lines | default([]) -%}
+      {{ item.rule }}
+      {% endfor %}
+  when:
+    - '"auditd" in ansible_facts.packages'
+    - (wazuh_delta_audit_rule_lines | default([])) | length > 0
+
+- name: Audit | Preseed watch targets
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: touch
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0600') }}"
+  loop: "{{ wazuh_delta_audit_preseed_files | default([]) }}"
+  when: '"auditd" in ansible_facts.packages'
+
+- name: Audit | Ensure tmpfiles-owned directories
+  ansible.builtin.copy:
+    dest: /etc/tmpfiles.d/wazuh-audit.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: "{{ (wazuh_delta_audit_tmpfiles_lines | default([])) | join('\n') }}\n"
+  when:
+    - '"auditd" in ansible_facts.packages'
+    - (wazuh_delta_audit_tmpfiles_lines | default([])) | length > 0
+
+- name: Audit | Create tmpfiles dirs now
+  ansible.builtin.command: systemd-tmpfiles --create /etc/tmpfiles.d/wazuh-audit.conf
+  changed_when: true
+  when:
+    - '"auditd" in ansible_facts.packages'
+    - (wazuh_delta_audit_tmpfiles_lines | default([])) | length > 0
+
+- name: Audit | Load merged rules
+  ansible.builtin.command: augenrules --load
+  changed_when: true
+  when: '"auditd" in ansible_facts.packages'
+
+- name: Audit | Restart auditd
+  ansible.builtin.systemd:
+    name: auditd
+    state: restarted
+  when: '"auditd" in ansible_facts.packages'

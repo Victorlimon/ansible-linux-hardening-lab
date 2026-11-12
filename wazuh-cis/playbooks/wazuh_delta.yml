@@ -17,5 +17,10 @@
     wazuh_delta_journald_rotation_enabled: true
     wazuh_delta_logrotate_permissions_enabled: true
     wazuh_delta_apparmor_enforce_all_enabled: true
+    wazuh_delta_audit_rules_enabled: true
+    wazuh_delta_password_aging_enabled: true
+    wazuh_delta_sudo_logfile_enabled: true
+    wazuh_delta_cron_at_restriction_enabled: true
+    wazuh_delta_ssh_macs_enabled: true
   roles:
     - role: wazuh_sca_delta

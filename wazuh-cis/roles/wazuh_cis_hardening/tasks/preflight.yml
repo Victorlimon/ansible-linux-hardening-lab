@@ -1,0 +1,35 @@
+---
+- name: Require supported facts and the reviewed runtime
+  ansible.builtin.assert:
+    that:
+      - ansible_version.full == '2.21.2'
+      - >-
+        (ansible_facts.distribution == 'Debian' and ansible_facts.distribution_major_version == '12')
+        or (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_version == '24.04')
+      - not (wazuh_hardening_network_enabled | bool)
+      - wazuh_hardening_minlen | int >= 14
+      - wazuh_hardening_difok | int >= 2
+      - wazuh_hardening_minclass | int == 4
+      - wazuh_hardening_maxrepeat | int in [1, 2, 3]
+      - wazuh_hardening_maxsequence | int in [1, 2, 3]
+      - wazuh_hardening_remember | int >= 24
+      - wazuh_hardening_pass_max_days | int > wazuh_hardening_pass_min_days | int
+      - wazuh_hardening_pass_max_days | int <= 365
+      - wazuh_hardening_pass_min_days | int >= 1
+      - wazuh_hardening_pass_warn_age | int >= 7
+      - wazuh_hardening_inactive_days | int >= 0
+      - wazuh_hardening_inactive_days | int <= 30
+      - wazuh_hardening_umask in ['0027', '0077']
+      - wazuh_hardening_tmout | int > 0
+      - wazuh_hardening_tmout | int <= 900
+    fail_msg: Unsupported platform, policy values or unimplemented network group; no silent fallback.
+
+- name: Require explicit SSH administrators including the connection user
+  ansible.builtin.assert:
+    that:
+      - wazuh_hardening_admin_users | length > 0
+      - ansible_user in wazuh_hardening_admin_users
+      - wazuh_hardening_admin_users | unique | length == wazuh_hardening_admin_users | length
+      - wazuh_hardening_admin_users | select('match', '^[a-z_][a-z0-9_-]*[$]?$') | list | length == wazuh_hardening_admin_users | length
+    fail_msg: Supply explicit local admin usernames; empty, wildcard and host-qualified lists are refused.
+  when: wazuh_hardening_ssh_enabled | bool

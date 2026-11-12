@@ -1,0 +1,47 @@
+---
+- name: Require explicit shared-memory workload compatibility approval
+  ansible.builtin.assert:
+    that: wazuh_hardening_shm_compatible | bool
+
+- name: Inspect the actual shared-memory mount
+  ansible.builtin.command: /usr/bin/findmnt --json --mountpoint /dev/shm --output SOURCE,TARGET,FSTYPE,OPTIONS
+  changed_when: false
+  register: hardening_shm_mount
+
+- name: Read the persistent mount table
+  ansible.builtin.slurp:
+    src: /etc/fstab
+  register: hardening_fstab
+
+- name: Require a normal tmpfs mount and refuse pre-existing unmanaged persistent policy
+  ansible.builtin.assert:
+    that:
+      - (hardening_shm_mount.stdout | from_json).filesystems | length == 1
+      - (hardening_shm_mount.stdout | from_json).filesystems[0].fstype == 'tmpfs'
+      - (hardening_shm_mount.stdout | from_json).filesystems[0].source == 'tmpfs'
+      - >-
+        (hardening_fstab.content | b64decode | regex_findall('(?m)^[^#\n]+[ \t]+/dev/shm[ \t]+[^\n]+') | length) == 0
+        or (hardening_fstab.content | b64decode is search('(?m)^tmpfs /dev/shm tmpfs [^\n]*noexec[^\n]* 0 0$'))
+    fail_msg: Review an existing persistent /dev/shm policy before adoption; no storage migration is attempted.
+
+- name: Save the original persistent mount table once
+  ansible.builtin.copy:
+    src: /etc/fstab
+    dest: '{{ wazuh_hardening_backup_dir }}/fstab.original'
+    remote_src: true
+    force: false
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Persist and activate restrictive options while retaining unrelated live options
+  ansible.posix.mount:
+    path: /dev/shm
+    src: tmpfs
+    fstype: tmpfs
+    opts: >-
+      {{ (((hardening_shm_mount.stdout | from_json).filesystems[0].options.split(',')
+      | difference(['exec', 'dev', 'suid'])) + ['noexec', 'nodev', 'nosuid']) | unique | sort | join(',') }}
+    state: mounted
+    backup: true
+  notify: Wazuh hardening | Reload systemd unit configuration

@@ -1,0 +1,23 @@
+---
+- name: Close the existing transport before proving fresh authentication
+  ansible.builtin.meta: reset_connection
+
+- name: Prove a fresh SSH session as the inventory connection user
+  ansible.builtin.command: /usr/bin/id -un
+  become: false
+  vars:
+    ansible_become: false
+  changed_when: false
+  register: hardening_login
+
+- name: Prove sudo on the fresh session
+  ansible.builtin.command: /usr/bin/id -u
+  changed_when: false
+  register: hardening_become
+
+- name: Require the expected unprivileged identity and root become
+  ansible.builtin.assert:
+    that:
+      - hardening_login.stdout == ansible_user
+      - hardening_become.stdout == '0'
+    success_msg: "Fresh SSH login as {{ ansible_user }} and sudo uid 0 succeeded."

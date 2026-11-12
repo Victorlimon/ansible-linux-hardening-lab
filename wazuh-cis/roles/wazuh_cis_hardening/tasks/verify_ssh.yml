@@ -1,0 +1,19 @@
+---
+- name: Validate the complete SSH configuration
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+
+- name: Read effective SSH settings without exposing keys
+  ansible.builtin.command: /usr/sbin/sshd -T
+  changed_when: false
+  register: hardening_sshd
+
+- name: Require exact allowlist and retained public-key administration
+  ansible.builtin.assert:
+    that:
+      - >-
+        (hardening_sshd.stdout_lines | select('match', '^allowusers ')
+        | map('regex_replace', '^allowusers ', '') | join(' ')).split()
+        == wazuh_hardening_admin_users
+      - "'pubkeyauthentication yes' in hardening_sshd.stdout_lines"
+      - "'usepam yes' in hardening_sshd.stdout_lines"

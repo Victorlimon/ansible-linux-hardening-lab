@@ -1,0 +1,343 @@
+---
+- name: Validate platform and site policy independently
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+
+- name: Verify PAM module order, options and strength policy
+  ansible.builtin.import_tasks: verify_pam.yml
+  when: wazuh_hardening_pam_enabled | bool
+  tags: hardening_pam
+
+- name: Independently exercise PAM refusal fixtures
+  ansible.builtin.import_tasks: pam_guard.yml
+  when: wazuh_hardening_pam_enabled | bool
+  tags: hardening_pam
+
+- name: Verify SSH effective configuration
+  ansible.builtin.import_tasks: verify_ssh.yml
+  when: wazuh_hardening_ssh_enabled | bool
+  tags: hardening_ssh
+
+- name: Read account creation defaults
+  ansible.builtin.slurp:
+    src: /etc/login.defs
+  register: hardening_login_defs
+  when: wazuh_hardening_account_defaults_enabled | bool
+  tags: hardening_accounts
+
+- name: Verify future account policy without claiming existing account compliance
+  ansible.builtin.assert:
+    that:
+      - "hardening_login_defs.content | b64decode is search('(?m)^' ~ item.key ~ ' ' ~ item.value ~ '$')"
+  loop:
+    - {key: PASS_MAX_DAYS, value: '{{ wazuh_hardening_pass_max_days }}'}
+    - {key: PASS_MIN_DAYS, value: '{{ wazuh_hardening_pass_min_days }}'}
+    - {key: PASS_WARN_AGE, value: '{{ wazuh_hardening_pass_warn_age }}'}
+  when: wazuh_hardening_account_defaults_enabled | bool
+  tags: hardening_accounts
+
+- name: Read native new-account defaults
+  ansible.builtin.command: /usr/sbin/useradd -D
+  changed_when: false
+  register: hardening_useradd
+  when: wazuh_hardening_account_defaults_enabled | bool
+  tags: hardening_accounts
+
+- name: Verify inactive default
+  ansible.builtin.assert:
+    that: "('INACTIVE=' ~ wazuh_hardening_inactive_days) in hardening_useradd.stdout_lines"
+  when: wazuh_hardening_account_defaults_enabled | bool
+  tags: hardening_accounts
+
+- name: Verify shell configurations parse natively
+  ansible.builtin.command:
+    argv: [/bin/bash, -n, '{{ item }}']
+  changed_when: false
+  loop: [/etc/profile, /etc/bash.bashrc, /root/.bashrc, /root/.profile]
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Inspect interactive login shell values without changing credentials
+  ansible.builtin.command:
+    argv: [/bin/bash, -lic, 'umask; declare -p TMOUT']
+  changed_when: false
+  register: hardening_environment
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Require effective root mask and readonly exported timeout
+  ansible.builtin.assert:
+    that:
+      - hardening_environment.stdout_lines[0] == wazuh_hardening_umask
+      - "hardening_environment.stdout is search('declare -rx TMOUT=\"[1-9][0-9]{0,2}\"')"
+      - "(hardening_environment.stdout | regex_findall('TMOUT=\"([0-9]+)\"') | first | int) <= wazuh_hardening_tmout | int"
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Inspect the unprivileged interactive login environment
+  ansible.builtin.command:
+    argv: [/bin/bash, -lic, 'umask; declare -p TMOUT']
+  become: false
+  vars:
+    ansible_become: false
+  changed_when: false
+  register: hardening_user_environment
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Require effective unprivileged mask and readonly exported timeout
+  ansible.builtin.assert:
+    that:
+      - hardening_user_environment.stdout_lines[0] == wazuh_hardening_umask
+      - "hardening_user_environment.stdout is search('declare -rx TMOUT=\"[1-9][0-9]{0,2}\"')"
+      - "(hardening_user_environment.stdout | regex_findall('TMOUT=\"([0-9]+)\"') | first | int) <= wazuh_hardening_tmout | int"
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Prove clean, inherited and already-readonly interactive timeout behavior
+  ansible.builtin.command:
+    argv: >-
+      {{ ['/usr/bin/env'] + item.1.environment + ['/bin/bash'] +
+      (item.1.bash_options | default(['-ic'])) +
+      [item.1.probe | default('declare -p TMOUT')] }}
+  vars:
+    ansible_become: '{{ item.0 }}'
+    hardening_tmout_cases:
+      - {name: clean, environment: [-u, TMOUT], expected: '{{ wazuh_hardening_tmout }}'}
+      - {name: inherited-900, environment: [TMOUT=900], expected: '{{ wazuh_hardening_tmout }}'}
+      - {name: inherited-weak, environment: [TMOUT=1800], expected: '{{ wazuh_hardening_tmout }}'}
+      - {name: inherited-disabled, environment: [TMOUT=0], expected: '{{ wazuh_hardening_tmout }}'}
+      - {name: inherited-malformed, environment: [TMOUT=invalid], expected: '{{ wazuh_hardening_tmout }}'}
+      - {name: inherited-stricter, environment: [TMOUT=300], expected: '{{ [300, wazuh_hardening_tmout | int] | min }}'}
+      - name: readonly-approved-repeated-startup
+        environment: [-u, TMOUT]
+        bash_options: [--norc, -ic]
+        probe: 'readonly TMOUT={{ wazuh_hardening_tmout }}; . /etc/bash.bashrc; . /etc/bash.bashrc; declare -p TMOUT'
+        expected: '{{ wazuh_hardening_tmout }}'
+      - name: readonly-stricter-startup
+        environment: [-u, TMOUT]
+        bash_options: [--norc, -ic]
+        probe: 'readonly TMOUT={{ [300, wazuh_hardening_tmout | int] | min }}; . /etc/bash.bashrc; declare -p TMOUT'
+        expected: '{{ [300, wazuh_hardening_tmout | int] | min }}'
+  loop: '{{ [true, false] | product(hardening_tmout_cases) | list }}'
+  loop_control:
+    label: '{{ (item.0 | ternary("root", "connection-user")) ~ ":" ~ item.1.name }}'
+  changed_when: false
+  register: hardening_tmout_proofs
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Assert readonly export and the approved or retained stricter timeout for every case
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - "item.stdout is search('(?m)^declare -rx TMOUT=\"' ~ item.item.1.expected ~ '\"$')"
+      - item.stderr is not search('Readonly TMOUT violates|readonly variable')
+    quiet: true
+  loop: '{{ hardening_tmout_proofs.results }}'
+  loop_control:
+    label: '{{ item.item.1.name }}'
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Prove noninteractive shells do not acquire an interactive timeout
+  ansible.builtin.command:
+    argv: [/usr/bin/env, -u, TMOUT, /bin/bash, '{{ item }}', 'declare -p TMOUT']
+  loop: [-c, -lc]
+  changed_when: false
+  register: hardening_noninteractive_clean
+  failed_when: hardening_noninteractive_clean.rc != 1 or hardening_noninteractive_clean.stdout != ''
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Prove noninteractive inherited environment is not reset
+  ansible.builtin.command:
+    argv: [/usr/bin/env, TMOUT=1800, /bin/bash, '{{ item }}', 'declare -p TMOUT']
+  loop: [-c, -lc]
+  changed_when: false
+  register: hardening_noninteractive_inherited
+  failed_when: hardening_noninteractive_inherited.rc != 0 or hardening_noninteractive_inherited.stdout != 'declare -x TMOUT="1800"'
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Refuse an unchangeable weak readonly timeout without attempting a conflicting assignment
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/env
+      - -u
+      - TMOUT
+      - /bin/bash
+      - --norc
+      - -ic
+      - 'readonly TMOUT=1800; . /etc/bash.bashrc; printf "%s\n" UNEXPECTED_CONTINUATION'
+  vars:
+    ansible_become: '{{ item }}'
+  loop: [true, false]
+  changed_when: false
+  register: hardening_readonly_refusal
+  failed_when: >-
+    hardening_readonly_refusal.rc != 1
+    or hardening_readonly_refusal.stdout != ''
+    or 'Readonly TMOUT violates the approved interactive policy.' not in hardening_readonly_refusal.stderr
+    or 'readonly variable' in hardening_readonly_refusal.stderr
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Read runtime dumpability
+  ansible.builtin.command: /usr/sbin/sysctl -n fs.suid_dumpable
+  changed_when: false
+  register: hardening_dumpable
+  when: wazuh_hardening_core_enabled | bool
+  tags: hardening_core
+
+- name: Require restricted suid dumpability
+  ansible.builtin.assert:
+    that: hardening_dumpable.stdout == '0'
+  when: wazuh_hardening_core_enabled | bool
+  tags: hardening_core
+
+- name: Read the persistent core limits
+  ansible.builtin.slurp:
+    src: /etc/security/limits.d/60-wazuh-cis-core.conf
+  register: hardening_core_limits
+  when: wazuh_hardening_core_enabled | bool
+  tags: hardening_core
+
+- name: Require explicit user and root hard core limits
+  ansible.builtin.assert:
+    that:
+      - "'* hard core 0' in (hardening_core_limits.content | b64decode)"
+      - "'root hard core 0' in (hardening_core_limits.content | b64decode)"
+  when: wazuh_hardening_core_enabled | bool
+  tags: hardening_core
+
+- name: Read package facts without changing package state
+  ansible.builtin.package_facts:
+    manager: auto
+  when: wazuh_hardening_core_enabled | bool
+  tags: hardening_core
+
+- name: Verify installed Apport is masked
+  ansible.builtin.command: /usr/bin/systemctl is-enabled apport.service
+  changed_when: false
+  register: hardening_apport
+  failed_when: hardening_apport.rc != 1 or hardening_apport.stdout != 'masked'
+  when:
+    - wazuh_hardening_core_enabled | bool
+    - "'apport' in ansible_facts.packages"
+  tags: hardening_core
+
+- name: Verify installed Apport is inactive
+  ansible.builtin.command: /usr/bin/systemctl is-active apport.service
+  changed_when: false
+  register: hardening_apport_active
+  failed_when: hardening_apport_active.rc != 3 or hardening_apport_active.stdout != 'inactive'
+  when:
+    - wazuh_hardening_core_enabled | bool
+    - "'apport' in ansible_facts.packages"
+  tags: hardening_core
+
+- name: Read installed Apport persistent policy
+  ansible.builtin.slurp:
+    src: /etc/default/apport
+  register: hardening_apport_config
+  when:
+    - wazuh_hardening_core_enabled | bool
+    - "'apport' in ansible_facts.packages"
+  tags: hardening_core
+
+- name: Require disabled persistent error reporting
+  ansible.builtin.assert:
+    that: "hardening_apport_config.content | b64decode is search('(?m)^enabled=0$')"
+  when:
+    - wazuh_hardening_core_enabled | bool
+    - "'apport' in ansible_facts.packages"
+  tags: hardening_core
+
+- name: Read optional systemd collector persistent policy
+  ansible.builtin.slurp:
+    src: /etc/systemd/coredump.conf
+  register: hardening_coredump_config
+  when:
+    - wazuh_hardening_core_enabled | bool
+    - "'systemd-coredump' in ansible_facts.packages"
+  tags: hardening_core
+
+- name: Require disabled optional systemd collector storage and processing
+  ansible.builtin.assert:
+    that:
+      - "hardening_coredump_config.content | b64decode is search('(?m)^Storage=none$')"
+      - "hardening_coredump_config.content | b64decode is search('(?m)^ProcessSizeMax=0$')"
+  when:
+    - wazuh_hardening_core_enabled | bool
+    - "'systemd-coredump' in ansible_facts.packages"
+  tags: hardening_core
+
+- name: Read live shared-memory options
+  ansible.builtin.command: /usr/bin/findmnt --json --mountpoint /dev/shm --output SOURCE,TARGET,FSTYPE,OPTIONS
+  changed_when: false
+  register: hardening_shm_verify
+  when: wazuh_hardening_shm_enabled | bool
+  tags: hardening_shm
+
+- name: Read persistent shared-memory options
+  ansible.builtin.command: /usr/bin/findmnt --fstab --json --mountpoint /dev/shm --output SOURCE,TARGET,FSTYPE,OPTIONS
+  changed_when: false
+  register: hardening_shm_persistent
+  when: wazuh_hardening_shm_enabled | bool
+  tags: hardening_shm
+
+- name: Require all three restrictions live and persistent
+  ansible.builtin.assert:
+    that:
+      - "['noexec', 'nodev', 'nosuid'] | difference((item.stdout | from_json).filesystems[0].options.split(',')) | length == 0"
+  loop: '{{ [hardening_shm_verify, hardening_shm_persistent] }}'
+  loop_control:
+    label: shared-memory-options
+  when: wazuh_hardening_shm_enabled | bool
+  tags: hardening_shm
+
+- name: Validate complete sudo policy independently
+  ansible.builtin.command: /usr/sbin/visudo -c
+  changed_when: false
+  when: wazuh_hardening_priority_enabled | bool
+  tags: hardening_priority
+
+- name: Inspect existing protected GRUB file
+  ansible.builtin.stat:
+    path: /boot/grub/grub.cfg
+    follow: false
+    get_checksum: false
+    get_mime: false
+  register: hardening_grub
+  when: wazuh_hardening_priority_enabled | bool
+  tags: hardening_priority
+
+- name: Verify the established sudo logging destination independently
+  ansible.builtin.command:
+    argv: [/usr/bin/grep, -Fx, 'Defaults logfile="{{ wazuh_hardening_sudo_logfile }}"', /etc/sudoers]
+  changed_when: false
+  when: wazuh_hardening_priority_enabled | bool
+  tags: hardening_priority
+
+- name: Require root-only GRUB configuration
+  ansible.builtin.assert:
+    that:
+      - hardening_grub.stat.isreg
+      - hardening_grub.stat.uid == 0
+      - hardening_grub.stat.gid == 0
+      - hardening_grub.stat.mode == '0400'
+  when: wazuh_hardening_priority_enabled | bool
+  tags: hardening_priority
+
+- name: Independently prove fresh SSH and become
+  ansible.builtin.import_tasks: access.yml
+  tags: always
+
+- name: Disclose verification scope and the unresolved integrity warning
+  ansible.builtin.debug:
+    msg: >-
+      Selected controls verified, not an SCA score or overall integrity verdict.
+      Existing priority AIDE database and configuration were not modified or rebaselined.
+      Known previous AIDE check rc=6 remains unresolved; these configuration changes add monitored deltas.
+  tags: always

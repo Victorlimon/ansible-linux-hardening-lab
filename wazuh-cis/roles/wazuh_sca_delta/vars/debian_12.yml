@@ -13,6 +13,11 @@ wazuh_delta_platform_supported_controls:
   - legacy_clients
   - rsyslog
   - logrotate
+  - audit_rules
+  - password_aging
+  - sudo_logfile
+  - cron_at
+  - ssh_macs
 
 # /bin/true on Debian; the Ubuntu policy demands /bin/false. See MAPPING.md.
 wazuh_delta_kernel_module_install_target: /bin/true
@@ -45,3 +50,91 @@ wazuh_delta_legacy_client_packages:
   - inetutils-telnet
   - ftp
   - inetutils-ftp
+
+# Debian 33163 reads `f:/etc/pam.d/common-password -> r:sha512$`; Debian 12
+# ships yescrypt, so pam_unix must be rewritten. Ubuntu has no such rule.
+wazuh_delta_pam_password_file: /etc/pam.d/common-password
+
+# ---------------------------------------------------------------------------
+# Wazuh CIS v1.0.0 auditd collection rules still missing on the node.
+# Every line below closes one sub-rule of the `condition: all` checks; the
+# tokens mirror the policy regexes EXACTLY (same-line conjunctions of
+# ^-a/-w, arch, -S syscall list, -F perm/auid/exit filters and the -k key
+# name the policy expects). Existing ansible/ repo lines (cis_6_2_3_*.rules,
+# 50-privileged.rules) already satisfy the other sub-rules — this file is
+# additive, never a rewrite. Verified against live auditctl -l rendering
+# (syscall rules print `-F key=`, watches print `-k`; normalization in
+# files/audit_runtime_check.py).
+wazuh_delta_audit_rule_lines:
+  # 33108 — time-change (adjtimex,settimeofday line ships in cis_6_2_3_4)
+  - rule: "-a always,exit -F arch=b64 -S clock_settime -F auid>=1000 -F auid!=unset -k time-change"
+    comment: "Wazuh 33108 clock_settime b64 (policy rule: -S clock_settime + key)"
+  - rule: "-a always,exit -F arch=b32 -S clock_settime -F auid>=1000 -F auid!=unset -k time-change"
+    comment: "Wazuh 33108 clock_settime b32"
+  - rule: "-w /etc/localtime -p wa -k time-change"
+    comment: "Wazuh 33108 /etc/localtime watch"
+  # 33109 — identity (/etc/group ships in cis_6_2_3_8)
+  - rule: "-w /etc/passwd -p wa -k identity"
+    comment: "Wazuh 33109 passwd"
+  - rule: "-w /etc/shadow -p wa -k identity"
+    comment: "Wazuh 33109 shadow"
+  - rule: "-w /etc/gshadow -p wa -k identity"
+    comment: "Wazuh 33109 gshadow"
+  - rule: "-w /etc/security/opasswd -p wa -k identity"
+    comment: "Wazuh 33109 opasswd"
+  # 33110 — system-locale (sethostname/setdomainname line ships in cis_6_2_3_5)
+  - rule: "-w /etc/issue -p wa -k system-locale"
+    comment: "Wazuh 33110 /etc/issue"
+  - rule: "-w /etc/issue.net -p wa -k system-locale"
+    comment: "Wazuh 33110 /etc/issue.net"
+  - rule: "-w /etc/hosts -p wa -k system-locale"
+    comment: "Wazuh 33110 /etc/hosts"
+  - rule: "-w /etc/network -p wa -k system-locale"
+    comment: "Wazuh 33110 /etc/network (ifupdown dir present on Debian)"
+  # 33111 — MAC-policy (/etc/apparmor ships in cis_6_2_3_14)
+  - rule: "-w /etc/apparmor.d -p wa -k MAC-policy"
+    comment: "Wazuh 33111 /etc/apparmor.d"
+  # 33112 — logins (lastlog ships in cis_6_2_3_12)
+  - rule: "-w /var/log/faillog -p wa -k logins"
+    comment: "Wazuh 33112 faillog"
+  - rule: "-w /var/log/tallylog -p wa -k logins"
+    comment: "Wazuh 33112 tallylog (file preseeded below)"
+  # 33113 — session (utmp ships in cis_6_2_3_11)
+  - rule: "-w /var/log/wtmp -p wa -k session"
+    comment: "Wazuh 33113 wtmp"
+  - rule: "-w /var/log/btmp -p wa -k session"
+    comment: "Wazuh 33113 btmp"
+  # 33114 — perm_mod (chmod line ships in cis_6_2_3_9; regex needs each
+  # family on ONE line)
+  - rule: "-a always,exit -F arch=b64 -S chown,fchown,lchown,fchownat -F auid>=1000 -F auid!=unset -k perm_mod"
+    comment: "Wazuh 33114 chown family"
+  - rule: "-a always,exit -F arch=b64 -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=unset -k perm_mod"
+    comment: "Wazuh 33114 xattr family"
+  # 33115 — access (EACCES ships in cis_6_2_3_7)
+  - rule: "-a always,exit -F arch=b64 -S creat,open,openat,truncate,ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=unset -k access"
+    comment: "Wazuh 33115 EPERM"
+  # 33118 — scope (/etc/sudoers ships in cis_6_2_3_1)
+  - rule: "-w /etc/sudoers.d -p wa -k scope"
+    comment: "Wazuh 33118 sudoers.d"
+  # 33119 — actions (sudo execve; the v1.1.0 user_emulation rule uses
+  # -C euid!=uid, the v1.0.0 policy regex demands the literal -C uid!=euid)
+  - rule: "-a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k actions"
+    comment: "Wazuh 33119 sudo execve actions (Debian form)"
+  # 33120 — modules (cis_6_2_3_19 carries key=kernel_modules, not modules)
+  - rule: "-a always,exit -F arch=b64 -S init_module,finit_module,delete_module -F auid>=1000 -F auid!=unset -k modules"
+    comment: "Wazuh 33120 module syscalls with v1.0.0 key 'modules'"
+  - rule: "-w /sbin/insmod -p x -k modules"
+    comment: "Wazuh 33120 insmod exec watch"
+  - rule: "-w /sbin/rmmod -p x -k modules"
+    comment: "Wazuh 33120 rmmod exec watch"
+  - rule: "-w /sbin/modprobe -p x -k modules"
+    comment: "Wazuh 33120 modprobe exec watch"
+
+# Audit watches need their target to exist at rule-load time.
+# NO tallylog preseed: these nodes use pam_faillock, so /var/log/tallylog is
+# not a faillock data file — the repo's tmpfiles.d entry (`f /var/log/tallylog
+# 0664 root utmp -`) owns it. A 0600 root:root tallylog broke getty's login()
+# and hung the getty loop on reboot (verified via VBox console 2026-11-05).
+wazuh_delta_audit_preseed_files: []
+
+wazuh_delta_audit_tmpfiles_lines: []

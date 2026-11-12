@@ -1,0 +1,19 @@
+---
+# Wazuh CIS v1.0.0 strong-only SSH MACs (33150 / 35654). The policy rule uses
+# `condition: none` over a weak-MAC list, so pinning a strong allow-list is the
+# compliant state.
+
+- name: SSH | Pin strong MAC algorithms
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^\s*MACs\s+'
+    line: 'MACs {{ wazuh_delta_sshd_macs }}'
+    insertafter: '^\s*#?\s*Ciphers'
+    backup: true
+    validate: sshd -t -f %s
+  notify: reload sshd
+
+- name: SSH | Reload sshd
+  ansible.builtin.systemd:
+    name: ssh
+    state: reloaded

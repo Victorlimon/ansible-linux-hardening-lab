@@ -1,0 +1,53 @@
+---
+- name: Validate platform and policy before any mutation
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+
+- name: Validate the complete active PAM flow and refusal fixtures before any writes
+  ansible.builtin.import_tasks: pam_guard.yml
+  when: wazuh_hardening_pam_enabled | bool
+  tags: always
+
+- name: Prepare private first-run rollback copies
+  ansible.builtin.file:
+    path: "{{ wazuh_hardening_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  tags: always
+
+- name: Apply password quality and history without replacing the PAM stack
+  ansible.builtin.import_tasks: pam.yml
+  when: wazuh_hardening_pam_enabled | bool
+  tags: hardening_pam
+
+- name: Restrict SSH administrators without modifying cryptography
+  ansible.builtin.import_tasks: ssh.yml
+  when: wazuh_hardening_ssh_enabled | bool
+  tags: hardening_ssh
+
+- name: Configure future account defaults only
+  ansible.builtin.import_tasks: accounts.yml
+  when: wazuh_hardening_account_defaults_enabled | bool
+  tags: hardening_accounts
+
+- name: Configure login environment
+  ansible.builtin.import_tasks: environment.yml
+  when: wazuh_hardening_environment_enabled | bool
+  tags: hardening_environment
+
+- name: Restrict crash collection
+  ansible.builtin.import_tasks: core.yml
+  when: wazuh_hardening_core_enabled | bool
+  tags: hardening_core
+
+- name: Restrict shared memory with explicit compatibility approval
+  ansible.builtin.import_tasks: shm.yml
+  when: wazuh_hardening_shm_enabled | bool
+  tags: hardening_shm
+
+- name: Maintain reusable sudo logging and existing boot protection
+  ansible.builtin.import_tasks: priority.yml
+  when: wazuh_hardening_priority_enabled | bool
+  tags: hardening_priority

@@ -1,0 +1,12 @@
+# MANAGED BY ANSIBLE — wazuh-cis/roles/wazuh_sca_delta — DO NOT EDIT ON HOST
+# Wazuh SCA CIS v1.0.0 "are collected" delta rules.
+# Deliberately additive: the ansible/ repo CIS v1.1.0 files under
+# /etc/audit/rules.d/ stay in place; the union of *.rules satisfies both
+# benchmarks. Line shapes follow the Wazuh policy regexes exactly (same-line
+# token conjunctions, -k key names, -F auid/exit filters).
+{% for entry in wazuh_delta_audit_rule_lines %}
+{% if entry.comment is defined %}
+# {{ entry.comment }}
+{% endif %}
+{{ entry.rule }}
+{% endfor %}
