@@ -1,0 +1,23 @@
+schemaName: gentle-ai.sdd-preproposal
+schemaVersion: 1
+revision: 1
+changeName: wazuh-managed-hardening-integration
+artifactStore: hybrid
+exploration:
+  outcome: success
+  openspec: openspec/changes/wazuh-managed-hardening-integration/exploration.md
+  engram: sdd/wazuh-managed-hardening-integration/explore
+research:
+  selected: false
+  outcome: unselected
+  requestedSourceClasses: []
+  admission: not_requested
+productDecisions:
+  status: confirmed
+  decisions:
+    - Mantener lab_v9 solo en modo comprobación hasta demostrar supervisión recuperable.
+    - Usar perfiles sellados por host y sección; Wazuh no enviará rutas ni variables arbitrarias.
+    - Exigir aprobación de un solo uso por host, sección y perfil para aplicar cambios.
+    - No declarar controles manuales o no aplicables como remediados automáticamente.
+    - Exigir prueba viva aislada de Wazuh 4.12.0 antes de adaptación productiva.
+proposalReady: true

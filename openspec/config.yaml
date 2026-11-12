@@ -1,6 +1,81 @@
-# Gentle AI SDD control-plane declaration (minimal).
-# Declares Engram as the authoritative artifact store WITHOUT authorizing any
-# OpenSpec change artifacts. Native `sdd-status`/`sdd-continue` resolve
-# `artifactStore: engram` from this file.
+# Configuración del SDD. Los artefactos se conservan en OpenSpec y Engram.
+schema: spec-driven
 sdd:
-  artifact_store: engram
+  artifact_store: hybrid
+
+context: |
+  Proyecto de hardening GNU/Linux con Ansible y adaptación a CIS para Ubuntu 24.04 y Debian 12.
+  El laboratorio usa Vagrant y una integración local Wazuh → ansible-control → nodos.
+  Los playbooks separan auditoría, remediación y verificación; las acciones sensibles requieren aprobación.
+  La documentación local de Ansible es de solo lectura; no se debe modificar ni incluir en commits.
+  La producción institucional y Wazuh 4.12.0 todavía requieren validación independiente.
+
+# No existe un comando de pruebas de raíz que cubra todos los componentes.
+strict_tdd: false
+projects:
+  - path: .
+    stack: Bash, Make y Vagrant
+    test_command: make check-host
+    coverage_command: ""
+    quality_commands:
+      - git diff --check
+      - bash scripts/check_host.sh
+  - path: ansible
+    stack: Ansible Core y pruebas Python unittest
+    test_command: python3 -m unittest discover -s tests -p 'test_*.py'
+    coverage_command: ""
+    quality_commands:
+      - ansible-playbook playbooks/hardening/cis_ubuntu_2404.yml --syntax-check
+      - ansible-playbook playbooks/hardening/cis_debian_12.yml --syntax-check
+      - ansible-lint
+      - yamllint .
+  - path: integration/wazuh
+    stack: Python unittest y Wazuh Active Response
+    test_command: python3 -m unittest discover -s tests -p 'test_*.py'
+    coverage_command: ""
+    quality_commands: []
+  - path: .opencode
+    stack: paquete Node.js auxiliar para OpenCode
+    test_command: ""
+    coverage_command: ""
+    quality_commands: []
+
+testing:
+  strict_tdd: false
+  workspace_test_command: ""
+  reason: El control de host no ejecuta las pruebas de Ansible ni de integración; no hay un runner único.
+  test_layers:
+    unit: Python unittest en ansible y integration/wazuh
+    integration: Contratos Ansible/Wazuh y laboratorio Vagrant; ejecución separada
+    end_to_end: Wazuh Docker → agente → ansible-control → nodos; requiere entorno activo
+  coverage: No se detectó un comando de cobertura del repositorio.
+  quality:
+    lint: ansible-lint y yamllint declarados en ansible/requirements-dev.in
+    type_check: No se detectó una herramienta configurada.
+    format: .editorconfig define UTF-8, LF y espacios; no hay comando de formato único.
+
+rules:
+  proposal:
+    - Delimitar el laboratorio frente a producción y declarar los límites de soporte.
+    - Incluir recuperación o reversión para cambios de seguridad.
+  specs:
+    - Definir escenarios verificables por host, sección, perfil y versión de Wazuh.
+    - Diferenciar controles automatizables, condicionados, manuales y no aplicables.
+  design:
+    - Documentar autoridad de inventario, variables y aprobaciones; rechazar entradas libres no validadas.
+    - Tratar SSH, PAM, sudo y firewall como cambios de riesgo crítico.
+  tasks:
+    - Agrupar unidades funcionales verificables, reversibles y revisables.
+    - Dividir PRs cuando superen 400 líneas modificadas; no comprimir pruebas ni documentación.
+  apply:
+    guidelines:
+      - Mantener el modo solo comprobación como opción segura mientras no exista supervisión recuperable.
+      - Consultar docs/ansible-documentation antes de editar Ansible y no modificar esa copia.
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Conservar el historial de cambios y documentar toda limitación no resuelta.
