@@ -251,6 +251,30 @@ class ManagedJobTests(unittest.TestCase):
                 self.assertEqual(len(digest), 64)
                 self.assertEqual(list(Path(temporary).glob("*.selected-tasks.log")), [])
 
+    def test_v2_task_listing_allows_slow_single_core_controllers(self):
+        # --list-tasks took 75-100 s per call on a 1-vCPU controller; full selections
+        # were rejected by the former 120 s bound.
+        request = job.parse_wazuh(protocol(v2_order(selection={"kind": "tags", "names": ["cis_4_2_6"]})))
+        seen = {}
+
+        def fake_run(args, cwd, service, output, **kw):
+            seen.update(kw)
+            output.write_bytes(b"play #1\n  tasks:\n    cis_4_2_6 : Remediate\tTAGS: [cis_4_2_6]\n")
+            return 0, False
+
+        with tempfile.TemporaryDirectory() as temporary:
+            with patch.object(job, "STATE_DIR", Path(temporary)), \
+                 patch.object(job, "trusted_file", side_effect=lambda path: path.read_bytes()), \
+                 patch.object(job, "run_private", side_effect=fake_run):
+                job._v2_selected_tasks(policy(), request, "web01", {"tags": ["cis_4_2_6"]}, None)
+        self.assertEqual(seen["timeout"], job.LIST_TASKS_TIMEOUT)
+        self.assertGreaterEqual(job.LIST_TASKS_TIMEOUT, 300)
+
+    def test_full_check_output_fits_bounds(self):
+        self.assertGreaterEqual(job.MAX_OUTPUT, 8 * 1024 * 1024)
+        self.assertEqual(job.MAX_TRUSTED_FILE, job.MAX_OUTPUT)
+        self.assertGreaterEqual(job.TIMEOUT, 3600)
+
     def test_v2_terminal_event_recovery_keeps_blocker_until_published(self):
         request = job.parse_wazuh(protocol(v2_order(mode="apply", approvals={"web01": managed_args()[1]})))
         with tempfile.TemporaryDirectory() as temporary:

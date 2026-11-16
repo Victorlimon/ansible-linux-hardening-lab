@@ -43,8 +43,15 @@ STATE_DIR = Path("/var/lib/ansible-wazuh/state")
 LOCAL_TEMP = Path("/var/lib/ansible-wazuh/runtime-tmp")
 EVENT_LOG = Path("/var/log/ansible-wazuh-jobs.jsonl")
 MAX_REQUEST = 65536
-MAX_OUTPUT = 1024 * 1024
-TIMEOUT = 1800
+# A full-selection check with --diff over ~260 controls exceeds 1 MiB of output.
+MAX_OUTPUT = 8 * 1024 * 1024
+# Root-read evidence files (logs, policy, approvals) share the output bound.
+MAX_TRUSTED_FILE = MAX_OUTPUT
+TIMEOUT = 3600
+# --list-tasks parses every role task file; one core needs ~75-100 s per call
+# for a single tag, so the previous 120 s bound rejected full selections.
+LIST_TASKS_TIMEOUT = 600
+INVENTORY_TIMEOUT = 180
 ID = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,63}\Z")
 CONTROL_TAG = re.compile(r"cis_[0-9]+(?:_[0-9]+){2,6}\Z")
 SECTION = re.compile(r"[1-7](?:\.[1-9][0-9]?)?\Z")
@@ -784,7 +791,7 @@ def _v2_selected_tasks(policy: dict, request: ManagedV2Request, host: str,
     output = STATE_DIR / (str(uuid.uuid4()) + ".selected-tasks.log")
     try:
         code, truncated = run_private(command, Path(policy["ansible_root"]),
-                                      policy["service_user"], output, timeout=120)
+                                      policy["service_user"], output, timeout=LIST_TASKS_TIMEOUT)
         if code != 0 or truncated:
             raise Reject("sealed Ansible task listing failed")
         raw = trusted_file(output).decode("utf-8", errors="replace")
@@ -1124,11 +1131,11 @@ def trusted_file(path: Path, *, owner: int = 0) -> bytes:
         if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != owner
                 or metadata.st_mode & 0o022 or metadata.st_nlink != 1):
             raise Reject("untrusted file")
-        if metadata.st_size > 1024 * 1024:
+        if metadata.st_size > MAX_TRUSTED_FILE:
             raise Reject("file too large")
         with os.fdopen(os.dup(fd), "rb") as stream:
-            data = stream.read(1024 * 1024 + 1)
-        if len(data) > 1024 * 1024 or len(data) != metadata.st_size:
+            data = stream.read(MAX_TRUSTED_FILE + 1)
+        if len(data) > MAX_TRUSTED_FILE or len(data) != metadata.st_size:
             raise Reject("file changed while reading")
         return data
     finally:
@@ -1561,7 +1568,8 @@ def inventory_groups(policy: dict, request_id: str) -> dict:
     output = STATE_DIR / (request_id + ".inventory.log")
     command = [str(Path(policy["ansible_bin_dir"]) / "ansible-inventory"),
                "-i", policy["inventory"], "--list"]
-    code, truncated = run_private(command, root, policy["service_user"], output, timeout=60)
+    code, truncated = run_private(command, root, policy["service_user"], output,
+                                  timeout=INVENTORY_TIMEOUT)
     if code != 0 or truncated:
         raise Reject("inventory inspection failed")
     try:
