@@ -1,0 +1,6 @@
+---
+# Valid values: lab, staging, production (checked by the role preflight).
+# "production" additionally requires cis_production_mode: true and the
+# cis_production_* gates declared below (see ansible/inventories/production).
+cis_execution_environment: staging
+cis_production_mode: false

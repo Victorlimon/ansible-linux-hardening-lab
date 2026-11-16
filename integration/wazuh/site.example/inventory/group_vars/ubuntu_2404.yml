@@ -1,0 +1,29 @@
+---
+# Ubuntu 24.04 policy. Every value here is part of the sealed release: a change
+# means a new bundle and a new release id. FICTITIOUS EXAMPLE VALUES.
+
+# CIS 5.1.4 (AllowUsers): without a value the remediation refuses to run.
+# Include every administrator AND the Ansible connection user (ansible_user).
+cis_ubuntu_2404_sshd_allow_users:
+  - ansible
+  - admin1
+
+# Firewall engine (section 4) and the SSH/inbound allowlist used by UFW 4.2.x.
+cis_firewall: ufw
+cis_ufw_ssh_port: 22
+cis_ufw_ssh_allowed_sources: []   # e.g. ["198.51.100.10/32"] controller and admin hosts
+cis_ufw_allowed_in_rules: []      # e.g. [{from_ip: "198.51.100.0/24", port: 443, proto: tcp}]
+
+# HOW REMEDIATION IS ENABLED (real variables consumed by the roles)
+# - The gateway turns on cis_ubuntu_2404_remediation_enabled for each approved order;
+#   do not set it here.
+# - Automated controls run when selected (sections/tags/roles/full).
+# - Risk-gated controls stay OFF until enabled one by one with
+#   cis_ubuntu_2404_<control_id>_remediate: true  (control_id with dots as underscores).
+#   Enable only what was reviewed for this server role, for example:
+# cis_ubuntu_2404_2_1_18_web_server_remediate: true        # removes a web server: never on web hosts
+# cis_ubuntu_2404_5_3_2_2_pam_faillock_remediate: true     # PAM faillock
+# cis_ubuntu_2404_6_2_3_20_audit_immutable_remediate: true # needs a reboot to change audit rules later
+# Some controls take a boolean to skip them on purpose, for example:
+# cis_ubuntu_2404_1_1_2_4_var_partition: false             # no separate /var partition on this server
+# See ansible/inventories/local/group_vars/ubuntu_2404.yml for the full lab-validated list.

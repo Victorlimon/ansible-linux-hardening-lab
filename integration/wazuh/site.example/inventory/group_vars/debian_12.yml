@@ -1,0 +1,33 @@
+---
+# Debian 12 policy. Every value here is part of the sealed release: a change
+# means a new bundle and a new release id. FICTITIOUS EXAMPLE VALUES.
+
+cis_debian_12_sshd_allow_users:
+  - ansible
+  - admin1
+
+# Firewall engine (section 4): nftables. The ruleset must allow SSH from the
+# controller and every published service BEFORE it is enabled.
+cis_firewall: nftables
+cis_ufw_ssh_port: 22
+# cis_nftables_config: |-
+#   table inet filter { ... }   # see ansible/inventories/local/group_vars/debian_12.yml
+
+# Banner changes need a separately approved local text.
+cis_debian_12_banner_remediation_enabled: false
+cis_debian_12_banner_text_approved: false
+cis_debian_12_issue_banner_text: ""
+
+# HOW REMEDIATION IS ENABLED (real variables consumed by the roles)
+# - The gateway turns on cis_debian_12_remediation_enabled for each approved order;
+#   do not set it here.
+# - Automated controls run when selected (sections/tags/roles/full).
+# - Risk-gated controls stay OFF until enabled one by one with
+#   cis_debian_12_<control_id>_remediate: true  (control_id with dots as underscores).
+#   Enable only what was reviewed for this server role, for example:
+# cis_debian_12_2_1_18_web_server_remediate: true        # removes a web server: never on web hosts
+# cis_debian_12_5_3_2_2_pam_faillock_remediate: true     # PAM faillock
+# cis_debian_12_6_2_3_20_audit_immutable_remediate: true # needs a reboot to change audit rules later
+# Some controls take a boolean to skip them on purpose, for example:
+# cis_debian_12_1_1_2_4_var_partition: false             # no separate /var partition on this server
+# See ansible/inventories/local/group_vars/debian_12.yml for the full lab-validated list.

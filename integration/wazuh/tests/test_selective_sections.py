@@ -62,10 +62,13 @@ class SelectiveSectionsTests(unittest.TestCase):
             text = (root / "main.yml").read_text(encoding="utf-8")
             with patch.object(job, "trusted_file", side_effect=lambda path: Path(path).read_bytes()):
                 ssh = job._section_tags(text, root, ("5.1",), "remediation")
-                self.assertEqual(len(ssh), 21)
+                # Controls 5.1.1 through 5.1.22 each have one remediation directory.
+                self.assertEqual(len(ssh), 22)
                 self.assertTrue(all(tag.startswith("cis_5_1_") for tag in ssh))
                 self.assertTrue(job._control_tag_present(text, root, "cis_5_1_2", "remediation"))
-                self.assertFalse(job._control_tag_present(text, root, "cis_5_1_4", "remediation"))
+                # 5.1.4 (AllowUsers) became remediable; a non-existent control stays unselectable.
+                self.assertTrue(job._control_tag_present(text, root, "cis_5_1_4", "remediation"))
+                self.assertFalse(job._control_tag_present(text, root, "cis_5_1_99", "remediation"))
             if platform == "cis_ubuntu_2404":
                 self.assertIn("cis_4_2_6", job._section_tags(text, root, ("4",), "remediation"))
 
@@ -91,7 +94,7 @@ class SelectiveSectionsTests(unittest.TestCase):
                     self.assertEqual(full_plan["tags"], [role + "_remediation"])
                     section = self._parse({"kind": "sections", "names": ["5.1"]}, **options)
                     _, section_plan = job._v2_plan(policy, "a" * 64, section, inventory)
-                    self.assertEqual(len(section_plan["tags"]), 21)
+                    self.assertEqual(len(section_plan["tags"]), 22)
                     control = self._parse({"kind": "tags", "names": ["cis_5_1_2"]}, **options)
                     _, control_plan = job._v2_plan(policy, "a" * 64, control, inventory)
                     self.assertEqual(control_plan["tags"], ["cis_5_1_2"])

@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "service_user": "ansible-wazuh",
+  "targets": {
+    "ubuntu_app01": {"host": "ubuntu-app01", "os": "ubuntu24"},
+    "ubuntu_app02": {"host": "ubuntu-app02", "os": "ubuntu24"},
+    "debian_db01": {"host": "debian-db01", "os": "debian12"}
+  },
+  "controls": {
+    "cron_hourly": {"tag": "cis_2_4_1_3", "os": ["ubuntu24", "debian12"]},
+    "cron_daily": {"tag": "cis_2_4_1_4", "os": ["ubuntu24", "debian12"]}
+  }
+}

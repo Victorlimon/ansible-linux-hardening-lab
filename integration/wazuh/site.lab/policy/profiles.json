@@ -1,0 +1,59 @@
+{
+  "releases": {
+    "@RELEASE_ID@": {
+      "inventory_profiles": {
+        "ubuntu_lab": {
+          "platform": "ubuntu24",
+          "aliases": [
+            "ubuntu24"
+          ]
+        },
+        "debian_lab": {
+          "platform": "debian12",
+          "aliases": [
+            "debian12"
+          ]
+        }
+      },
+      "host_profiles": {
+        "ubuntu24": {
+          "inventory_profile": "ubuntu_lab",
+          "platform": "ubuntu24",
+          "alias": "ubuntu24"
+        },
+        "debian12": {
+          "inventory_profile": "debian_lab",
+          "platform": "debian12",
+          "alias": "debian12"
+        }
+      },
+      "section_profiles": {
+        "ubuntu24_cron_hourly": {
+          "host_profile": "ubuntu24",
+          "section": "cron_hourly",
+          "tags": [
+            "cis_2_4_1_3"
+          ],
+          "gates": [
+            "cis_ubuntu_2404_remediation_enabled"
+          ],
+          "disposition": "automated",
+          "network_rules": []
+        },
+        "debian12_cron_hourly": {
+          "host_profile": "debian12",
+          "section": "cron_hourly",
+          "tags": [
+            "cis_2_4_1_3"
+          ],
+          "gates": [
+            "cis_debian_12_remediation_enabled",
+            "cis_debian_12_canary_confirmed"
+          ],
+          "disposition": "automated",
+          "network_rules": []
+        }
+      }
+    }
+  }
+}
