@@ -193,6 +193,9 @@ El operador usa un usuario de API que solo puede ejecutar `active-response:comma
 | `release` con `--expect-sha256` incorrecto | Rechazado antes de extraer |
 | CHECK `full` vía Wazuh como `ansible_operator`, ubuntu24 (`lab_v7`) | `ok=2009 changed=137 failed=0` (≈38 min con 1 vCPU) |
 | CHECK `full` vía Wazuh como `ansible_operator`, debian12 (`lab_v7`) | `ok=1845 changed=114 failed=0` (≈28 min con 1 vCPU) |
+| APPLY `full` vía Wazuh con snapshot, `prepare_safety.py` y aprobación, ubuntu24 | `ok=1347 changed=132 failed=1`: se detiene a propósito en CIS 5.3.2.2 porque `pam-auth-update` detecta modificaciones locales en `/etc/pam.d/common-*` y no las sobrescribe sin autorización. SSH, sudo, agente y UFW operativos; aprobación consumida. |
+
+**Decisión por servidor (PAM):** si `pam-auth-update` rechaza el cambio por modificaciones locales, el responsable revisa `/etc/pam.d/common-*` y, solo si acepta regenerarlos desde los perfiles, define `cis_linux_common_faillock_pam_auth_update_force: true` y `cis_linux_common_pwhistory_pam_auth_update_force: true` en el repo **site** para ese servidor, construye una release nueva y repite `CHECK → aprobación → APPLY`. Después de esa ejecución se vuelve a `false`.
 
 Correcciones derivadas de las pruebas `full`: el gateway limitaba el listado de tareas a 120 s y la salida a 1 MiB (ahora 600 s y 8 MiB; ejecución máxima 60 min), y nueve verificaciones posteriores a la remediación fallaban en modo `--check` (ahora se omiten solo en simulación; las ejecuciones reales y `verify/` las siguen comprobando). Con 1 vCPU cada orden `full` tarda 30–40 min; planificar las ventanas de cambio en consecuencia.
 
