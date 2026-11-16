@@ -43,7 +43,10 @@
     get_checksum: false
   register: cis_linux_common_aide_db_post
 
+# In check mode the installation/configuration above is only simulated,
+# so the resulting state cannot be asserted; verify/ playbooks still do.
 - name: Common AIDE installed | Verify AIDE install and initialization
+  when: not ansible_check_mode
   ansible.builtin.assert:
     that:
       - ansible_facts.packages['aide'] is defined

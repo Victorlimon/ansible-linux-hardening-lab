@@ -107,7 +107,11 @@
 - name: Common pwquality parameter | Compute post-remediation evidence
   ansible.builtin.import_tasks: mechanisms/pwquality_parameter/evaluate.yml
 
+# In check mode the remediation above is only simulated, so the
+# post-remediation state cannot be asserted; verify/ playbooks and real
+# runs still assert it.
 - name: Common pwquality parameter | Verify the remediated parameter
+  when: not ansible_check_mode
   ansible.builtin.assert:
     that:
       - cis_linux_common_pwq_package not in ansible_facts.packages or

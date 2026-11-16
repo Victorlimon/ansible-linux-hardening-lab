@@ -31,7 +31,10 @@
   register: cis_linux_common_aide_crypto_file
   when: '"aide" in ansible_facts.packages'
 
+# In check mode the installation/configuration above is only simulated,
+# so the resulting state cannot be asserted; verify/ playbooks still do.
 - name: Common AIDE crypto | Verify sha512 rules for the audit tools
+  when: not ansible_check_mode
   ansible.builtin.assert:
     that:
       - ansible_facts.packages['aide'] is not defined or

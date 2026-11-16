@@ -32,7 +32,11 @@
 - name: Common script line | Inspect the corpus after remediation
   ansible.builtin.import_tasks: mechanisms/script_line/inspect.yml
 
+# In check mode the remediation above is only simulated, so the
+# post-remediation state cannot be asserted; verify/ playbooks and real
+# runs still assert it.
 - name: Common script line | Verify the remediated corpus
+  when: not ansible_check_mode
   ansible.builtin.assert:
     that:
       - cis_linux_common_script_unreadable_files | length == 0

@@ -64,7 +64,11 @@
 - name: Common login.defs parameter | Inspect after remediation
   ansible.builtin.import_tasks: mechanisms/login_defs_parameter/inspect.yml
 
+# In check mode the remediation above is only simulated, so the
+# post-remediation state cannot be asserted; verify/ playbooks and real
+# runs still assert it.
 - name: Common login.defs parameter | Verify the remediated parameter
+  when: not ansible_check_mode
   ansible.builtin.assert:
     that:
       - cis_linux_common_logindefs_ok

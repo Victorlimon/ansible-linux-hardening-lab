@@ -56,7 +56,11 @@
 - name: Common pam_pwhistory stack | Inspect the remediated stack
   ansible.builtin.import_tasks: mechanisms/pam_pwhistory_stack/inspect.yml
 
+# In check mode the remediation above is only simulated, so the
+# post-remediation state cannot be asserted; verify/ playbooks and real
+# runs still assert it.
 - name: Common pam_pwhistory stack | Verify the remediated stack
+  when: not ansible_check_mode
   ansible.builtin.assert:
     that:
       - cis_linux_common_pwhistory_package not in ansible_facts.packages or
